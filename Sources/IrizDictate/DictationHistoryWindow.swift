@@ -141,6 +141,11 @@ final class DictationHistoryPresenter {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .ignoresCycle]
         panel.isReleasedWhenClosed = false
+        // Прозрачный корпус, как у окна настроек. Без него стекло внутри
+        // сэмплирует собственную серую плиту окна, а не то, что за ним, и
+        // окно истории остаётся единственной непрозрачной панелью продукта.
+        panel.isOpaque = false
+        panel.backgroundColor = .clear
         panel.onClose = { [weak self] in self?.close(returningFocus: true) }
         panel.contentView = NSHostingView(rootView: DictationHistoryView(model: model))
         return panel
@@ -546,23 +551,37 @@ struct DictationHistoryView: View {
             }
         }
         .frame(minWidth: 360, minHeight: 280)
+        // Тот же фон, что у настроек: прозрачное стекло с преломлением.
+        .background(IrizGlassBackdrop())
         .onChange(of: model.focusSearchField) { _, wanted in searchFocused = wanted }
         .onAppear { searchFocused = model.rescue == nil }
     }
 
     private var historyBody: some View {
-        VStack(spacing: 0) {
-            titleRow
-            searchRow
-            Divider()
-            if model.visible.isEmpty {
-                emptyState
-            } else {
-                list
+        // Список и подвал - плавающие плиты канона, как в настройках: шапка со
+        // строкой поиска на одной, список на второй, подвал на третьей.
+        // Разделители при этом не нужны: границу держит сама плита.
+        VStack(spacing: IrizGlassBackdrop.plateInset) {
+            VStack(spacing: 0) {
+                titleRow
+                searchRow
             }
-            Divider()
+            .background(IrizFloatingPlate())
+
+            Group {
+                if model.visible.isEmpty {
+                    emptyState
+                } else {
+                    list
+                }
+            }
+            .frame(maxHeight: .infinity)
+            .background(IrizFloatingPlate())
+
             footer
+                .background(IrizFloatingPlate())
         }
+        .padding(IrizGlassBackdrop.plateInset)
     }
 
     // MARK: - Спасение
@@ -583,7 +602,7 @@ struct DictationHistoryView: View {
                         .font(.system(size: 15, weight: .semibold))
                     Text(dictationRescueExplanation(for: rescue.failure))
                         .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
@@ -619,7 +638,7 @@ struct DictationHistoryView: View {
                 Spacer()
                 Text("\(rescue.text.count) симв.")
                     .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
             }
 
             if let notice = model.rescueNotice {
@@ -655,7 +674,7 @@ struct DictationHistoryView: View {
             Spacer(minLength: 8)
             Text("\(model.entries.count)")
                 .font(.system(size: 12))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .monospacedDigit()
         }
         .padding(.horizontal, 16)
@@ -668,7 +687,7 @@ struct DictationHistoryView: View {
     private var searchRow: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
             TextField("Поиск по надиктовкам", text: $model.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 14))
@@ -677,7 +696,7 @@ struct DictationHistoryView: View {
                 Button {
                     model.query = ""
                 } label: {
-                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(IRIZ_SUBTLE)
                 }
                 .buttonStyle(.plain)
                 .help("Очистить поиск")
@@ -695,7 +714,7 @@ struct DictationHistoryView: View {
                  ? "Продиктуйте что-нибудь — запись появится здесь."
                  : "Попробуйте другое слово.")
                 .font(.system(size: 12))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(24)
@@ -717,16 +736,21 @@ struct DictationHistoryView: View {
             }
             .onChange(of: model.selection) { _, _ in
                 guard let id = model.selectedEntry?.id else { return }
-                withAnimation(.easeOut(duration: 0.12)) { scroll.scrollTo(id) }
+                withAnimation(irizAnimation(.irizQuick)) { scroll.scrollTo(id) }
             }
         }
     }
+
+    @Namespace private var historySelection
 
     private func row(_ entry: DictationHistoryEntry, isSelected: Bool) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(dictationHistoryPreview(entry.displayText))
                 .font(.system(size: 13))
-                .foregroundStyle(isSelected ? AnyShapeStyle(.white) : AnyShapeStyle(.primary))
+                // Белый по сплошному акценту давал контраст 4,02 при пороге
+                // 4,5. На тонированном стекле подложка просвечивает, и
+                // системный цвет остаётся читаемым в обоих состояниях.
+                .foregroundStyle(.primary)
                 .lineLimit(3)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
@@ -741,10 +765,10 @@ struct DictationHistoryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(isSelected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.clear))
-        )
+        // Подсветка канона продукта: одна капсула стекла на весь список, она
+        // ПЕРЕЕЗЖАЕТ между строками. Свой радиус 8 и своя сплошная заливка
+        // были третьим способом подсветки в одном продукте.
+        .irizSelected(isSelected, in: historySelection, group: "history")
         .contextMenu {
             Button("Вставить") { model.onInsert?(entry) }
             Button("Копировать") { model.onCopy?(entry) }
@@ -770,7 +794,7 @@ struct DictationHistoryView: View {
                 // мышечной памяти он сносил бы расшифровку. Только правым щелчком.
                 Text("удалить — правым щелчком")
                     .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .lineLimit(1)
                     .fixedSize()
                 Spacer(minLength: 12)
@@ -784,7 +808,7 @@ struct DictationHistoryView: View {
             // а «⌘V ничего не вставил» заметен сразу), но молчать о нём нельзя.
             Text("Скопированное держится в буфере 2 минуты, потом буфер чистится.")
                 .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .accessibilityLabel("Скопированное держится в буфере две минуты, потом буфер чистится")
         }
         .padding(.horizontal, 16)
@@ -798,7 +822,7 @@ struct DictationHistoryView: View {
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
                 .background(RoundedRectangle(cornerRadius: 4).fill(.quaternary))
-            Text(what).font(.system(size: 11)).foregroundStyle(.secondary)
+            Text(what).font(.system(size: 11)).foregroundStyle(IRIZ_SUBTLE)
         }
     }
 }

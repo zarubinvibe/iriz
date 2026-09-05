@@ -1,3 +1,4 @@
+import IrizCore
 // Окно знакомства: одна мысль на экран, по центру, с картинкой и с пробой.
 //
 // Композиция по центру, а не по левому краю. Левое выравнивание годится
@@ -135,7 +136,9 @@ private struct FirstRunCallToAction: View {
             Button(granted ? FirstRunCopy.granted : title, action: action)
                 .modifier(FirstRunProminentButton())
                 .disabled(granted)
-                .opacity(granted ? 0.65 : 1)
+                // `.opacity` здесь стояла на ПРЕДКЕ стеклянной кнопки и молча
+                // схлопывала её преломление ровно в момент «разрешение выдано»
+                // (правило G04). Гашение даёт `.disabled`, оно системное.
         }
     }
 }
@@ -146,8 +149,9 @@ private struct FirstRunCallToAction: View {
 private struct FirstRunBackdrop: View {
     var body: some View {
         ZStack {
+            // Один слой. Второй клал тот же цвет поверх самого себя: ноль
+            // пикселей разницы и лишний проход отрисовки.
             Rectangle().fill(.background)
-            Rectangle().fill(.background.opacity(0.35))
         }
         .ignoresSafeArea()
     }
@@ -168,7 +172,7 @@ private struct FirstRunProgress: View {
                     .frame(width: 6, height: 6)
                     .scaleEffect(item == step ? 1.25 : 1)
                     .frame(width: 10, height: 10)
-                    .animation(.easeOut(duration: 0.18), value: step)
+                    .animation(irizAnimation(.irizEaseOut), value: step)
             }
         }
         .accessibilityHidden(true)

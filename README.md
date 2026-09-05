@@ -10,9 +10,11 @@ Speak and the text appears. Your speech is decoded on your own Mac, not in someb
 
 <!-- owner-welcome:start -->
 
-> Hello. I am a lawyer with two daughters and a coffee business, and I dictate a lot: filings, letters, tasks for agents. The polished dictation tools clean up speech beautifully, except the text travels to somebody else's server, and mine carries client names and amounts.
+> Hello. I am a lawyer who vibe-codes, and I type a great deal. I type fast, and it still eats so much of the day that by evening half of it turns out to have been typing.
 >
-> iriz came out of that. It decodes speech on my Mac and says nothing outward. If you need the same, take it and make it yours.
+> After trying a few tools I noticed something simple: I say things more precisely than I type them. Typing, I hunt for words. Speaking, I do not, the thought comes out whole, and the model on the other end understands me better. One thing stood in the way, privacy. So the line is drawn here: whatever has to stay mine is decoded on my own machine, and the only thing that leaves it is what I sent out myself, a translation or a task built from what I said.
+>
+> And the small thing this all started from: I forget to switch the language and type a sentence in the wrong layout. Here that repairs itself.
 >
 > — Filipp Zarubin
 

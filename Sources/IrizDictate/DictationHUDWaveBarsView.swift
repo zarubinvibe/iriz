@@ -312,6 +312,10 @@ public let DICTATION_HUD_WAVE_GREEN = NSColor(srgbRed: 0.22, green: 0.80, blue: 
 /// «идёт работа» и режим переставал различаться цветом вовсе, потом он стал
 /// режимом - и остался просто вторым холодным тоном рядом с зелёным.
 public let DICTATION_HUD_WAVE_GOLD = NSColor(srgbRed: 0.945, green: 0.729, blue: 0.322, alpha: 1)
+/// Запись встречи. Оранжево-алый, между золотом промпта и красным отказа, но
+/// заметно теплее и насыщеннее обоих: «идёт запись» обязано читаться одним
+/// взглядом через комнату, а не сравнением оттенков рядом.
+public let DICTATION_HUD_WAVE_MEETING = NSColor(srgbRed: 0.976, green: 0.443, blue: 0.180, alpha: 1)
 /// Насколько ядро золота вправе выгорать в белое. Золото бледнее зелёного, и
 /// общая доля белого его убивает: владелец увидел белую волну вместо золотой.
 let DICTATION_HUD_GOLD_CORE_WHITE: CGFloat = 0.22
@@ -330,7 +334,7 @@ public let DICTATION_HUD_WAVE_VIOLET = NSColor(srgbRed: 0.667, green: 0.427, blu
 
 /// Что говорит цвет. Три значения, и все три названы владельцем.
 public enum DictationHUDWaveTone: String, CaseIterable, Sendable {
-    case normal, prompt, translation, failure
+    case normal, prompt, translation, meeting, failure
 }
 
 func dictationHUDWaveTone(stage: DictationHUDStage,
@@ -348,6 +352,7 @@ func dictationHUDWaveTone(stage: DictationHUDStage,
         case .prompt: return .prompt
         case .translation: return .translation
         case .dictation: return .normal
+        case .meeting: return .meeting
         }
     }
 }
@@ -357,6 +362,7 @@ public func dictationHUDWaveColor(_ tone: DictationHUDWaveTone) -> NSColor {
     case .normal: return DICTATION_HUD_WAVE_GREEN
     case .prompt: return DICTATION_HUD_WAVE_GOLD
     case .translation: return DICTATION_HUD_WAVE_VIOLET
+    case .meeting: return DICTATION_HUD_WAVE_MEETING
     case .failure: return DICTATION_HUD_WAVE_RED
     }
 }

@@ -23,9 +23,9 @@ let DICTATION_REJECTED_REPORT_FILE_NAME = "verification.txt"
 /// Тайминги токенов распознавателя (см. DictationTimings.swift).
 let DICTATION_TIMINGS_FILE_NAME = "timings.json"
 
-enum DictationStore {
+public enum DictationStore {
     /// Каталог со всеми надиктовками. `root` подменяется только тестами.
-    static func dictationsDirectory(in root: URL? = nil) throws -> URL {
+    public static func dictationsDirectory(in root: URL? = nil) throws -> URL {
         let supportRoot = try root ?? irizApplicationSupportDirectory()
         return supportRoot.appendingPathComponent("dictations", isDirectory: true)
     }

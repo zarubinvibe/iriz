@@ -14,9 +14,9 @@ import IrizCore
 /// сортировки и то, что показывается владельцу. Ключ именно имя, а не mtime:
 /// после импорта из старого приложения mtime врёт (см. PromptEnvelope.swift,
 /// `latestDictation`) — папки пишутся на диск в обратном порядку номеров.
-struct DictationHistoryEntry: Equatable, Identifiable {
+public struct DictationHistoryEntry: Equatable, Identifiable {
     let directory: URL
-    let label: String
+    public let label: String
     /// Сырьё — ответ ASR байт в байт. Есть всегда, иначе записи нет.
     let text: String
     /// То, что фактически ушло в поле (inserted.txt), если файл есть.
@@ -24,11 +24,11 @@ struct DictationHistoryEntry: Equatable, Identifiable {
     /// Готовый промпт, даже если фокус сменился или вставка не удалась.
     let generatedText: String?
 
-    var id: String { directory.path }
+    public var id: String { directory.path }
 
     /// Подтверждённая вставка точнее всего. Если её нет, prompt-запись отдаёт
     /// готовый `generated.txt`, а не сырую надиктовку. `prompt.md` здесь не читается.
-    var displayText: String { insertedText ?? generatedText ?? text }
+    public var displayText: String { insertedText ?? generatedText ?? text }
 
     init(directory: URL,
          text: String,
@@ -49,7 +49,7 @@ struct DictationHistoryEntry: Equatable, Identifiable {
 /// Правила отбора те же, что у перечислителя промпт-режима: только подкаталоги,
 /// только с `raw.txt`, скрытые пропускаются. Иначе история и промпт-режим
 /// разошлись бы в том, что считается надиктовкой.
-func dictationHistoryEntries(in dictationsRoot: URL,
+public func dictationHistoryEntries(in dictationsRoot: URL,
                              fileManager: FileManager = .default) -> [DictationHistoryEntry] {
     let urls = (try? fileManager.contentsOfDirectory(
         at: dictationsRoot,
@@ -94,18 +94,18 @@ func dictationHistoryMatches(text: String, query: String) -> Bool {
                       options: [.caseInsensitive, .diacriticInsensitive]) != nil
 }
 
-func filteredDictationHistory(_ entries: [DictationHistoryEntry],
+public func filteredDictationHistory(_ entries: [DictationHistoryEntry],
                               query: String) -> [DictationHistoryEntry] {
     entries.filter { dictationHistoryMatches(text: $0.displayText, query: query) }
 }
 
 // MARK: - Показ строки
 
-let DICTATION_HISTORY_PREVIEW_LIMIT = 220
+public let DICTATION_HISTORY_PREVIEW_LIMIT = 220
 
 /// Превью строки списка: переводы строк сплющены, длинный текст обрезан.
 /// Обрезка по символам, а не по байтам — иначе кириллица режется посередине.
-func dictationHistoryPreview(_ text: String,
+public func dictationHistoryPreview(_ text: String,
                              limit: Int = DICTATION_HISTORY_PREVIEW_LIMIT) -> String {
     let flat = text
         .replacingOccurrences(of: "\n", with: " ")
@@ -122,7 +122,7 @@ func dictationHistoryPreview(_ text: String,
 /// ISO8601 от импортёра старого приложения. Разобрать не удалось — показываем
 /// имя как есть: соврать про время записи нельзя, а найти её по имени
 /// каталога владелец сможет.
-func dictationHistoryTimeLabel(_ label: String,
+public func dictationHistoryTimeLabel(_ label: String,
                                locale: Locale = Locale(identifier: "ru_RU"),
                                timeZone: TimeZone = .current) -> String {
     guard let date = dictationHistoryDate(label) else { return label }

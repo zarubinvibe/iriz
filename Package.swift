@@ -3,6 +3,9 @@ import PackageDescription
 
 let package = Package(
     name: "IrizApp",
+    // Язык оригинала. В коде стоят русские строки, переводы лежат рядом
+    // таблицами: Sources/IrizCore/Resources/<язык>.lproj/Localizable.strings.
+    defaultLocalization: "ru",
     platforms: [.macOS(.v14)],
     products: [
         .executable(name: "iriz", targets: ["iriz"]),
@@ -30,7 +33,8 @@ let package = Package(
         ),
         .target(
             name: "IrizCore",
-            path: "Sources/IrizCore"
+            path: "Sources/IrizCore",
+            resources: [.process("Resources")]
         ),
         .target(
             name: "IrizInput",

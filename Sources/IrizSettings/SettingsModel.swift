@@ -174,6 +174,7 @@ final class SettingsModel: ObservableObject {
     @Published var layoutMode: LayoutMode
     @Published var enterDelayText: String
     @Published var pasteSuffix: PasteSuffix
+    @Published var speechCleanupMode: SpeechCleanupMode
     @Published var launchAtLogin: Bool
     @Published var corrections: [TranscriptCorrection]
     /// Заготовки живут отдельным списком от словаря: другой редактор, другой
@@ -250,6 +251,7 @@ final class SettingsModel: ObservableObject {
         layoutMode = layoutSettings.readMode()
         enterDelayText = String(dictationSettings.enterDelayMilliseconds)
         pasteSuffix = dictationSettings.pasteSuffix
+        speechCleanupMode = dictationSettings.speechCleanupMode
         corrections = dictationSettings.transcriptCorrections
         snippets = dictationSettings.snippets
         hudSize = dictationSettings.dictationHUDSize
@@ -509,6 +511,7 @@ final class SettingsModel: ObservableObject {
 
         dictationSettings.enterDelayMilliseconds = delay
         dictationSettings.pasteSuffix = pasteSuffix
+        dictationSettings.speechCleanupMode = speechCleanupMode
         dictationSettings.transcriptCorrections = corrections
         dictationSettings.snippets = snippets
         dictationSettings.dictationHUDSize = hudSize
@@ -554,6 +557,7 @@ final class SettingsModel: ObservableObject {
         layoutMode = .fixing
         enterDelayText = "120"
         pasteSuffix = .appendSpace
+        speechCleanupMode = .local
         launchAtLogin = true
         corrections = []
         snippets = []

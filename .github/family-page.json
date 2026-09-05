@@ -102,7 +102,7 @@
       ],
       "docs": "Deeper: [the step-by-step walkthrough](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), dependency licenses in [THIRD-PARTY](THIRD-PARTY).",
       "license": "MIT. See [LICENSE](LICENSE).",
-      "welcome": "Hello. I am a lawyer with two daughters and a coffee business, and I dictate a lot: filings, letters, tasks for agents. The polished dictation tools clean up speech beautifully, except the text travels to somebody else's server, and mine carries client names and amounts.\n\niriz came out of that. It decodes speech on my Mac and says nothing outward. If you need the same, take it and make it yours.",
+      "welcome": "Hello. I am a lawyer who vibe-codes, and I type a great deal. I type fast, and it still eats so much of the day that by evening half of it turns out to have been typing.\n\nAfter trying a few tools I noticed something simple: I say things more precisely than I type them. Typing, I hunt for words. Speaking, I do not, the thought comes out whole, and the model on the other end understands me better. One thing stood in the way, privacy. So the line is drawn here: whatever has to stay mine is decoded on my own machine, and the only thing that leaves it is what I sent out myself, a translation or a task built from what I said.\n\nAnd the small thing this all started from: I forget to switch the language and type a sentence in the wrong layout. Here that repairs itself.",
       "compare_header": [
         "Choice",
         "Best when",
@@ -203,7 +203,7 @@
       ],
       "docs": "Глубже: [пошаговое знакомство](docs/ONBOARDING.ru.md), [как помочь](CONTRIBUTING.ru.md), лицензии зависимостей в [THIRD-PARTY](THIRD-PARTY).",
       "license": "MIT. Текст в файле [LICENSE](LICENSE).",
-      "welcome": "Привет. Я юрист, у меня две дочки и кофейное дело, и диктую я много: заявления, письма, задания агентам. Готовые диктовки чистят речь отлично, только текст при этом уезжает на чужой сервер, а у меня там имена доверителей и суммы.\n\niriz появился из этого. Он разбирает речь на моем Маке и молчит наружу. Если вам нужно то же самое, забирайте и делайте своим.",
+      "welcome": "Привет. Я юрист и вайб-кодер, и печатаю я очень много. Печатаю быстро, но времени это все равно съедает столько, что к вечеру половина дня оказывается набором текста.\n\nПопробовав несколько инструментов, я понял простую вещь: голосом я говорю точнее, чем печатаю. Когда печатаю, я подбираю слова. Когда говорю, не подбираю, и мысль выходит целой, а модель на том конце понимает меня лучше. Мешала одна вещь - приватность. Поэтому здесь она разведена по границе: то, что должно остаться моим, разбирается только на моей машине, а наружу уходит лишь то, что я сам туда отправил, вроде перевода или сборки задания.\n\nИ мелочь, из которой все начиналось: я забываю переключить язык и набираю фразу не в той раскладке. Тут это чинится само.",
       "compare_header": [
         "Вариант",
         "Когда подходит",
@@ -306,7 +306,7 @@
       ],
       "docs": "想看更深的：[一步一步的上手引导](docs/ONBOARDING.zh.md)、[怎么参与](CONTRIBUTING.zh.md)，依赖的许可证在 [THIRD-PARTY](THIRD-PARTY)。",
       "license": "MIT。见 [LICENSE](LICENSE)。",
-      "welcome": "你好。我是一名律师，有两个女儿和一份咖啡生意，口述的量很大：文书、信件、给智能体的任务。那些做得好的听写工具确实把口语收拾得漂亮，只是文字要跑到别人的服务器上，而我这边写着委托人的名字和金额。\n\niriz 就是从这儿长出来的。它在我的 Mac 上把话解开，对外一声不吭。你要是也需要这么一件东西，拿去，把它变成你自己的。",
+      "welcome": "你好。我是个律师，也写代码，而且打字打得很多。打得不算慢，可一天下来还是发现，半天时间都花在敲字上了。\n\n试过几个工具之后，我明白了一件很简单的事：我说出来的比敲出来的准。敲字的时候我在挑词；说话的时候不挑，念头是整的，另一头的模型也更明白我要什么。挡在中间的只有一件事，隐私。所以这里把界划清楚了：该留在我这儿的，只在我自己的机器上识别；出去的，只有我自己送出去的那部分，比如翻译，或者把我说的话整理成任务。\n\n还有最开始那件小事：我总忘了切输入语言，一句话敲成了另一套布局。在这儿它自己会改回来。",
       "compare_header": [
         "方案",
         "适合什么时候",

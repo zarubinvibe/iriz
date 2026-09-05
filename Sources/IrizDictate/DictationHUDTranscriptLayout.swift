@@ -3,6 +3,7 @@
 // Числа живут здесь, в чистых функциях под тестом, а не в рисующем коде. У
 // геометрии плашки в этом проекте уже есть история из пяти отказов подряд, и
 // разъехаться модели с картинкой нельзя.
+import AppKit
 import CoreGraphics
 import Foundation
 
@@ -28,6 +29,17 @@ public let DICTATION_HUD_TRANSCRIPT_FOOTER_GAP: CGFloat = 8
 /// Сколько длится раскрытие плашки в панель. Столько же, сколько морф стекла:
 /// это одно движение, и разъехаться его части не имеют права.
 public let DICTATION_HUD_TRANSCRIPT_MORPH_SECONDS: TimeInterval = 0.34
+/// Сторона крестика с кольцом отсчёта в правом верхнем углу панели.
+public let DICTATION_HUD_TRANSCRIPT_CLOSE_SIZE: CGFloat = 24
+/// Полоса под крестиком. Он стоит НАД подложкой с текстом, а не поверх неё:
+/// крестик, лежащий на буквах, закрывает первое слово строки.
+public let DICTATION_HUD_TRANSCRIPT_HEADER_HEIGHT: CGFloat = 28
+/// Заливка кнопки: тёплый камень семьи, а не системная синяя.
+public let DICTATION_HUD_TRANSCRIPT_BUTTON_FILL = NSColor(srgbRed: 0.929, green: 0.894, blue: 0.827, alpha: 1)
+/// Буквы на кнопке: тёмный уголь семьи.
+public let DICTATION_HUD_TRANSCRIPT_BUTTON_INK = NSColor(srgbRed: 0.165, green: 0.153, blue: 0.141, alpha: 1)
+/// Подложка крестика: чтобы он читался и на светлом, и на тёмном.
+public let DICTATION_HUD_TRANSCRIPT_CLOSE_FILL = NSColor(srgbRed: 0.09, green: 0.086, blue: 0.078, alpha: 1)
 /// Сколько держится подтверждение «Скопировано» перед тем, как панель уйдёт.
 public let DICTATION_HUD_TRANSCRIPT_COPIED_SECONDS: TimeInterval = 0.5
 /// Подпись кнопки и её подтверждение.
@@ -50,6 +62,7 @@ public func dictationHUDTranscriptSize(lineCount: Int,
     // текстом, просвет, строка с кнопкой, поле. Раньше высота считалась без
     // подложки и без кнопки, и текст упирался в кромку стекла.
     let height = DICTATION_HUD_TRANSCRIPT_PADDING * 2
+        + DICTATION_HUD_TRANSCRIPT_HEADER_HEIGHT
         + DICTATION_HUD_TRANSCRIPT_CARD_INSET * 2
         + textHeight
         + DICTATION_HUD_TRANSCRIPT_FOOTER_GAP

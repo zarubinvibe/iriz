@@ -1,3 +1,4 @@
+import IrizCore
 import AppKit
 import SwiftUI
 import IrizDictate
@@ -46,7 +47,7 @@ struct MenuContentView: View {
     /// Куда ведёт стрелка вниз. Порядок совпадает с порядком на экране —
     /// иначе клавиатурная навигация читается как случайная.
     private enum FocusTarget: Hashable {
-        case permissions, mode, layout, dictation, history, welcome, settings, quit
+        case permissions, mode, layout, dictation, meeting, history, welcome, settings, quit
     }
 
     @State private var chrome = MenuPanelChrome()
@@ -119,12 +120,12 @@ struct MenuContentView: View {
                     .frame(width: 7, height: 7)
                     .accessibilityHidden(true)
                 Text(state.heroTitle).font(.system(size: 17, weight: .semibold))
-                    + Text(state.heroDetail).font(.system(size: 17)).foregroundStyle(.secondary)
+                    + Text(state.heroDetail).font(.system(size: 17)).foregroundStyle(IRIZ_SUBTLE)
             }
 
             Text(state.statsLine)
                 .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
         }
         .padding(.horizontal, 6)
         .padding(.bottom, 3)
@@ -203,10 +204,10 @@ struct MenuContentView: View {
             HStack(spacing: 8) {
                 Text("Речь → промпт")
                 Spacer(minLength: 8)
-                Text(prompt).foregroundStyle(.tertiary)
+                Text(prompt).foregroundStyle(IRIZ_SUBTLE)
             }
             .font(.system(size: 11))
-            .foregroundStyle(.secondary)
+            .foregroundStyle(IRIZ_SUBTLE)
             .padding(.leading, 18)
             .padding(.trailing, 6)
             .padding(.top, 1)
@@ -221,7 +222,7 @@ struct MenuContentView: View {
             // мелкой серой строке: это ровно то, ради чего продукт локальный.
             Text(promptDestinationTitle)
                 .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .padding(.leading, 18)
                 .accessibilityLabel("Промпт-режим включён, \(promptDestinationTitle)")
         }
@@ -229,6 +230,16 @@ struct MenuContentView: View {
         // Окно истории — кликом, а не только по памяти о клавише. Пока строки
         // здесь не было, целая функция оставалась ненаходимой: хоткей знал
         // только тот, кто его сам себе настроил.
+        // Запись встречи - строкой в меню, а не только цветом плашки. Режим
+        // существовал и был недостижим: цвет показывал состояние, в которое
+        // нечем было войти.
+        actionRow(appDelegate.isRecordingMeeting ? "Остановить запись встречи"
+                                                 : "Записать встречу",
+                  key: nil, target: .meeting) {
+            chrome.close()
+            appDelegate.toggleMeetingRecording()
+        }
+
         actionRow("История надиктовок", key: keys.history, target: .history) {
             chrome.close()
             appDelegate.showDictationHistory()
@@ -251,7 +262,7 @@ struct MenuContentView: View {
         Text(text.uppercased())
             .font(.system(size: 10, weight: .semibold))
             .kerning(0.6)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(IRIZ_SUBTLE)
             .padding(.horizontal, 6)
             .padding(.bottom, 5)
             .accessibilityHidden(true)
@@ -266,7 +277,7 @@ struct MenuContentView: View {
             Spacer(minLength: 8)
             Text(key)
                 .font(.system(size: prominent ? 13 : 11))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 3)
@@ -355,6 +366,10 @@ struct MenuContentView: View {
             chrome.close()
             appDelegate.recheckPermissions()
             return true
+        case .meeting:
+            chrome.close()
+            appDelegate.toggleMeetingRecording()
+            return true
         case .history:
             chrome.close()
             appDelegate.showDictationHistory()
@@ -384,6 +399,7 @@ private struct MenuActionRow: View {
     let action: () -> Void
 
     @State private var hovering = false
+    @Namespace private var menuSelection
     @Environment(\.isFocused) private var focused
 
     var body: some View {
@@ -407,26 +423,30 @@ private struct MenuActionRow: View {
                 if let key {
                     Text(key)
                         .font(.system(size: 13))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                         .lineLimit(1)
                 }
             }
             .padding(.horizontal, 6)
             .padding(.vertical, 4)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .fill(highlight)
-            )
             .contentShape(Rectangle())
+            // Подсветка канона: тонированное стекло вместо плоской заливки со
+            // своим радиусом 5. Наведение оставлено краской - стекло на каждой
+            // строке под курсором было бы перебором.
+            .background {
+                if hovering && !focused {
+                    RoundedRectangle(cornerRadius: IRIZ_SELECTION_RADIUS, style: .continuous)
+                        .fill(Color.primary.opacity(0.09))
+                }
+            }
+            .irizSelected(focused, in: menuSelection, group: "menu")
         }
-        .buttonStyle(.plain)
+        // Отклик на нажатие: без него строка меню кажется картинкой.
+        .buttonStyle(IrizPressStyle())
         .focusable()
         .onHover { hovering = $0 }
     }
 
-    private var highlight: Color {
-        if focused { return Color.primary.opacity(0.16) }
-        return hovering ? Color.primary.opacity(0.09) : Color.clear
-    }
+
 }

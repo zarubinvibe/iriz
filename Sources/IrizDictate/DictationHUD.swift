@@ -604,6 +604,12 @@ func dictationHUDVisual(for stage: DictationHUDStage) -> DictationHUDVisual {
     case .listening(.translation):
         return .init(form: .waveform, accent: .violet,
                      mark: .none, flow: .forward, halo: .even)
+    case .listening(.meeting):
+        // Оранжевый и бегущий ореол: цвет записи, который ни с чем в продукте
+        // не спутать. Красный занят диктовкой, а «идёт запись встречи» обязано
+        // читаться одним взглядом через всю комнату.
+        return .init(form: .waveform, accent: .orange,
+                     mark: .none, flow: .symmetric, halo: .traveling)
     case .recognizing:
         return .init(form: .processing, accent: .blue)
     case .buildingPrompt:
@@ -905,6 +911,11 @@ func dictationHUDTitle(for stage: DictationHUDStage) -> String {
         return "слушаю для промпта"
     case .listening(.translation):
         return "слушаю для перевода"
+    case .listening(.meeting):
+        // Цвет и ореол видит зрячий. Голосовому доступу режим тоже положен:
+        // иначе запись встречи от диктовки на слух не отличить, а разница
+        // между ними - сохранённый звук.
+        return "записываю встречу"
     case .recognizing:
         return "распознаю"
     case .buildingPrompt:

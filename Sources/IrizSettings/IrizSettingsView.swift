@@ -13,55 +13,6 @@ private let HOTKEY_BUTTON_WIDTH: CGFloat = 150
 /// в строке подписей, иначе шапка съезжает относительно полей.
 private let CORRECTION_TRASH_WIDTH: CGFloat = 22
 
-/// Стеклянные плиты секций вместо системных непрозрачных.
-///
-/// Отдельным модификатором, а не строкой в теле: правило одно на все секции, и
-/// повторить его девять раз значит однажды забыть в десятой.
-/// Одна плита стекла. Тот же материал, что у секций формы: два разных стекла
-/// в одном окне разъезжаются по виду, а глубина стекла в этом окне ровно одна.
-struct GlassPlate: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-        } else {
-            content.background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-        }
-    }
-}
-
-struct GlassSectionPlates: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            // `.interactive()` - живое стекло: оно откликается на указатель
-            // движением самой линзы, а не подсветкой поверх. Анимацию ведёт
-            // система по положению курсора, а не наш таймер.
-            //
-            // `.regular`, а не `.clear`. Прозрачное стекло поверх прозрачного
-            // окна пропускало чужой текст насквозь: настройки открывают ПОВЕРХ
-            // работы, и на кадре 05.09.2026 сквозь плиту читался чужой чат, а
-            // своё - нет. Матовость, на которую владелец жаловался раньше,
-            // приходила от ДВУХ слоёв стекла по глубине; здесь слой один, под
-            // ним вуаль, и прозрачность видна по краям и в движении линзы.
-            content.listRowBackground(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.clear)
-                    .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 12))
-            )
-        } else {
-            // На младших системах стекла нет. Полупрозрачный материал - честное
-            // приближение; подделывать стекло заливкой значит соврать про то,
-            // чего система не умеет.
-            content.listRowBackground(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-        }
-    }
-}
-
 @MainActor
 public struct IrizSettingsView: View {
     @StateObject private var model: SettingsModel
@@ -71,36 +22,108 @@ public struct IrizSettingsView: View {
     @State private var transferMessage: String?
     @State private var transferFailed = false
     @State private var appProfileMessage: String?
-    @State private var page: SettingsPage = .keys
+    @State private var page: SettingsPage
+    @State private var languageChoice: IrizLanguage = irizLanguageChoice()
+    @State private var fileQueue: [IrizDropItem] = []
+    @State private var meetingQueue: [IrizDropItem] = []
+    @State private var meetingProgress: String?
+    @State private var meetingReport: String?
+    @State private var meetingFailed = false
     @State private var diskEntries: [DiskUsageEntry] = []
     @State private var diskCounting = false
+    @State private var historyEntries: [DictationHistoryEntry] = []
+    @State private var historyQuery = ""
+    @Namespace private var sidebarGlass
+    /// Система гасит свою анимацию, но не наш `withAnimation` - морф стекла
+    /// приходится гейтить руками (правило M07 линтера).
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(preview: Bool = false) {
+    public init(preview: Bool = false, page: SettingsPage = .keys) {
         _model = StateObject(wrappedValue: SettingsModel(preview: preview))
+        _page = State(initialValue: page)
     }
 
     public var body: some View {
-        NavigationSplitView {
-            List(SettingsPage.allCases, selection: $page) { item in
-                // Значков в боковике нет намеренно. Готовые системные глифы -
-                // чужой набор, а свой рисуется отдельной работой; строка без
-                // значка честнее строки с заимствованным.
-                Text(item.title).tag(item)
-            }
-            .navigationSplitViewColumnWidth(min: 190, ideal: 200, max: 240)
-        } detail: {
-            VStack(spacing: 0) {
+        glassScene
+    }
+
+    /// Общего `GlassEffectContainer` здесь НЕТ, и это измеренное решение.
+    ///
+    /// Линтер скилла требует контейнер на соседние стекла (правило G10), и по
+    /// букве он прав: без общей области сэмплирования поверхности не видят
+    /// друг друга. Но фон окна и плиты - не соседи, а слои: плита лежит НА
+    /// фоне. Контейнер их объединил, и прибор показал цену сразу: пропускание
+    /// боковика поднялось с 0.418 до 0.622 при фоне 0.678, то есть плита
+    /// растворилась в фоне и разница между поверхностями пропала.
+    ///
+    /// Правило написано про соседние элементы одного слоя. Слои им не
+    /// объединяют.
+    @ViewBuilder
+    private var glassScene: some View {
+        sceneBody
+    }
+
+    private var sceneBody: some View {
+        // Своя раскладка вместо NavigationSplitView, и это вынужденно.
+        //
+        // Колонка боковика у разделённого вида несёт СОБСТВЕННЫЙ непрозрачный
+        // материал, и снять его нечем: он живёт в NSSplitViewItem ниже SwiftUI.
+        // Прибор показал цену прямо: пропускание боковика 0.078 против 0.281 у
+        // страницы в том же окне - колонка была глухой стеной внутри стекла.
+        // Прошлая попытка гасить материал обходом дерева видов была и мёртвой,
+        // и запрещённой: справочник Apple прямо велит не подкладывать свои фоны
+        // под боковик разделённого вида. Значит разделённого вида здесь нет.
+        //
+        // Цена решения названа вслух: пропала системная кнопка сворачивания
+        // боковика. Окно 980 pt, скрывать колонку не за чем.
+        ZStack(alignment: .topLeading) {
+            let inset = IrizGlassBackdrop.plateInset
+            let leftGutter = IrizGlassBackdrop.sidebarWidth + inset * 2
+            let bottomGutter = IrizGlassBackdrop.footerHeight + inset * 2
+
+            // Плита содержимого. Владелец: «такая же плашка под текстом, то,
+            // что в основном меню справа» - центральная часть живёт на своей
+            // поверхности, как боковик и низ.
+            // Плита по ВЫСОТЕ ТЕКСТА, а не во весь размер окна. Прокрутка
+            // снята с самой формы и вынесена наружу: иначе форма растягивается
+            // на всю доступную высоту, и под коротким списком остаётся
+            // полплиты пустого стекла.
+            ScrollView {
                 pageBody
-                footerBar
+                    .scrollDisabled(true)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // Страница не подменяется рывком: уходит прозрачностью и
+                    // коротким сдвигом вниз. Сдвиг маленький (6 pt) - смысл в
+                    // направлении, а не в поездке.
+                    .id(page)
+                    .transition(.opacity.combined(with: .offset(y: 6)))
+                    .animation(reduceMotion ? nil : Animation.irizEaseOut, value: page)
+                    .background(IrizFloatingPlate())
             }
-            // Вуаль кладётся ИМЕННО на правую колонку. Фон под самим
-            // NavigationSplitView до неё не доходит: колонки рисуют себя сами,
-            // и правая оставалась насквозь прозрачной - сквозь пустое место
-            // под формой читалось чужое окно.
-            .background(settingsGlassBackdrop)
+            .scrollContentBackground(.hidden)
+            .padding(.leading, leftGutter)
+            .padding(.trailing, inset)
+            .padding(.top, inset)
+            .padding(.bottom, bottomGutter)
+
+            // Плавающий боковик.
+            sidebar
+                .frame(width: IrizGlassBackdrop.sidebarWidth)
+                .background(IrizFloatingPlate())
+                .padding(.leading, inset)
+                .padding(.vertical, inset)
+
+            // Плавающая нижняя полоса.
+            VStack {
+                Spacer()
+                footerBar
+                    .background(IrizFloatingPlate())
+                    .padding(.leading, leftGutter)
+                    .padding([.trailing, .bottom], inset)
+            }
         }
         .frame(minWidth: 900, minHeight: 620)
-        .background(settingsGlassBackdrop)
+        .background(IrizGlassBackdrop())
         .navigationTitle("Настройки \(IRIZ_NAME)")
         .alert("Сбросить настройки?", isPresented: $showResetConfirmation) {
             Button("Сбросить", role: .destructive) {
@@ -112,12 +135,81 @@ public struct IrizSettingsView: View {
         }
     }
 
+    /// Боковик со стеклянной капсулой выбора.
+    ///
+    /// Своя раскладка вместо `List`: системная подсветка - сплошная плашка, а
+    /// нужна одна капсула стекла, которая ПЕРЕЕЗЖАЕТ с пункта на пункт. Так
+    /// сделаны вкладки часов на iOS: стекло не гаснет и не зажигается заново,
+    /// оно переносится, а по кромке идёт преломление.
+    private var sidebar: some View {
+        ScrollView {
+            if #available(macOS 26.0, *) {
+                // Контейнер обязателен: без него капсулам нечем переливаться
+                // друг в друга, и каждая рисуется сама по себе.
+                GlassEffectContainer(spacing: 6) { sidebarRows }
+            } else {
+                sidebarRows
+            }
+        }
+        .scrollContentBackground(.hidden)
+    }
+
+    private var sidebarRows: some View {
+        VStack(spacing: 2) {
+            ForEach(SettingsPage.allCases) { item in
+                sidebarRow(item)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+    }
+
+    @ViewBuilder
+    private func sidebarRow(_ item: SettingsPage) -> some View {
+        let selected = page == item
+        Button {
+            // Пружина, а не кривая: переезд стекла - движение вещи, и оно
+            // должно доезжать с весом. Отскок маленький, иначе меню играет.
+            // Пресет вместо магических чисел: `.snappy` и есть «доехать с весом,
+            // без игры» (правило M02 линтера).
+            withAnimation(reduceMotion ? nil : .irizMove) {
+                page = item
+            }
+        } label: {
+            Label {
+                Text(item.title)
+            } icon: {
+                // Значки свои, из набора продукта: одна сетка, одна толщина
+                // штриха, одно скругление. Разнобой видно раньше, чем сами
+                // фигуры.
+                IrizGlyphView(item.glyph, size: 16)
+            }
+            // Белый цвет подписи прибит был напрасно: на тонированном стекле
+            // подложка просвечивает, и системный цвет остаётся читаемым.
+            .foregroundStyle(Color.primary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .contentShape(Rectangle())
+            // Стекло вешается НА строку, а не подкладывается фоном. Фоном оно
+            // уходит в общий слой контейнера и закрывает собой текст: строка
+            // исчезает, остаётся цветная капсула.
+            .irizSelected(selected, in: sidebarGlass, group: "sidebar")
+        }
+        .buttonStyle(IrizPressStyle())
+        .accessibilityAddTraits(selected ? [.isSelected] : [])
+    }
+
     /// Содержимое одной страницы. Секции остались теми же: резалась портянка,
     /// а не переписывались настройки.
     @ViewBuilder
     private var pageBody: some View {
         Form {
             switch page {
+            case .history: historySection
+            case .language: languageSection
+            case .files: filesSection
+            case .meetings: meetingsSection
             case .keys: hotkeysSection
             case .layout: layoutSection
             case .dictation: behaviorSection
@@ -138,7 +230,6 @@ public struct IrizSettingsView: View {
         // Системная плита `.grouped` рисуется непрозрачной, и её приходится
         // снимать явно: `.scrollContentBackground(.hidden)` убирает только фон
         // прокрутки, но не подложки под каждой секцией.
-        .modifier(GlassSectionPlates())
         // Своя подложка формы убирается: под ней стекло, и серая плита формы
         // закрыла бы ровно то, ради чего стекло и заводилось.
         .scrollContentBackground(.hidden)
@@ -155,7 +246,7 @@ public struct IrizSettingsView: View {
                     .accessibilityLabel("Ошибка настроек: \(message)")
             } else if let statusMessage {
                 Text(statusMessage)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel(statusMessage)
             }
 
@@ -164,6 +255,9 @@ public struct IrizSettingsView: View {
             Button("Сбросить к заводским", role: .destructive) {
                 showResetConfirmation = true
             }
+            // Стекло и здесь: рядом со стеклянной «Сохранить» системная серая
+            // таблетка читалась как чужая деталь из другого окна.
+            .modifier(GlassButton())
             .accessibilityLabel("Сбросить все настройки к заводским")
 
             Button("Сохранить") {
@@ -177,17 +271,11 @@ public struct IrizSettingsView: View {
             .disabled(!model.canSave)
             .accessibilityLabel("Сохранить настройки")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        // Своя плита под строкой: без неё кнопки висят прямо над тем, что за
-        // окном, и читаются как чужие.
-        .background {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.clear)
-                .modifier(GlassPlate())
-        }
         .padding(.horizontal, 20)
-        .padding(.bottom, 16)
+        .padding(.vertical, 12)
+        // Нижняя полоса - матовое стекло: под кнопками и текстом блик мешал бы
+        // читать, а прозрачность при этом сохраняется.
+        .frame(height: IrizGlassBackdrop.footerHeight)
     }
 
     /// Кнопка на стекле там, где стекло есть.
@@ -201,7 +289,26 @@ public struct IrizSettingsView: View {
     struct GlassProminentButton: ViewModifier {
         func body(content: Content) -> some View {
             if #available(macOS 26.0, *) {
-                content.buttonStyle(.glassProminent)
+                // `.glass` с тоном, а не `.glassProminent`. Prominent заливает
+                // кнопку акцентом целиком, и в стеклянном окне она осталась
+                // единственным глухим пятном - владелец назвал её «глухой
+                // синей». Главной кнопку делает тон и вес подписи, а не заливка.
+                // Тон тот же, что у капсулы выбора: смешанный с фоном акцент.
+                // Чистый `Color.accentColor` даёт стеклу полную насыщенность, и
+                // кнопка снова читается сплошной заливкой - владелец назвал
+                // такую «глухой синей».
+                // Тона нет вовсе. Замер кадром: и `.glassProminent`, и `.glass`
+                // с тоном рисуют сплошную заливку - стекло под цветом не
+                // читается ни при какой насыщенности. Владелец назвал такую
+                // кнопку «глухой синей», а он просил прозрачное во всех
+                // элементах.
+                //
+                // Главной кнопку теперь делает ВЕС подписи и то, что она ловит
+                // Enter. Цветом главное больше не называется - в стеклянном
+                // окне цвет и есть та самая глухая заплата.
+                content
+                    .buttonStyle(.glass)
+                    .fontWeight(.semibold)
             } else {
                 content.buttonStyle(.borderedProminent)
             }
@@ -224,26 +331,12 @@ public struct IrizSettingsView: View {
     /// применён для плашки записи: стекло берётся настоящее там, где оно есть,
     /// и не имитируется там, где его нет.
     @ViewBuilder
-    private var settingsGlassBackdrop: some View {
-        // Вуаль, а не второе стекло. История места такая.
-        //
-        // Сначала здесь лежал сплошной слой `.regular` во всё окно, и из-за
-        // него всё остальное выходило матовым: стекло на стекле складывается.
-        // Владелец сказал прямо: «мне нужно прозрачное». Слой убрали совсем, и
-        // окно стало по-настоящему прозрачным.
-        //
-        // Но прозрачное насквозь окно читается только на спокойных обоях. На
-        // чужом окне с текстом - а настройки открывают поверх работы - сквозь
-        // плиты просвечивал чужой текст, и своё читать было нельзя. Снято
-        // кадром 05.09.2026.
-        //
-        // Вуаль решает это, не возвращая матовость: она не стекло, слоёв
-        // стекла по глубине по-прежнему один - плиты. Прозрачность остаётся,
-        // но фон за ней приглушён, и буквы своего окна выигрывают у чужих.
-        Color(nsColor: .windowBackgroundColor)
-            .opacity(0.82)
-            .ignoresSafeArea()
-    }
+    // Указание Apple, от которого мы сознательно ушли:
+    // «Reduce your use of custom backgrounds… Prefer to remove custom effects
+    // and let the system determine the background appearance, especially for
+    // split views, tab bars, and toolbars». Разделённый вид сам живёт в слое
+    // Liquid Glass, и всё, что я подкладывал под него - вуаль, размытие,
+    // сплошное стекло, - системе мешало. Три попытки прошли мимо именно так.
 
     // MARK: - Кирпичи вида
 
@@ -278,7 +371,7 @@ public struct IrizSettingsView: View {
         } label: {
             Text("Подробнее")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
         }
         .accessibilityLabel("Подробное пояснение к секции")
     }
@@ -315,7 +408,7 @@ public struct IrizSettingsView: View {
             if let note = model.agentAdapter.configurationNote {
                 Label(note, systemImage: "exclamationmark.circle")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Важно про этого агента: \(note)")
             }
 
@@ -329,7 +422,7 @@ public struct IrizSettingsView: View {
 
             if let path = model.detectedAgentPath {
                 Label("Найден: \(path)", systemImage: "checkmark.circle.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .textSelection(.enabled)
                     .accessibilityLabel("Агент найден. \(path)")
             } else {
@@ -356,7 +449,7 @@ public struct IrizSettingsView: View {
                         .accessibilityLabel("Аргументы своего CLI, по одному в строке")
                     Text("Подстановки: {prompt} — текст промпта отдельным аргументом. Без {prompt} промпт уходит в стандартный ввод. Командная строка не собирается из строк, поэтому кавычки не нужны.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                         .accessibilityLabel("Подстановка {prompt} передаёт текст отдельным аргументом. Без неё промпт уходит в стандартный ввод. Кавычки не нужны")
                 }
             }
@@ -371,7 +464,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Parakeet быстрее в 11-15 раз, но транслитерирует английские термины внутри русской фразы: git rebase слышится как «гид репейс». Whisper large-v3 берет их латиницей (19 процентов ошибок на смешанной речи против 44), зато надиктовка в полминуты ждет расшифровки около 16 секунд. Оба считают на этом Маке, наружу не уходит ничего.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
             }
 
             Picker("Исполнитель промпта", selection: $model.promptRecipient) {
@@ -384,7 +477,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Этот режим необязателен. Промпт собирает выбранный агент, а профиль готовит текст для того, кто будет промпт исполнять. Пустое поле пути включает автопоиск. Обычная диктовка работает локально всегда; расшифровку наружу отдаёт только промпт-режим и только выбранному агенту. Ollama — единственный вариант, который не отправляет ничего: он считает на этом Маке. Готовый промпт вставляется без отправки, а качество проверяется здесь же — утверждение без дословной опоры на надиктовку отклоняется независимо от того, какой агент его сочинил.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Промпт-режим необязателен. Промпт собирает выбранный агент, профиль готовит текст для исполнителя. Пустое поле пути включает автопоиск. Обычная диктовка всегда локальна. Расшифровку отдаёт только промпт-режим и только выбранному агенту. Ollama считает на этом Маке и не отправляет ничего. Готовый промпт вставляется без отправки, а утверждение без дословной опоры на надиктовку отклоняется независимо от агента")
             }
         } header: {
@@ -415,7 +508,7 @@ public struct IrizSettingsView: View {
                     Text("До \(PROMPT_GUIDANCE_INSTRUCTIONS_MAX) символов. Это предпочтение по ФОРМЕ, "
                          + "а не право выдумывать факты: запреты контракта сильнее.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                 }
 
                 ForEach(Array(model.promptGuidanceExamples.indices), id: \.self) { index in
@@ -423,7 +516,7 @@ public struct IrizSettingsView: View {
                         HStack(spacing: 8) {
                             Text("Пример \(index + 1)")
                                 .font(.callout)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(IRIZ_SUBTLE)
                             Spacer(minLength: 8)
                             Button(role: .destructive) {
                                 model.removePromptExample(at: index)
@@ -450,7 +543,7 @@ public struct IrizSettingsView: View {
                 } else {
                     Text("Примеров хватит: больше \(PROMPT_GUIDANCE_EXAMPLES_MAX) уже не учат форме, а диктуют содержание.")
                         .font(.footnote)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                 }
             } header: {
                 sectionHeader(.promptGuidance)
@@ -478,7 +571,7 @@ public struct IrizSettingsView: View {
         Section {
             if model.appProfiles.isEmpty {
                 Text("Список пуст — промпт для любого приложения собирается по профилю выше.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Список приложений пуст, работает профиль по умолчанию")
             }
 
@@ -488,7 +581,7 @@ public struct IrizSettingsView: View {
                         Text(applicationTitle(model.appProfiles[index].bundleID))
                         Text(model.appProfiles[index].bundleID)
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(IRIZ_SUBTLE)
                     }
                     Spacer(minLength: 8)
                     Picker("", selection: appProfileBinding(at: index)) {
@@ -518,14 +611,14 @@ public struct IrizSettingsView: View {
             if let appProfileMessage {
                 Label(appProfileMessage, systemImage: "info.circle")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel(appProfileMessage)
             }
 
             settingsNote {
                 Text("Диктуете в редактор кода — промпт собирается для Codex, диктуете в почту — универсальный. \(IRIZ_NAME) смотрит только на то, какое приложение сейчас спереди: ни окно, ни поле, ни текст чужой программы не читаются. Приложение спрашивается один раз, в момент нажатия, и сразу забывается — на диск и в журнал уходит выбранный профиль, а не имя программы. Приложений, которых нет в списке, это не касается: им достаётся профиль по умолчанию.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Профиль выбирается по приложению, которое спереди в момент нажатия. Окно, поле и текст чужой программы не читаются. Приложение спрашивается один раз и сразу забывается: на диск и в журнал уходит профиль, а не имя программы. Приложениям вне списка достаётся профиль по умолчанию")
             }
         } header: {
@@ -639,7 +732,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Переливы — три тона вокруг цвета режима. Спокойная — те же тона, но разлёт вдвое уже. Монохром — без переливов вовсе. Цвет режима палитра не меняет: обычная диктовка остаётся тёплой, промпт — холодным, иначе по плашке было бы не видно, что именно записывается.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Переливы: три тона вокруг цвета режима. Спокойная: те же тона, разлёт вдвое уже. Монохром: без переливов. Цвет режима палитра не меняет — диктовка остаётся тёплой, промпт холодным")
             }
         } header: {
@@ -675,7 +768,7 @@ public struct IrizSettingsView: View {
             // начинает работать. Осталась одна.
             Text("Сочетание применяется сразу после сохранения. Отмена переключения — то же сочетание конвертации ещё раз.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .accessibilityLabel("Сочетание применяется сразу после сохранения. Отмена переключения - то же сочетание конвертации ещё раз")
         } header: {
             sectionHeader(.hotkeys)
@@ -699,7 +792,7 @@ public struct IrizSettingsView: View {
 
             Text(model.layoutMode.explanation)
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .accessibilityLabel("Что делает режим \(model.layoutMode.title): \(model.layoutMode.explanation)")
         } header: {
             sectionHeader(.layout)
@@ -718,8 +811,26 @@ public struct IrizSettingsView: View {
                         .frame(width: 72)
                         .multilineTextAlignment(.trailing)
                         .accessibilityLabel("Задержка Enter в миллисекундах")
-                    Text("мс").foregroundStyle(.secondary)
+                    Text("мс").foregroundStyle(IRIZ_SUBTLE)
                 }
+            }
+
+            Picker("Чистить речь", selection: $model.speechCleanupMode) {
+                ForEach(SpeechCleanupMode.allCases, id: \.self) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .accessibilityLabel("Где чистится речь")
+
+            // Предупреждение показывается ДО отправки, а не после: оно и есть
+            // то согласие, о котором говорил владелец. Живёт ровно там, где
+            // текст уходит с машины, и приходит из самого режима - список
+            // режимов и список предупреждений не могут разъехаться.
+            if let warning = model.speechCleanupMode.warning {
+                Label(warning, systemImage: "exclamationmark.triangle.fill")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .accessibilityLabel("Предупреждение: \(warning)")
             }
 
             Picker("После вставки", selection: $model.pasteSuffix) {
@@ -741,7 +852,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Вставка не дошла до поля — \(IRIZ_NAME) поднимает окно с готовым текстом: скопировать или вставить ещё раз, Esc — закрыть. Когда сработал запасной прямой ввод, окна не будет: там текст, скорее всего, уже в поле, и предлагать вставить его второй раз опаснее, чем промолчать.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Если вставка не дошла до поля, \(IRIZ_NAME) показывает окно с готовым текстом: скопировать или вставить ещё раз, Esc закрывает. При запасном прямом вводе окно не поднимается: текст скорее всего уже в поле")
             }
         } header: {
@@ -753,7 +864,7 @@ public struct IrizSettingsView: View {
         Section {
             if model.corrections.isEmpty {
                 Text("Замен пока нет.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Словарь замен пуст")
             } else {
                 // Подписи колонок ОДИН раз. Прежде каждая строка несла свои две:
@@ -767,7 +878,7 @@ public struct IrizSettingsView: View {
                     Spacer().frame(width: CORRECTION_TRASH_WIDTH)
                 }
                 .font(.caption)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(IRIZ_SUBTLE)
                 .accessibilityHidden(true)
             }
 
@@ -777,7 +888,7 @@ public struct IrizSettingsView: View {
                         .labelsHidden()
                         .accessibilityLabel("Как распозналось, замена \(index + 1)")
                     Image(systemName: "arrow.right")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(IRIZ_SUBTLE)
                         .accessibilityHidden(true)
                     TextField("На что менять", text: correctionReplacement(at: index))
                         .labelsHidden()
@@ -807,7 +918,7 @@ public struct IrizSettingsView: View {
         Section {
             if model.snippets.isEmpty {
                 Text("Заготовок пока нет.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Список заготовок пуст")
             }
 
@@ -839,7 +950,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Произнесённая фраза заменяется сохранённым текстом — так вставляются шапки, реквизиты и стандартные формулировки. Совпадение точное и по границам слова: «иск» внутри «иска» не сработает, регистр значения не имеет. Заготовки и словарь замен подставляются одним проходом, поэтому текст заготовки словарь уже не переписывает. Сырая расшифровка на диске остаётся нетронутой, а промпт-режим заготовок не видит вовсе.")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Произнесённая фраза заменяется сохранённым текстом: шапки, реквизиты, стандартные формулировки. Совпадение точное и по границам слова, регистр не важен. Заготовки и словарь подставляются одним проходом, текст заготовки словарь не переписывает. Сырая расшифровка на диске не меняется, промпт-режим заготовок не видит")
             }
         } header: {
@@ -872,7 +983,7 @@ public struct IrizSettingsView: View {
             settingsNote {
                 Text("Файл — обычный JSON, его можно открыть и поправить руками. Это единственная копия словаря: всё остальное живёт в настройках системы и исчезает вместе с ними. При импорте совпавшие по фразе записи берутся из файла, а те, которых в файле нет, остаются на месте — импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи: половина восстановленного словаря хуже честного отказа. Импортированное попадает в настройки после кнопки «Сохранить».")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel("Файл — обычный JSON, его можно поправить руками. Это единственная копия словаря. При импорте совпавшие по фразе записи берутся из файла, остальные остаются на месте, импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи. Импортированное попадает в настройки после кнопки Сохранить")
             }
         } header: {
@@ -929,7 +1040,7 @@ public struct IrizSettingsView: View {
                 Text(diskCounting
                      ? "Считаю…"
                      : "Пока ничего не занято: ни модели, ни надиктовок на диске нет.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(IRIZ_SUBTLE)
             } else {
                 ForEach(diskEntries) { entry in
                     HStack(alignment: .firstTextBaseline, spacing: 12) {
@@ -937,12 +1048,12 @@ public struct IrizSettingsView: View {
                             Text(entry.title)
                             Text(entry.note)
                                 .font(.footnote)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(IRIZ_SUBTLE)
                         }
                         Spacer()
                         Text(diskUsageSizeText(entry.bytes))
                             .monospacedDigit()
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(IRIZ_SUBTLE)
                         Button("Показать") {
                             NSWorkspace.shared.activateFileViewerSelecting([entry.url])
                         }
@@ -962,7 +1073,7 @@ public struct IrizSettingsView: View {
                  + "а кнопка «очистить», нажатая не глядя, стоит дороже сэкономленного "
                  + "гигабайта. Чистка живёт там, где видно, что именно чистишь, - в окне истории.")
                 .font(.footnote)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(IRIZ_SUBTLE)
         } header: {
             Text("Место на диске")
         }
@@ -972,6 +1083,228 @@ public struct IrizSettingsView: View {
             let found = await Task.detached(priority: .utility) { diskUsageEntries() }.value
             diskEntries = found
             diskCounting = false
+        }
+    }
+
+    /// Язык интерфейса. Отдельной страницей и первой: человек, открывший
+    /// настройки на незнакомом языке, ищет именно ее.
+    private var languageSection: some View {
+        Section {
+            Picker("Язык интерфейса", selection: $languageChoice) {
+                ForEach(IrizLanguage.allCases, id: \.self) { language in
+                    Text(language == .auto
+                         ? "\(language.ownName) (\(irizResolvedLanguage(choice: .auto, systemPreferred: Locale.preferredLanguages).ownName))"
+                         : language.ownName)
+                        .tag(language)
+                }
+            }
+            .pickerStyle(.inline)
+            .onChange(of: languageChoice) { _, choice in
+                setIrizLanguageChoice(choice)
+                statusMessage = "Язык сменится после перезапуска."
+            }
+
+            Text("«Авто» берет язык системы. Выбор руками старше системного: "
+                 + "macOS может быть на английском, а интерфейс вам нужен русский.\n\n"
+                 + "Смена языка вступает в силу после перезапуска приложения: "
+                 + "тексты собираются один раз при старте.")
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+        } header: {
+            Text("Язык")
+        }
+    }
+
+    /// Расшифровка файлов: бросил запись - получил текст рядом с ней.
+    private var filesSection: some View {
+        Section {
+            IrizDropZone(title: "Перенесите записи сюда",
+                         subtitle: "Диктофон, звонок, экспорт из встречи. Текст ляжет рядом с файлом.",
+                         extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
+                enqueue(urls, into: $fileQueue)
+            }
+            ForEach(fileQueue) { item in
+                IrizDropRow(item: item) { fileQueue.removeAll { $0.id == item.id } }
+            }
+            Text("Расшифровка идёт на этом Маке тем же движком, что и диктовка. "
+                 + "Звук никуда не отправляется, а сам файл остаётся там, где лежал.")
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+        } header: {
+            Text("Расшифровка файлов")
+        }
+    }
+
+    /// Встречи и заседания: тот же перенос, но звук СОХРАНЯЕТСЯ.
+    /// История надиктовок в главном окне.
+    ///
+    /// Владелец просил одно место: «не сверху просто через плашку, а
+    /// непосредственно основная история для всех настроек, для просмотра
+    /// предыдущих моих диктовок». Отдельная плавающая панель истории остаётся
+    /// для быстрого доступа с клавиши, но искать прошлую надиктовку человек
+    /// приходит сюда, где уже лежит всё остальное.
+    ///
+    /// Вставки в поле здесь нет намеренно: фокус принадлежит этому окну, и
+    /// «вставить» означало бы вставить в него же. Копирование есть.
+    private var historySection: some View {
+        Section {
+            if historyEntries.isEmpty {
+                Text("Пока пусто. Надиктованное появится здесь.")
+                    .foregroundStyle(IRIZ_SUBTLE)
+            } else {
+                // Системная оправа `.roundedBorder` рисуется непрозрачной
+                // коробкой: в стеклянном окне она читается как дырка. Своя
+                // оправа - то же стекло, что у плит, только тоньше.
+                HStack(spacing: 8) {
+                    IrizGlyphView(.history, size: 13)
+                        .foregroundStyle(IRIZ_SUBTLE)
+                    TextField("Поиск по надиктовкам", text: $historyQuery)
+                        .textFieldStyle(.plain)
+                        .accessibilityLabel("Поиск по надиктовкам")
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(IrizSearchFieldPlate())
+
+                ForEach(filteredDictationHistory(historyEntries, query: historyQuery)) { entry in
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(dictationHistoryPreview(entry.displayText))
+                            .lineLimit(3)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 6) {
+                            Text(dictationHistoryTimeLabel(entry.label))
+                            Text("·")
+                            Text("\(entry.displayText.count) симв.")
+                        }
+                        .font(.footnote)
+                        .foregroundStyle(IRIZ_SUBTLE)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .contextMenu {
+                        Button("Копировать") { copyHistory(entry) }
+                    }
+                }
+            }
+        } header: {
+            Text("История надиктовок")
+        }
+        .onAppear { loadHistory() }
+    }
+
+    private func loadHistory() {
+        // Читается с диска при каждом открытии страницы, а не держится в
+        // памяти: диктовки пишутся другим процессом окна, и кэш разъехался бы
+        // с диском ровно тогда, когда владелец ищет только что сказанное.
+        historyEntries = (try? dictationHistoryEntries(in: DictationStore.dictationsDirectory())) ?? []
+    }
+
+    private func copyHistory(_ entry: DictationHistoryEntry) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(entry.displayText, forType: .string)
+        statusMessage = "Скопировано в буфер обмена."
+    }
+
+    private var meetingsSection: some View {
+        Section {
+            IrizDropZone(title: "Перенесите запись встречи",
+                         subtitle: "Запись заседания или созвона. Рядом ляжет протокол.",
+                         extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
+                enqueue(urls, into: $meetingQueue)
+            }
+            ForEach(meetingQueue) { item in
+                IrizDropRow(item: item) { meetingQueue.removeAll { $0.id == item.id } }
+            }
+
+            if !meetingQueue.isEmpty {
+                Button("Разобрать записи") { runMeetings() }
+                    .modifier(GlassProminentButton())
+                    .disabled(meetingProgress != nil)
+                    .accessibilityLabel("Разобрать записи встреч")
+            }
+
+            if let meetingProgress {
+                // Ход показывается словами, а не полосой: у часовой записи
+                // полоса врёт про остаток, а название шага честно говорит,
+                // что именно сейчас происходит.
+                Label(meetingProgress, systemImage: "hourglass")
+                    .font(.footnote)
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
+
+            if let meetingReport {
+                Label(meetingReport,
+                      systemImage: meetingFailed ? "exclamationmark.triangle.fill" : "checkmark.circle")
+                    .font(.footnote)
+                    .foregroundStyle(meetingFailed ? Color.orange : IRIZ_SUBTLE)
+                    .textSelection(.enabled)
+            }
+
+            // Здесь продукт нарушает собственное правило, и молчать об этом
+            // нельзя: в диктовке звук не сохраняется никогда, а у встречи он
+            // остаётся вместе с расшифровкой. Иначе протокол нечем сверить.
+            Text("Разница с диктовкой названа прямо: у встречи сохраняется и звук, и расшифровка. "
+                 + "В обычной диктовке звук не сохраняется никогда. Файлы лежат на вашем диске "
+                 + "открытым текстом под правами 0600: шифрование диска даёт FileVault, а не приложение.")
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+        } header: {
+            Text("Встречи")
+        }
+    }
+
+    /// Прогон очереди встреч.
+    ///
+    /// Записи идут по одной, а не разом: распознавание и разделение по
+    /// говорящим забирают ANE целиком, и две записи параллельно означали бы
+    /// вдвое дольше обе, а не быстрее.
+    ///
+    /// Отказ на одной записи не отменяет остальные: владелец принёс папку, и
+    /// одна битая запись не должна стоить ему разбора всех.
+    private func runMeetings() {
+        let items = meetingQueue
+        meetingReport = nil
+        meetingFailed = false
+        Task { @MainActor in
+            let pipeline = MeetingPipeline()
+            var done = 0
+            var failures: [String] = []
+            for item in items {
+                let name = item.url.deletingPathExtension().lastPathComponent
+                meetingProgress = "\(name): читаю"
+                do {
+                    let result = try await pipeline.run(
+                        audio: item.url,
+                        title: name,
+                        progress: { step in
+                            Task { @MainActor in meetingProgress = "\(name): \(step.lowercased())" }
+                        }
+                    )
+                    done += 1
+                    meetingQueue.removeAll { $0.id == item.id }
+                    if !result.speakersResolved {
+                        // Владелец должен отличить монолог от неудавшегося
+                        // разделения: в первом случае имена расставлять не
+                        // нужно, во втором нужно.
+                        failures.append("\(name): говорящие не разобраны, протокол одной репликой")
+                    }
+                } catch {
+                    let reason = (error as? MeetingPipelineFailure)?.rawValue ?? "\(error)"
+                    failures.append("\(name): \(reason)")
+                }
+            }
+            meetingProgress = nil
+            meetingFailed = !failures.isEmpty
+            let base = done > 0 ? "Разобрано записей: \(done)." : "Разобрать не удалось."
+            meetingReport = failures.isEmpty ? base : base + " " + failures.joined(separator: "; ")
+        }
+    }
+
+    /// Положить файлы в очередь, не задваивая уже принесённые.
+    private func enqueue(_ urls: [URL], into queue: Binding<[IrizDropItem]>) {
+        for url in urls where !queue.wrappedValue.contains(where: { $0.url == url }) {
+            let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+            queue.wrappedValue.append(IrizDropItem(url: url, bytes: bytes ?? 0))
         }
     }
 
@@ -1020,6 +1353,10 @@ public struct IrizSettingsView: View {
 /// прокруткой мимо всего остального. Порядок страниц - от того, чем пользуются
 /// каждый день, к тому, что трогают раз в жизни.
 public enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
+    case history
+    case language
+    case files
+    case meetings
     case keys
     case layout
     case dictation
@@ -1032,8 +1369,32 @@ public enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
 
     public var id: String { rawValue }
 
+    /// Значок страницы из СВОЕГО набора. Готовые системные глифы - чужой
+    /// набор: они читаются как деталь macOS, а не как лицо продукта.
+    public var glyph: IrizGlyph {
+        switch self {
+        case .history: return .history
+        case .language: return .language
+        case .files: return .files
+        case .meetings: return .meetings
+        case .keys: return .keys
+        case .layout: return .layout
+        case .dictation: return .dictation
+        case .plate: return .plate
+        case .dictionary: return .dictionary
+        case .snippets: return .snippets
+        case .prompt: return .prompt
+        case .transfer: return .transfer
+        case .disk: return .disk
+        }
+    }
+
     public var title: String {
         switch self {
+        case .history: return "История"
+        case .language: return "Язык"
+        case .files: return "Расшифровка файлов"
+        case .meetings: return "Встречи"
         case .keys: return "Клавиши"
         case .layout: return "Раскладка"
         case .dictation: return "Диктовка"

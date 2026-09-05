@@ -33,9 +33,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if exportUIShotsIfRequested() { return }
         if captureHUDLiveIfRequested() { return }
         if captureUILiveIfRequested() { return }
+        if probeGlassIfRequested() { return }
         if measureHUDFirstShowIfRequested() { return }
+        exportGlyphSheetIfRequested()
         showFirstRunIfRequested()
         showSettingsIfRequested()
+        showHistoryIfRequested()
+        showLearningDemoIfRequested()
         showUndeliveredDemoIfRequested()
 
         // Настройки переезжают из домена прежнего бандла ПЕРВЫМИ - до того, как
@@ -152,6 +156,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Darwin.exit(EXIT_SUCCESS)
             } catch {
                 self.writeHUDExportError("UI live capture failed: \(error.localizedDescription)")
+                Darwin.exit(EXIT_FAILURE)
+            }
+        }
+        return true
+    }
+
+    /// `--glass-probe <папка>` - снять окно над чёрной, белой и полосатой
+    /// подложкой. Кадры не для разглядывания: их читает scripts/glass_probe.py
+    /// и выносит вердикт числом.
+    private func probeGlassIfRequested() -> Bool {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard arguments.first == "--glass-probe" else { return false }
+        let output = arguments.count == 2
+            ? URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
+            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+                .appendingPathComponent(".build", isDirectory: true)
+                .appendingPathComponent("glass-probe", isDirectory: true)
+        DispatchQueue.main.async {
+            do {
+                let shots = try probeSettingsGlass(to: output)
+                print("GLASS_PROBE files=\(shots.count) directory=\(output.path)")
+                Darwin.exit(EXIT_SUCCESS)
+            } catch {
+                self.writeHUDExportError("Glass probe failed: \(error.localizedDescription)")
                 Darwin.exit(EXIT_FAILURE)
             }
         }
@@ -275,6 +303,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         dictationController.onStateChange = { [weak self] state in
             MainActor.assumeIsolated { self?.applyDictationState(state) }
         }
+        // Плашка умеет открыть настройки, но своего окна у модуля диктовки нет
+        // и быть не должно: окно принадлежит приложению.
+        dictationController.onOpenSettings = { [weak self] in self?.openSettings() }
         dictationController.start()
         // Прогрев плашки целиком: панель, её слои, шейдер, первый кадр, шрифты
         // подсказки. Всё это собиралось в момент первого нажатия — ровно та
@@ -432,12 +463,61 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// проверить перед выпуском, и чтобы вспомнить, что там написано.
     ///
     /// Тем же путём оно откроется из меню, когда там появится пункт.
+    /// `--export-glyphs <файл>` - снять лист значков и выйти. Значок нельзя
+    /// утвердить по описанию: он читается или не читается на шестнадцати
+    /// пунктах, и видно это только на настоящем рендере.
+    private func exportGlyphSheetIfRequested() {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard let index = arguments.firstIndex(of: "--export-glyphs") else { return }
+        let next = arguments.index(after: index)
+        let path = next < arguments.count ? arguments[next] : "glyphs.png"
+        DispatchQueue.main.async {
+            do {
+                try irizWriteGlyphSheet(to: URL(fileURLWithPath: path))
+                print(path)
+                Darwin.exit(EXIT_SUCCESS)
+            } catch {
+                FileHandle.standardError.write(Data("лист значков не снят: \(error)\n".utf8))
+                Darwin.exit(EXIT_FAILURE)
+            }
+        }
+    }
+
     /// `--settings` - открыть окно настроек сразу. У приложения из строки меню
     /// окно иначе поднимается только мышью по значку, и снять его кадром для
     /// проверки нечем.
     private func showSettingsIfRequested() {
-        guard CommandLine.arguments.dropFirst().contains("--settings") else { return }
-        DispatchQueue.main.async { [weak self] in self?.openSettings() }
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard let index = arguments.firstIndex(of: "--settings") else { return }
+        // Имя страницы за флагом: любая страница обязана подниматься по
+        // команде, иначе её нельзя ни снять кадром, ни прогнать прибором.
+        let next = arguments.index(after: index)
+        let page = next < arguments.count ? SettingsPage(rawValue: arguments[next]) : nil
+        DispatchQueue.main.async { [weak self] in self?.openSettings(page: page ?? .keys) }
+    }
+
+    /// `--history` - открыть окно истории сразу.
+    ///
+    /// Без флага окно поднималось только клавишей или из меню, то есть снять
+    /// его кадром и прогнать прибором было нечем. Поверхность, которую нельзя
+    /// показать по команде, нельзя и судить: окно истории целый круг оставалось
+    /// единственной непрозрачной панелью продукта, и заметил это разбор, а не
+    /// проверка.
+    private func showHistoryIfRequested() {
+        guard CommandLine.arguments.dropFirst().contains("--history") else { return }
+        DispatchQueue.main.async { [weak self] in self?.dictationController.showHistory() }
+    }
+
+    /// `--demo-learning` - показать всплывашку обучения словаря.
+    ///
+    /// Поверхность, которую нельзя поднять по команде, нельзя и судить: она
+    /// появляется только после настоящей правки в чужом приложении, и снять
+    /// её кадром иначе нечем.
+    private func showLearningDemoIfRequested() {
+        guard CommandLine.arguments.dropFirst().contains("--demo-learning") else { return }
+        DispatchQueue.main.async {
+            dictationLearningDemoToast()
+        }
     }
 
     /// `--demo-undelivered [текст]` - поднять панель с не доехавшим текстом.
@@ -1008,49 +1088,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
 
     /// Открыть знакомство заново из меню.
+    /// Идёт ли запись встречи. Меню спрашивает, чтобы назвать строку словом
+    /// «остановить», а не показывать «записать» поверх идущей записи.
+    var isRecordingMeeting: Bool {
+        dictationController.isRecordingMeeting
+    }
+
+    /// Начать или остановить запись встречи одной строкой меню.
+    func toggleMeetingRecording() {
+        if dictationController.isRecordingMeeting {
+            dictationController.stopMeetingRecording()
+        } else {
+            dictationController.startMeetingRecording()
+        }
+    }
+
     func showWelcome() {
         firstRun.show()
     }
 
-    func openSettings() {
+    func openSettings(page: SettingsPage = .keys) {
         if let window = settingsWindow {
             NSApplication.shared.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             return
         }
-
-        // LSUIElement-приложение своих оконных сцен не имеет: MenuBarExtra — единственная.
-        // Поэтому окно поднимаем вручную поверх SwiftUI-вида.
-        let window = NSWindow(
-            // Окно шире прежнего: слева боковик со страницами, справа сама
-            // страница. В 700 pt на две колонки не помещалось ничего.
-            contentRect: NSRect(x: 0, y: 0, width: 980, height: 720),
-            // .resizable обязателен: содержимое формы выше 772 pt, и без изменения
-            // размера владелец обречён скроллить в тесном окне на большом экране.
-            // `.fullSizeContentView` - содержимое идёт ПОД строку заголовка.
-            // Без него окно с прозрачным заголовком и скрытым названием даёт
-            // пустую полосу, в которой висят три кнопки и больше ничего:
-            // владелец увидел это живьём и сказал, что похоже на поломку.
-            // Теперь стекло и содержимое доходят до верхней кромки, а кнопки
-            // плывут над ними - обычный вид современного окна macOS.
-            styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Настройки \(IRIZ_NAME)"
-        // Окно на СТЕКЛЕ: заголовок сливается с содержимым, фон окна пуст, а
-        // подложку даёт Liquid Glass под формой. Без прозрачного фона стекло
-        // сэмплировать нечего - оно ляжет на собственную серую плиту окна.
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isMovableByWindowBackground = true
-        if #available(macOS 26.0, *) {
-            window.isOpaque = false
-            window.backgroundColor = .clear
-        }
-        window.contentMinSize = NSSize(width: 900, height: 620)
-        window.contentView = NSHostingView(rootView: IrizSettingsView())
-        window.isReleasedWhenClosed = false  // иначе закрытие окна уронит приложение
+        // Окно собирает общая фабрика: прибор снимает ровно это окно, а не
+        // свою копию с другими флагами.
+        let window = makeIrizSettingsWindow(page: page)
         window.center()
         settingsWindow = window
 
@@ -1077,3 +1142,5 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 }
+
+

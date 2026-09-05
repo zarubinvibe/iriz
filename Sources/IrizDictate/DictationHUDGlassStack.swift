@@ -75,6 +75,11 @@ final class DictationHUDGlassStack: NSView {
         didSet {
             bodyContent?.wantsLayer = true
             bodyContent?.layer?.masksToBounds = true
+            // Вид узнаёт, что живёт внутри стекла, ЗДЕСЬ - в единственном
+            // месте, где этот факт становится правдой. Флаг существовал, но
+            // не присваивался нигде: живой веткой всегда была та, что рисует
+            // собственную квадратную плиту исхода внутри круглого стекла.
+            (bodyContent as? DictationHUDCapsuleView)?.hostedInGlass = true
             body.contentView = bodyContent
             needsLayout = true
         }

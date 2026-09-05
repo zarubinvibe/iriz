@@ -44,6 +44,10 @@ public final class DictationController {
     private let hotkeys = HotkeyListener()
     /// Окно истории надиктовок — по хоткею истории.
     private let history = DictationHistoryPresenter()
+    /// Обучение словаря из правок человека. Хранит ТОЛЬКО наш текст и адрес
+    /// окна, куда он ушёл; чужое поле спрашивается один раз и не сохраняется.
+    let learning = DictationLearningWatcher()
+    private let learningToast = DictationLearningToastPresenter()
     /// Плашка «идёт голос»: знак в строке меню — 18×18 pt в углу, владелец его
     /// не видит, когда смотрит в поле ввода. Заводится в `start()`, то есть
     /// только в живом приложении: под `swift test` `start()` не зовут, и панель
@@ -132,6 +136,7 @@ public final class DictationController {
             log("WARNING: registry override env var(s) set: \(hostile.joined(separator: ", ")) — ignored, offline enforced")
         }
 
+        wireLearning()
         wireHotkeys()
         wireAudioConfigurationRecovery()
         wireHUD()
@@ -251,6 +256,66 @@ public final class DictationController {
     /// До этого попасть в историю можно было только хоткеем, то есть только по
     /// памяти: в меню про неё не было ни строки, и целая функция оставалась
     /// ненаходимой. Меню зовёт этот метод — ту же самую цепочку, что и клавиша.
+    /// Начать запись встречи.
+    ///
+    /// Отдельная точка входа, а не флаг диктовки: у режимов разные исходы, и
+    /// перепутать их нельзя. Диктовка вставляет текст под курсор и звук не
+    /// хранит; встреча кладёт звук и протокол в свою папку и не вставляет
+    /// ничего.
+    public func startMeetingRecording() {
+        guard !isRecording else { return }
+        handlePress(purpose: .meeting)
+    }
+
+    /// Остановить запись встречи и отдать её в разбор.
+    public func stopMeetingRecording() {
+        guard isRecording, recordingPurpose == .meeting else { return }
+        handleRelease(shortcut: .standard,
+                      hotkeyDetectedAt: ProcessInfo.processInfo.systemUptime)
+    }
+
+    public var isRecordingMeeting: Bool {
+        isRecording && recordingPurpose == .meeting
+    }
+
+    /// Сохранить записанное и запустить конвейер протокола.
+    ///
+    /// Файл пишется ДО разбора и остаётся на диске, даже если разбор упадёт:
+    /// запись заседания дороже протокола, её нельзя терять из-за отказа
+    /// распознавателя.
+    private func finishMeetingRecording(samples: [Float]) {
+        state = .ready
+        guard !samples.isEmpty else {
+            log("meeting: пустая запись, сохранять нечего")
+            return
+        }
+        do {
+            let url = try meetingRecordingScratchURL()
+            let recording = try writeMeetingWAV(samples: samples,
+                                                sampleRate: SAMPLE_RATE,
+                                                to: url)
+            log("meeting: записано \(Int(recording.seconds)) с в \(url.lastPathComponent)")
+            Task { @MainActor in
+                let pipeline = MeetingPipeline()
+                let title = "Встреча " + meetingDateFormatter().string(from: Date())
+                do {
+                    let result = try await pipeline.run(audio: recording.url, title: title)
+                    log("meeting: протокол готов, реплик \(result.turns.count)")
+                } catch {
+                    // Разбор упал, но звук уже на диске - его можно принести в
+                    // окно встреч руками и разобрать ещё раз.
+                    log("meeting: разбор отказал (\(error)), звук остался в \(recording.url.path)")
+                }
+            }
+        } catch {
+            log("meeting: не удалось сохранить звук (\(error))")
+        }
+    }
+
+    /// Кого звать, когда с плашки просят настройки. Ставит приложение: у
+    /// модуля диктовки окна настроек нет и быть не должно.
+    public var onOpenSettings: (() -> Void)?
+
     public func showHistory() {
         history.toggle()
     }
@@ -322,6 +387,10 @@ public final class DictationController {
                 case .translation:
                     return dictationHUDHistoryHint(keycode: self.settings.translationHotkeyKeycode,
                                                    modifiers: self.settings.translationHotkeyModifiers)
+                case .meeting:
+                    // У записи встречи своей клавиши нет: она начинается из
+                    // окна, куда владелец принёс запись или нажал «записать».
+                    return ""
                 }
             },
             showsDragHint: { [weak self] in
@@ -333,7 +402,36 @@ public final class DictationController {
             // Режим записи — плашка обязана показать его СРАЗУ, пока владелец
             // говорит, а не после, на распознавании.
             recordingPurpose: { [weak self] in self?.recordingPurpose ?? .dictation },
-            surface: { [settings] in DictationHUDPanelSurface(settings: settings) }
+            surface: { [weak self, settings] in
+                let surface = DictationHUDPanelSurface(settings: settings)
+                // Управление подключается прямо здесь: плашка знает, у кого
+                // спросить язык, и знает, кому сказать о смене. Без этого меню
+                // на ней просто не открывается - молча, без поломки.
+                surface.controls = DictationHUDControls(
+                    currentLanguage: { settings.dictationLanguage },
+                    setLanguage: { language in
+                        settings.dictationLanguage = language
+                        // Настройки сохраняются сразу: язык меняют за секунду
+                        // до нажатия клавиши, и «применится после сохранения»
+                        // здесь означало бы «не применится вовсе».
+                        NotificationCenter.default.post(
+                            name: DictationController.settingsDidSaveNotification,
+                            object: settings
+                        )
+                    },
+                    currentSize: { settings.dictationHUDSize },
+                    setSize: { size in
+                        settings.dictationHUDSize = size
+                        NotificationCenter.default.post(
+                            name: DictationController.settingsDidSaveNotification,
+                            object: settings
+                        )
+                    },
+                    openSettings: { self?.onOpenSettings?() },
+                    openHistory: { self?.showHistory() }
+                )
+                return surface
+            }
         )
     }
 
@@ -383,6 +481,25 @@ public final class DictationController {
     /// клавиша за это отвечает. Нажатие кнопки идёт тем же путём, что и
     /// нажатие клавиши, - иначе проба показывала бы не тот продукт, который
     /// потом достанется.
+    /// Правка человека -> всплывашка -> словарь.
+    ///
+    /// Пара НЕ попадает в словарь сама. Словарь применяется молча к каждой
+    /// следующей диктовке, и молчаливое обучение однажды выучит опечатку:
+    /// человек должен увидеть пару и согласиться. Решение владельца от
+    /// 05.09.2026, записано в docs/PLAN-FEATURES.md.
+    private func wireLearning() {
+        learning.onPairs = { [weak self] pairs in
+            self?.learningToast.show(pairs)
+        }
+        learningToast.onAccept = { [weak self] pairs in
+            guard let self else { return }
+            let existing = self.settings.transcriptCorrections
+            let added = pairs.map { TranscriptCorrection(source: $0.heard, replacement: $0.fixed) }
+            self.settings.transcriptCorrections = existing + added
+            log("learning: добавлено пар в словарь \(added.count)")
+        }
+    }
+
     public func toggleDictationFromUI() {
         handlePress(purpose: .dictation)
     }
@@ -424,6 +541,10 @@ public final class DictationController {
         recordedPromptProfile = purpose == .prompt
             ? settings.promptAppProfileMap.profile(forBundleID: frontApplication?.bundleIdentifier)
             : nil
+        // Новая диктовка - лучший момент спросить про предыдущую: человек
+        // закончил править и вернулся к работе. Ждать дольше бессмысленно, а
+        // спрашивать раньше значит перебивать его посреди правки.
+        learning.check()
         isRecording = true
         state = .recording
         if settings.playFeedbackSounds { Sounds.playStart() }
@@ -446,6 +567,16 @@ public final class DictationController {
         recordedPromptProfile = nil
 
         let captured = audio.endRecording()
+
+        // Встреча уходит своим путём немедленно: у неё другой исход. Текст
+        // никуда не вставляется, звук сохраняется, и порог «слишком короткий
+        // клип» ей не подходит - трёхсекундная реплика в заседании это тоже
+        // заседание.
+        if purpose == .meeting {
+            finishMeetingRecording(samples: captured.samples)
+            return
+        }
+
         guard case .transcribe(let clipSeconds) =
                 recordingReleaseAction(capturedSampleCount: captured.samples.count) else {
             // Слишком короткий клип — случайное касание, молча выходим.
@@ -588,8 +719,30 @@ public final class DictationController {
                     return
                 }
 
-                let textToInsert = pastedText(from: processed.text, suffix: pasteSuffix)
+                // Очистка речи - между обработкой и вставкой: словарь замен и
+                // разбор уже отработали, а в поле уходит уже очищенный текст.
+                //
+                // Внешний режим здесь НЕ вызывается. Он уводит текст с машины,
+                // а обычная диктовка наружу не уходит никогда: наружу ходит
+                // отдельный режим, который владелец включает руками и видит
+                // предупреждение. Местная очистка молчалива по построению.
+                let cleaned: String
+                switch self.settings.speechCleanupMode {
+                case .off:
+                    cleaned = processed.text
+                case .local:
+                    cleaned = speechCleanupLocal(processed.text)
+                case .external:
+                    // Единственная ветка, где текст диктовки уходит с машины, и
+                    // включает её владелец руками, прочитав предупреждение.
+                    cleaned = await self.cleanedExternally(processed.text)
+                }
+                let textToInsert = pastedText(from: cleaned, suffix: pasteSuffix)
                 let attempt = TextInserter.insert(textToInsert)
+                // Запоминаем СВОЙ текст и адрес окна: по ним потом узнаем
+                // правку человека. Чужого здесь нет ни байта.
+                self.learning.remember(inserted: textToInsert,
+                                       pid: NSWorkspace.shared.frontmostApplication?.processIdentifier)
                 let verdict = await TextInserter.confirmDelivery(attempt)
                 self.recordInsertionVerdict(verdict)
                 // Плашка ДО Enter и до записи inserted.txt: владелец должен
@@ -674,6 +827,38 @@ public final class DictationController {
     ///
     /// Сырьё на диск уже легло до вызова: перевод может не дойти, а сказанное
     /// терять нельзя.
+    /// Очистка внешним агентом.
+    ///
+    /// Зовётся ТОЛЬКО из режима `.external`, который владелец включает руками и
+    /// рядом с которым в настройках стоит предупреждение. Отказ здесь никогда
+    /// не роняет диктовку: не нашёлся агент, не ответил, ответил мусором -
+    /// уходит исходный текст. Очистка это удобство, а не условие доставки.
+    private func cleanedExternally(_ text: String) async -> String {
+        guard settings.speechCleanupMode == .external else { return text }
+        let adapter = settings.promptAgentAdapter
+        guard let executableURL = settings.detectPromptAgentExecutable() else {
+            log("cleanup: агент не найден, текст идёт как есть")
+            return text
+        }
+        let model = settings.promptAgentModel
+        guard !adapter.requiresModel || !model.isEmpty else {
+            log("cleanup: модель агента не задана, текст идёт как есть")
+            return text
+        }
+        do {
+            let answer = try await CodexPromptGenerator(
+                executableURL: executableURL,
+                adapter: adapter,
+                model: model
+            )
+            .ask(SpeechCleanupRequest.body(text: text))
+            return SpeechCleanupRequest.cleaned(from: answer, original: text)
+        } catch {
+            log("cleanup: агент отказал (\(error)), текст идёт как есть")
+            return text
+        }
+    }
+
     private func translateAndDeliver(
         rawTranscript: String,
         rawURL: URL,

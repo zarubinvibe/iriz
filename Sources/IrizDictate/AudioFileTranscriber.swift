@@ -19,11 +19,16 @@ public struct AudioFileTranscript: Sendable {
     /// Сколько заняло само распознавание, секунды.
     public let processingSeconds: Double
     public let audioSeconds: Double
+    /// Слова со временем. Нужны там, где расшифровку сшивают с дорожками
+    /// говорящих: без времени слово не приписать никому.
+    public let tokenTimings: [DictationTokenTiming]
 
-    public init(text: String, processingSeconds: Double, audioSeconds: Double) {
+    public init(text: String, processingSeconds: Double, audioSeconds: Double,
+                tokenTimings: [DictationTokenTiming] = []) {
         self.text = text
         self.processingSeconds = processingSeconds
         self.audioSeconds = audioSeconds
+        self.tokenTimings = tokenTimings
     }
 }
 
@@ -79,7 +84,8 @@ public actor AudioFileTranscriber {
         return AudioFileTranscript(
             text: result.text,
             processingSeconds: ProcessInfo.processInfo.systemUptime - startedAt,
-            audioSeconds: audio.seconds
+            audioSeconds: audio.seconds,
+            tokenTimings: result.tokenTimings
         )
     }
 }

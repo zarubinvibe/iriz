@@ -1,79 +1,184 @@
-// Живой снимок окна настроек.
+import IrizCore
+// Живой снимок окна настроек и измерение стекла.
 //
 // Офскрин для стекла невозможен по построению: Liquid Glass сэмплирует то, что
-// позади ОКНА, а в битмапе позади ничего нет. Ровно это уже поймано пробой на
-// плашке записи. Окно настроек теперь тоже на стекле, значит и снимать его надо
-// живым - поднять на экран поверх известной подложки и захватить область.
+// позади ОКНА, а в битмапе позади ничего нет. Значит снимать надо живьём -
+// поднять окно поверх ИЗВЕСТНОЙ подложки и захватить область экрана.
+//
+// Отсюда же и способ мерить. Четыре круга подряд стекло судили кадром над
+// тёмным терминалом, где матовую краску от стекла отличить нельзя в принципе,
+// и все четыре раза проверка подтверждала то, чего не было. Прибор обязан
+// давать число, которое дефект проваливает:
+//
+//   ПРОПУСКАНИЕ. Снять окно дважды - над чёрной подложкой и над белой.
+//   Содержимое окна в обоих кадрах одно и то же, значит вся разница между
+//   ними приходит из-за окна. Размытие СРЕДНЮЮ яркость не меняет, поэтому
+//   сдвиг среднего и есть доля пропускания, независимо от радиуса размытия.
+//
+//   РАЗМЫТИЕ. Снять окно над вертикальными полосами. Полосы за окном дают
+//   размах яркости; внутри окна размытие этот размах гасит, а «дырка»
+//   сохраняет. Отношение размахов отделяет стекло от прозрачной пустоты.
+//
+// Краска даёт пропускание около нуля. Дырка даёт пропускание около единицы при
+// сохранённом размахе полос. Стекло - высокое пропускание при задавленном
+// размахе.
 import AppKit
-import SwiftUI
 import IrizSettings
+import SwiftUI
+
+/// Что положить под окно на время съёмки.
+enum IrizBackdrop: String {
+    /// Мягкий градиент: кадр для разглядывания, не для замера.
+    case gradient
+    case black
+    case white
+    /// Вертикальные полосы: замер размытия.
+    case stripes
+
+    /// Ширина полосы. Крупная нарочно: размытие окна имеет радиус в десятки
+    /// точек, и на узких полосах гасило бы их полностью даже у исправного
+    /// стекла - прибор мерил бы свою же полосу, а не окно.
+    static let stripeWidth: CGFloat = 120
+}
 
 @MainActor
-func captureSettingsWindowLive(to directory: URL) throws -> [URL] {
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
-                                            attributes: [.posixPermissions: 0o700])
-    guard let screen = NSScreen.main else {
-        throw NSError(domain: "iriz.uilive", code: 1,
-                      userInfo: [NSLocalizedDescriptionKey: "Экрана нет."])
-    }
+private func makeBackdropWindow(kind: IrizBackdrop, frame: CGRect, dark: Bool) -> NSWindow {
+    let window = NSWindow(contentRect: frame, styleMask: [.borderless],
+                          backing: .buffered, defer: false)
+    window.level = .normal
+    window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    let view = NSView(frame: CGRect(origin: .zero, size: frame.size))
+    view.wantsLayer = true
 
-    let size = CGSize(width: 700, height: 760)
-    let origin = CGPoint(x: screen.frame.minX + 200, y: screen.frame.minY + 160)
-    var written: [URL] = []
-
-    for dark in [true, false] {
-        let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
-
-        // Подложка: имитирует то, что лежит под окном. Без неё стеклу нечего
-        // преломлять, и кадр соврёт про прозрачность.
-        let backdrop = NSWindow(contentRect: CGRect(x: origin.x - 60, y: origin.y - 60,
-                                                    width: size.width + 120,
-                                                    height: size.height + 120),
-                                styleMask: [.borderless], backing: .buffered, defer: false)
-        backdrop.level = .normal
-        backdrop.appearance = appearance
-        let backdropView = NSView(frame: CGRect(origin: .zero, size: backdrop.frame.size))
-        backdropView.wantsLayer = true
+    switch kind {
+    case .black:
+        view.layer?.backgroundColor = NSColor.black.cgColor
+    case .white:
+        view.layer?.backgroundColor = NSColor.white.cgColor
+    case .stripes:
+        view.layer?.backgroundColor = NSColor.black.cgColor
+        var x: CGFloat = 0
+        while x < frame.width {
+            let stripe = CALayer()
+            stripe.frame = CGRect(x: x, y: 0, width: IrizBackdrop.stripeWidth, height: frame.height)
+            stripe.backgroundColor = NSColor.white.cgColor
+            view.layer?.addSublayer(stripe)
+            x += IrizBackdrop.stripeWidth * 2
+        }
+    case .gradient:
         let gradient = CAGradientLayer()
-        gradient.frame = backdropView.bounds
+        gradient.frame = view.bounds
         gradient.colors = dark
             ? [NSColor(calibratedRed: 0.10, green: 0.12, blue: 0.20, alpha: 1).cgColor,
                NSColor(calibratedRed: 0.16, green: 0.10, blue: 0.14, alpha: 1).cgColor]
             : [NSColor(calibratedRed: 0.83, green: 0.87, blue: 0.93, alpha: 1).cgColor,
                NSColor(calibratedRed: 0.93, green: 0.89, blue: 0.84, alpha: 1).cgColor]
-        backdropView.layer?.addSublayer(gradient)
-        backdrop.contentView = backdropView
-        backdrop.orderFrontRegardless()
+        view.layer?.addSublayer(gradient)
+    }
 
-        let window = NSWindow(contentRect: CGRect(origin: origin, size: size),
-                              styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
-                              backing: .buffered, defer: false)
-        window.appearance = appearance
-        window.titlebarAppearsTransparent = true
-        window.titleVisibility = .hidden
-        window.isOpaque = false
-        window.backgroundColor = .clear
-        window.isReleasedWhenClosed = false
-        window.contentView = NSHostingView(rootView: IrizSettingsView(preview: true))
-        window.orderFrontRegardless()
+    window.contentView = view
+    window.orderFrontRegardless()
+    return window
+}
 
-        RunLoop.current.run(until: Date().addingTimeInterval(0.9))
+/// Снять окно настроек поверх заданной подложки.
+///
+/// Окно берётся у общей фабрики - того же, что открывается владельцу по
+/// `--settings`. Своей копии окна у прибора нет и быть не должно.
+/// Голое стекло без интерфейса: потолок пропускания этой системы.
+///
+/// Без него порог приёмки берётся из головы. Первый порог я задал 0.30 и он
+/// оказался выдумкой: страница живого окна дала 0.288 при пустых панелях, то
+/// есть выше физического потолка подняться было нельзя в принципе. Приёмка
+/// теперь считается ДОЛЕЙ от потолка, а потолок меряется тем же прибором.
+@MainActor
+private func captureBareGlass(kind: IrizBackdrop, dark: Bool, to url: URL) throws {
+    try captureOverBackdrop(kind: kind, dark: dark, to: url, bare: true)
+}
 
-        let top = screen.frame.maxY - origin.y - size.height
-        let rect = "\(Int(origin.x)),\(Int(top)),\(Int(size.width)),\(Int(size.height))"
+@MainActor
+private func captureOverBackdrop(kind: IrizBackdrop, dark: Bool, to url: URL,
+                                 bare: Bool = false) throws {
+    guard let screen = NSScreen.main else {
+        throw NSError(domain: "iriz.uilive", code: 1,
+                      userInfo: [NSLocalizedDescriptionKey: "Экрана нет."])
+    }
+
+    let window = makeIrizSettingsWindow(preview: true)
+    if bare {
+        // То же окно с теми же флагами, но вместо интерфейса - одно стекло.
+        // Потолок меряется ТЕМ ЖЕ стеклом, что отгружается. Прежде здесь
+        // стоял NSGlassEffectView, а продукт возит SwiftUI `.glassEffect`:
+        // прибор считал потолок другого материала и врал в обе стороны.
+        window.contentView = NSHostingView(rootView: IrizGlassBackdrop())
+    }
+    window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    let origin = CGPoint(x: screen.frame.minX + 160, y: screen.frame.minY + 120)
+    window.setFrameOrigin(origin)
+    let frame = window.frame
+
+    // Подложка с запасом: размытие тянет краску из области ШИРЕ окна, и по
+    // кромке в кадр попадал бы рабочий стол вместо подложки.
+    let backdrop = makeBackdropWindow(
+        kind: kind,
+        frame: frame.insetBy(dx: -160, dy: -160),
+        dark: dark
+    )
+    window.orderFrontRegardless()
+
+    // Стекло доезжает не в первом кадре: сэмплирование подложки идёт своим
+    // тактом, и снимок сразу после показа ловит окно ещё без материала.
+    RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+
+    let top = screen.frame.maxY - frame.origin.y - frame.height
+    let rect = "\(Int(frame.origin.x)),\(Int(top)),\(Int(frame.width)),\(Int(frame.height))"
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+    process.arguments = ["-x", "-o", "-R", rect, url.path]
+    try process.run()
+    process.waitUntilExit()
+
+    window.orderOut(nil)
+    backdrop.orderOut(nil)
+
+    guard process.terminationStatus == 0 else {
+        throw NSError(domain: "iriz.uilive", code: 2,
+                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect)."])
+    }
+}
+
+/// Кадры для разглядывания: светлый и тёмный вид над мягким градиентом.
+@MainActor
+func captureSettingsWindowLive(to directory: URL) throws -> [URL] {
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                            attributes: [.posixPermissions: 0o700])
+    var written: [URL] = []
+    for dark in [true, false] {
         let url = directory.appendingPathComponent("settings-live-\(dark ? "dark" : "light").png")
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-        process.arguments = ["-x", "-o", "-R", rect, url.path]
-        try process.run()
-        process.waitUntilExit()
-        window.orderOut(nil)
-        backdrop.orderOut(nil)
-        guard process.terminationStatus == 0 else {
-            throw NSError(domain: "iriz.uilive", code: 2,
-                          userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect)."])
-        }
+        try captureOverBackdrop(kind: .gradient, dark: dark, to: url)
         written.append(url)
+    }
+    return written
+}
+
+/// Кадры для замера: три подложки на каждый вид.
+@MainActor
+func probeSettingsGlass(to directory: URL) throws -> [URL] {
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
+                                            attributes: [.posixPermissions: 0o700])
+    var written: [URL] = []
+    for dark in [false, true] {
+        for kind in [IrizBackdrop.black, .white, .stripes] {
+            let name = "probe-\(dark ? "dark" : "light")-\(kind.rawValue).png"
+            let url = directory.appendingPathComponent(name)
+            try captureOverBackdrop(kind: kind, dark: dark, to: url)
+            written.append(url)
+
+            let bareName = "bare-\(dark ? "dark" : "light")-\(kind.rawValue).png"
+            let bareURL = directory.appendingPathComponent(bareName)
+            try captureBareGlass(kind: kind, dark: dark, to: bareURL)
+            written.append(bareURL)
+        }
     }
     return written
 }

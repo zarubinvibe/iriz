@@ -1,3 +1,4 @@
+import IrizCore
 // Живая плашка внутри настроек: мост из AppKit в SwiftUI.
 //
 // Первый NSViewRepresentable в проекте, и заведён он по делу. Владелец просит
@@ -47,6 +48,8 @@ struct HUDPreviewChoice<Value: Equatable>: View {
 
     private var isSelected: Bool { selection == value }
 
+    @Namespace private var hudChoice
+
     var body: some View {
         Button {
             selection = value
@@ -57,16 +60,16 @@ struct HUDPreviewChoice<Value: Equatable>: View {
                            height: dictationHUDCollapsedSize(size).height)
                 Text(title)
                     .font(.callout)
-                    .foregroundStyle(isSelected ? .primary : .secondary)
+                    .foregroundStyle(isSelected ? Color.primary : IRIZ_SUBTLE)
             }
             .padding(10)
-            .background {
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(isSelected ? Color.accentColor : Color.clear, lineWidth: 2)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: IRIZ_SELECTION_RADIUS,
+                                           style: .continuous))
+            // Обводка акцентом радиусом 14 была третьим способом подсветки в
+            // продукте. Канон один: тонированное стекло, которое переезжает.
+            .irizSelected(isSelected, in: hudChoice, group: "hud-preview")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(IrizPressStyle())
         .accessibilityLabel(title)
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
     }

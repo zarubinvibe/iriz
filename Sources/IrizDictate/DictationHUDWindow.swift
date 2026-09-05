@@ -49,6 +49,7 @@ private protocol DictationHUDContainerDelegate: AnyObject {
     func hudMouseDown(at screenPoint: CGPoint)
     func hudMouseDragged(to screenPoint: CGPoint)
     func hudMouseUp(at screenPoint: CGPoint)
+    func hudRightMouseDown(with event: NSEvent, in view: NSView)
 }
 
 @MainActor
@@ -91,6 +92,11 @@ private final class DictationHUDContainerView: NSView {
     override func mouseDown(with event: NSEvent) { delegate?.hudMouseDown(at: NSEvent.mouseLocation) }
     override func mouseDragged(with event: NSEvent) { delegate?.hudMouseDragged(to: NSEvent.mouseLocation) }
     override func mouseUp(with event: NSEvent) { delegate?.hudMouseUp(at: NSEvent.mouseLocation) }
+    // Правая кнопка, а не левая: левая занята перетаскиванием плашки, и
+    // отбирать её у жеста, которым владелец двигает плашку каждый день, нельзя.
+    override func rightMouseDown(with event: NSEvent) {
+        delegate?.hudRightMouseDown(with: event, in: self)
+    }
 }
 
 @MainActor
@@ -108,6 +114,10 @@ private final class DictationHUDDisplayLinkProxy: NSObject {
 
 @MainActor
 final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHUDContainerDelegate {
+    /// Что плашка умеет попросить у приложения. Пусто до подключения: плашка
+    /// показывается и без управления, просто без меню.
+    var controls: DictationHUDControls?
+
     private struct ScalarAnimation {
         let from: CGFloat
         let to: CGFloat
@@ -160,6 +170,11 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     private var transcriptCopiedHandler: (() -> Void)?
     private var transcriptProgress: CGFloat = 0
     private var transcriptTarget: CGFloat = 0
+    /// Сколько панель уже висит и сколько ей отмерено. Кольцо отсчета на
+    /// крестике показывает ЭТО, а не свой отдельный таймер: два независимых
+    /// отсчета разъезжаются, и кольцо начинает врать про то, когда панель уйдет.
+    private var transcriptAge: TimeInterval = 0
+    private var transcriptLifetime: TimeInterval = 0
     private var transcriptPlateSize: CGSize = .zero
     private var transcriptPanelSize: CGSize = .zero
     private var currentContent: DictationHUDContent?
@@ -501,6 +516,15 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
 
     // MARK: - Drag
 
+    /// Управление плашкой: язык, история, настройки.
+    ///
+    /// Меню собирается на каждый щелчок заново, а не хранится: галочка языка
+    /// обязана показывать то, что стоит СЕЙЧАС, а язык меняется и из настроек.
+    func hudRightMouseDown(with event: NSEvent, in view: NSView) {
+        guard let controls else { return }
+        NSMenu.popUpContextMenu(makeDictationHUDMenu(controls: controls), with: event, for: view)
+    }
+
     func hudMouseDown(at screenPoint: CGPoint) {
         checkFocusInvariant()
         mouseDownPoint = screenPoint
@@ -653,6 +677,9 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             hoverAnimating: hoverAnimation != nil,
             reduceMotion: reduceMotionEnabled()
         ) || glassTransitionInFlight || (transcript != nil && transcriptProgress != transcriptTarget)
+            // Кольцо отсчета - тоже движение: без него линк останавливался, и
+            // кольцо стояло на месте, пока панель молча доживала свои секунды.
+            || (transcript != nil && transcriptLifetime > 0 && transcriptAge < transcriptLifetime)
         if !panel.isVisible || !hasMotion { stopMotion() }
     }
 
@@ -784,6 +811,9 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             view.onCopied = { [weak self] in self?.transcriptCopiedHandler?() }
             container?.addSubview(view)
             transcript = view
+            transcriptAge = 0
+            transcriptLifetime = dictationHUDDismissDelay(for: content.stage) ?? 0
+            view.lifeRemaining = 1
         }
         view.text = text
 
@@ -827,6 +857,10 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     /// стекла.
     private func advanceTranscript(dt: TimeInterval) {
         guard transcript != nil else { return }
+        if transcriptLifetime > 0, transcriptTarget > 0 {
+            transcriptAge += dt
+            transcript?.lifeRemaining = CGFloat(max(0, 1 - transcriptAge / transcriptLifetime))
+        }
         let step = CGFloat(dt / DICTATION_HUD_TRANSCRIPT_MORPH_SECONDS)
         let delta = transcriptTarget - transcriptProgress
         if abs(delta) <= step {

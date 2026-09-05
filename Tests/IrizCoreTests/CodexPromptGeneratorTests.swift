@@ -511,7 +511,7 @@ struct CodexPromptGeneratorTests {
             done
             /bin/cat >/dev/null
             case "$result" in
-              */attempt-0/result.json) exec /bin/sleep 5 ;;
+              */attempt-0/result.json) exec /bin/sleep 60 ;;
               */attempt-1/result.json) /usr/bin/printf '%s' '{"status":"ready","taskKind":"general","goal":{"text":"Timeout task","evidence":"Timeout task"},"context":[],"requirements":[],"constraints":[],"outputRequirements":[],"acceptance":[],"ambiguities":[],"modules":[]}' > "$result" ;;
               *) exit 73 ;;
             esac
@@ -520,7 +520,10 @@ struct CodexPromptGeneratorTests {
         defer { try? FileManager.default.removeItem(at: fake.directory) }
         let raw = "Timeout task"
 
-        let generation = try await fakeGenerator(fake, timeoutSeconds: 1)
+        // Порог 3 с, а не 1: первая попытка спит минуту и провалит его при
+        // любой нагрузке, а ВТОРОЙ нужен запас на запуск процесса. На пороге 1
+        // проба падала на занятой машине - зазор съедал сам запуск оболочки.
+        let generation = try await fakeGenerator(fake, timeoutSeconds: 3)
             .generate(rawTranscript: raw, markup: PromptEnvelopeBuilder().analyze(raw))
 
         #expect(generation.prompt == raw)
@@ -542,12 +545,12 @@ struct CodexPromptGeneratorTests {
             printf '%s' "$count" > "$attempts"
             case "$count" in
               1)
-                (trap '' HUP INT TERM; /bin/sleep 2.1; /usr/bin/printf '%s' 'stale' > "$result"; /usr/bin/printf '%s' 'yes' > "${0%/*}/stale-wrote") &
-                exec /bin/sleep 10
+                (trap '' HUP INT TERM; /bin/sleep 5; /usr/bin/printf '%s' 'stale' > "$result"; /usr/bin/printf '%s' 'yes' > "${0%/*}/stale-wrote") &
+                exec /bin/sleep 60
                 ;;
               2)
                 /usr/bin/printf '%s' '{"status":"ready","taskKind":"general","goal":{"text":"Fresh retry","evidence":"Fresh retry"},"context":[],"requirements":[],"constraints":[],"outputRequirements":[],"acceptance":[],"ambiguities":[],"modules":[]}' > "$result"
-                /bin/sleep 1
+                /bin/sleep 3
                 ;;
               *) exit 73 ;;
             esac
@@ -556,7 +559,13 @@ struct CodexPromptGeneratorTests {
         defer { try? FileManager.default.removeItem(at: fake.directory) }
         let raw = "Fresh retry"
 
-        let generation = try await fakeGenerator(fake, timeoutSeconds: 2)
+        // Времена разведены с запасом. Раньше устаревшая запись приходила
+        // через 0,1 с после снятия первой попытки и должна была попасть в
+        // трёхсекундное окно второй - зазор в одну десятую секунды не
+        // переживает занятую машину. Теперь: попытка снимается на 4 с,
+        // устаревшая запись приходит на 5-й, вторая попытка идёт 3 с, то есть
+        // окно шире зазора в тридцать раз.
+        let generation = try await fakeGenerator(fake, timeoutSeconds: 4)
             .generate(rawTranscript: raw, markup: PromptEnvelopeBuilder().analyze(raw))
 
         #expect(generation.prompt == raw)

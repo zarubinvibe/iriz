@@ -68,11 +68,26 @@ if [ -f README.md ] && [ -f README.ru.md ] && [ -f README.zh.md ]; then
   [ "$crossed" -eq 1 ] && ok "страницы на трёх языках связаны" || fail "страницы языков не ссылаются друг на друга"
 fi
 
-# 4. Абсолютных путей владельца в тексте нет.
-if grep -rIl --exclude-dir=.git --exclude-dir=.build -E '/(Users|home)/[a-zA-Z0-9._-]+/' . 2>/dev/null | grep -v '^./scripts/selfcheck.sh$' | head -1 | grep -q .; then
-  fail "в дереве остались абсолютные пути домашнего каталога"
+# 4. Абсолютных путей владельца нет В ТОМ, ЧТО ПУБЛИКУЕТСЯ.
+#
+# Проверять все дерево нельзя: приватный дом законно держит рабочие записи с
+# путями владельца, и такая проверка краснела бы на них вечно. Границу задает
+# белый список среза, и спрашивает ее отдельный прибор - тот же, что у
+# публикации, с той же семантикой шаблонов.
+naydeno=0
+while IFS= read -r put; do
+  [ -n "$put" ] || continue
+  case "$put" in scripts/selfcheck.sh|scripts/publishable_files.py) continue ;; esac
+  [ -f "$put" ] || continue
+  if grep -Iq -E '/(Users|home)/[a-zA-Z0-9._-]+/' "$put" 2>/dev/null; then
+    printf '  путь владельца в %s\n' "$put" >&2
+    naydeno=$((naydeno + 1))
+  fi
+done < <(python3 scripts/publishable_files.py)
+if [ "$naydeno" -eq 0 ]; then
+  ok "в публикуемых файлах абсолютных путей нет"
 else
-  ok "абсолютных путей домашнего каталога нет"
+  fail "абсолютные пути домашнего каталога в $naydeno публикуемых файлах"
 fi
 
 # 5. Права на исполнение у скриптов, которые зовут снаружи.

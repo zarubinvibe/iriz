@@ -49,6 +49,7 @@ public final class DictationSettings: @unchecked Sendable {
     private static let keyTranscriptCorrections = "transcript_corrections"
     private static let keyDictationSnippets = "dictation_snippets_v1"
     private static let keyPromptUserGuidance = "prompt_user_guidance_v1"
+    private static let keySpeechCleanupMode = "speech_cleanup_mode_v1"
     private static let keyDictationHUDSize = "dictation_hud_size_v1"
     private static let keyDictationLanguage = "dictation_language"
     private static let keyRemoveFinalPeriod = "remove_final_period_v1"
@@ -256,6 +257,25 @@ public final class DictationSettings: @unchecked Sendable {
 
     public var configuredTranslationHotkey: HotkeyChoice {
         hotkeyChoice(forKeycode: translationHotkeyKeycode, modifiers: translationHotkeyModifiers)
+    }
+
+    // MARK: - Очистка речи
+
+    /// Где чистится речь. Умолчание - на этой машине: очистка полезна, а
+    /// отправка текста наружу требует отдельного решения владельца.
+    ///
+    /// Неизвестное сохранённое значение не поднимается до внешнего режима
+    /// молча. Битая запись в настройках не имеет права выпустить текст с
+    /// машины - падаем в самый закрытый режим, а не в самый полезный.
+    public var speechCleanupMode: SpeechCleanupMode {
+        get {
+            guard let raw = defaults.string(forKey: Self.keySpeechCleanupMode),
+                  let mode = SpeechCleanupMode(rawValue: raw) else {
+                return .local
+            }
+            return mode
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.keySpeechCleanupMode) }
     }
 
     // MARK: - Промпт-режим

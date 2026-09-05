@@ -105,8 +105,11 @@ final class DictationHUDHintView: NSView {
                 ? NSColor(calibratedWhite: 0, alpha: 0.85 * alpha)
                 : NSColor(calibratedWhite: 1, alpha: 0.92 * alpha)
         } else {
+            // Светлая тема на 0,55 давала контраст 4,31 при пороге 4,5 -
+            // строка была приглушена ровно настолько, чтобы не читаться.
+            // В тёмной 0,55 давало 6,26 и трогать её незачем.
             color = light
-                ? NSColor(calibratedWhite: 0, alpha: 0.55 * alpha)
+                ? NSColor(calibratedWhite: 0, alpha: 0.68 * alpha)
                 : NSColor(calibratedWhite: 1, alpha: 0.55 * alpha)
         }
         return [

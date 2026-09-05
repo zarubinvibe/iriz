@@ -102,12 +102,12 @@ final class FirstRunModel: ObservableObject {
             finish()
             return
         }
-        withAnimation(.easeOut(duration: 0.22)) { step = next }
+        withAnimation(irizAnimation(.irizEaseOut)) { step = next }
     }
 
     func goBack() {
         guard let previous = firstRunPreviousStep(before: step) else { return }
-        withAnimation(.easeOut(duration: 0.22)) { step = previous }
+        withAnimation(irizAnimation(.irizEaseOut)) { step = previous }
     }
 
     /// Действие шага. Микрофон спрашивается системным запросом, остальные два
@@ -282,10 +282,13 @@ final class FirstRunWindowController: NSObject, NSWindowDelegate {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.isMovableByWindowBackground = true
-        if #available(macOS 26.0, *) {
-            window.isOpaque = false
-            window.backgroundColor = .clear
-        }
+        // Прозрачности у этого окна НЕТ, и это осознанно.
+        //
+        // Подложка знакомства непрозрачна по решению: на семи экранах текста
+        // сквозь окно видно чужие окна, и объяснение превращается в кашу -
+        // читаемость важнее эффекта. Прозрачный корпус под непрозрачным
+        // содержимым не давал ничего, кроме своего пути композиции и своей
+        // тени, то есть был мёртвой настройкой.
         model.onFinish = { [weak self] in self?.close() }
         window.contentView = NSHostingView(rootView: FirstRunView(model: model))
         window.isReleasedWhenClosed = false

@@ -1,0 +1,39 @@
+Photoreal studio render, ultra high resolution, wide 16:10 frame.
+
+Subject: Olympus Mons rendered as one colossal mass of white Carrara marble.
+Follow the true silhouette of the Martian shield volcano, not a pointed
+mountain: an extremely wide, very low profile, flanks rising at a shallow angle
+of only a few degrees, a broad flat summit plateau, and a wide shallow caldera
+depression cut into that plateau near the top centre. At the base, on both left
+and right, the shield ends in an abrupt vertical basal escarpment, a sheer cliff
+wall dropping straight to the floor.
+
+The mass spans the entire width of the frame and beyond, its summit reaching
+only about half the frame height. Proportion matters more than detail: it must
+read as broad and flat, wider than it is tall by a factor of at least four.
+
+Material: white Carrara marble with fine cool-grey veining, denser in the
+shadowed folds of the flanks and along the escarpment face. The surface carries
+the long shallow ridges and radial flow ripples of a shield volcano, carved as
+if by hand into stone.
+
+Ground: a mirror-polished marble floor holding a faint blurred reflection of the
+shield, dissolving into pure black before the bottom edge.
+
+Light: a single hard key light from the upper left, low and raking, grazing the
+shallow flanks so the ridges read; a weak fill from the right keeps the shadow
+side legible.
+
+Background: absolute true black, value zero, completely empty. No sky, no stars,
+no horizon, no clouds, no gradient, no vignette, no fog, no atmosphere.
+
+Nothing else exists in this image: no text, no logo, no glass capsule, no
+waveform, no figures, no columns, no props, no scale markers, no snow, no ice.
+
+Colour: strict greyscale, zero saturation, no colour cast. Wide tonal range,
+brilliant near-white on the lit plateau, deep true black in the void, rich mid
+greys in the veining. Very high microcontrast so the stone stays legible when
+shown at twenty percent opacity behind an interface.
+
+Sharpness: extremely crisp across the whole frame, no depth-of-field blur, no
+grain, no noise, no chromatic aberration, no lens flare.

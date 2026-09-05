@@ -35,6 +35,7 @@ final class DictationHUDTranscriptView: NSView {
             let visible = max(0, (revealProgress - 0.45) / 0.55)
             card.alphaValue = visible
             copyButton.alphaValue = visible
+            closeButton.alphaValue = visible
             // Подложка не только проявляется, но и подрастает: так раскрытие
             // читается одним движением, а не появлением второго предмета.
             let scale = 0.94 + 0.06 * visible
@@ -47,7 +48,18 @@ final class DictationHUDTranscriptView: NSView {
     /// висит и убрать её нечем.
     var onCopied: (() -> Void)?
 
+    /// Сколько жизни панели осталось, 1…0. Ведет ее общий такт движения окна,
+    /// а не свой таймер внутри вида: два независимых отсчета разъезжаются, и
+    /// кольцо начинает врать про то, когда панель уйдет.
+    var lifeRemaining: CGFloat = 1 {
+        didSet {
+            guard abs(lifeRemaining - oldValue) > 0.001 else { return }
+            closeButton.remaining = lifeRemaining
+        }
+    }
+
     private let card = NSView()
+    private let closeButton = DictationHUDCloseRing()
     private let scroll = NSScrollView()
     private let textView = NSTextView()
     private let copyButton = DictationHUDCopyPill()
@@ -84,6 +96,13 @@ final class DictationHUDTranscriptView: NSView {
         copyButton.onPress = { [weak self] in self?.copyPressed() }
         addSubview(copyButton)
 
+        // Закрыть руками, не дожидаясь конца отсчета. Панель живет двадцать
+        // секунд, и это долго, когда текст уже не нужен. Путь наверх тот же,
+        // что у копирования: дело панели кончилось, и разница только в том,
+        // попал текст в буфер или нет.
+        closeButton.onPress = { [weak self] in self?.onCopied?() }
+        addSubview(closeButton)
+
         applyColors()
     }
 
@@ -109,10 +128,15 @@ final class DictationHUDTranscriptView: NSView {
     override func layout() {
         super.layout()
         let padding = DICTATION_HUD_TRANSCRIPT_PADDING
+        let header = DICTATION_HUD_TRANSCRIPT_HEADER_HEIGHT
+        let ring = DICTATION_HUD_TRANSCRIPT_CLOSE_SIZE
+        closeButton.frame = CGRect(x: bounds.width - padding - ring,
+                                   y: padding - 2,
+                                   width: ring, height: ring)
         let footer = DICTATION_HUD_TRANSCRIPT_FOOTER_HEIGHT
         let gap = DICTATION_HUD_TRANSCRIPT_FOOTER_GAP
-        let cardHeight = max(0, bounds.height - padding * 2 - gap - footer)
-        card.frame = CGRect(x: padding, y: padding,
+        let cardHeight = max(0, bounds.height - padding * 2 - header - gap - footer)
+        card.frame = CGRect(x: padding, y: padding + header,
                             width: max(0, bounds.width - padding * 2),
                             height: cardHeight)
         let inset = DICTATION_HUD_TRANSCRIPT_CARD_INSET
@@ -207,16 +231,90 @@ final class DictationHUDCopyPill: NSView {
     override func draw(_ dirtyRect: NSRect) {
         let radius = bounds.height / 2
         let path = NSBezierPath(roundedRect: bounds, xRadius: radius, yRadius: radius)
-        // Нажатие видно: без отклика кнопка кажется неживой.
-        NSColor.controlAccentColor.withAlphaComponent(pressed ? 0.75 : 1).setFill()
+        // Кремовая, а не системная синяя. Синяя кнопка на стеклянной плашке
+        // читается чужой деталью macOS, попавшей внутрь продукта; теплый камень
+        // - цвет семьи, и панель выглядит своей.
+        DICTATION_HUD_TRANSCRIPT_BUTTON_FILL.withAlphaComponent(pressed ? 0.82 : 1).setFill()
         path.fill()
         let attributes: [NSAttributedString.Key: Any] = [
             .font: Self.font,
-            .foregroundColor: NSColor.white,
+            .foregroundColor: DICTATION_HUD_TRANSCRIPT_BUTTON_INK,
         ]
         let size = (title as NSString).size(withAttributes: attributes)
         (title as NSString).draw(at: CGPoint(x: (bounds.width - size.width) / 2,
                                              y: (bounds.height - size.height) / 2),
                                  withAttributes: attributes)
+    }
+}
+
+
+/// Крестик с кольцом обратного отсчета.
+///
+/// Кольцо показывает то, что и так происходит: панель уходит сама через
+/// двадцать секунд. Без кольца это выглядит внезапным исчезновением, и человек
+/// не понимает, успеет он дочитать или нет. С кольцом ожидание становится
+/// видимым, а крестик дает выйти раньше.
+final class DictationHUDCloseRing: NSView {
+    /// Сколько осталось, 1…0.
+    var remaining: CGFloat = 1 {
+        didSet { needsDisplay = true }
+    }
+    var onPress: (() -> Void)?
+
+    private var pressed = false
+
+    override var isFlipped: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        pressed = true
+        needsDisplay = true
+    }
+
+    override func mouseUp(with event: NSEvent) {
+        pressed = false
+        needsDisplay = true
+        guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
+        onPress?()
+    }
+
+    override func draw(_ dirtyRect: NSRect) {
+        let inset: CGFloat = 3
+        let disk = bounds.insetBy(dx: inset, dy: inset)
+
+        // Цвета берутся у системы, а не из палитры семьи. Кремовое кольцо на
+        // светлом фоне не видно вовсе, а панель стоит поверх ЧУЖОГО окна: какого
+        // оно тона, заранее не знает никто. Ярлык системы читается всегда.
+        let ink = NSColor.labelColor
+        ink.withAlphaComponent(pressed ? 0.22 : 0.12).setFill()
+        NSBezierPath(ovalIn: disk).fill()
+
+        // Кольцо отсчета идет по кромке и убывает по часовой стрелке от верха.
+        if remaining > 0 {
+            let ring = NSBezierPath()
+            let center = CGPoint(x: bounds.midX, y: bounds.midY)
+            let radius = disk.width / 2 + 1.5
+            ring.appendArc(withCenter: center, radius: radius,
+                           startAngle: 90,
+                           endAngle: 90 - 360 * max(0, min(1, remaining)),
+                           clockwise: true)
+            ring.lineWidth = 1.6
+            ring.lineCapStyle = .round
+            ink.withAlphaComponent(0.65).setStroke()
+            ring.stroke()
+        }
+
+        // Сам крест: две черты, а не символ шрифта. Глиф пришлось бы центровать
+        // по метрикам чужого шрифта, и на разных системах он бы гулял.
+        let arm = disk.width * 0.26
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        let cross = NSBezierPath()
+        cross.move(to: CGPoint(x: center.x - arm, y: center.y - arm))
+        cross.line(to: CGPoint(x: center.x + arm, y: center.y + arm))
+        cross.move(to: CGPoint(x: center.x + arm, y: center.y - arm))
+        cross.line(to: CGPoint(x: center.x - arm, y: center.y + arm))
+        cross.lineWidth = 1.6
+        cross.lineCapStyle = .round
+        ink.withAlphaComponent(0.85).setStroke()
+        cross.stroke()
     }
 }

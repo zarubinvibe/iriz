@@ -1,3 +1,4 @@
+import IrizCore
 // Проба настоящей клавишей: нажми ту клавишу, которой будешь пользоваться.
 //
 // Кнопка в окне пробу изображала, а не проводила. Человек уходил из знакомства,
@@ -35,7 +36,7 @@ struct FirstRunKeyTrial: View {
                 Text(statusLine)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(model.isRecording ? .primary : .secondary)
-                    .animation(.easeOut(duration: 0.18), value: model.isRecording)
+                    .animation(irizAnimation(.irizEaseOut), value: model.isRecording)
 
                 if !model.isRecording, !model.isTranscribing, model.tryItText.isEmpty {
                     Text(FirstRunCopy.trialSample)
@@ -96,7 +97,7 @@ private struct LevelBar: View {
                 Capsule()
                     .fill(Color.accentColor)
                     .frame(width: max(4, geometry.size.width * min(1, max(0, level))))
-                    .animation(.easeOut(duration: 0.08), value: level)
+                    .animation(irizAnimation(.irizQuick), value: level)
             }
         }
         .accessibilityHidden(true)
@@ -138,7 +139,7 @@ private struct KeyCap: View {
                     }
             }
             .offset(y: active ? 1 : 0)
-            .animation(.easeOut(duration: 0.14), value: active)
+            .animation(irizAnimation(.irizQuick), value: active)
             .accessibilityLabel("Клавиша диктовки: \(label)")
     }
 }
