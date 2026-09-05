@@ -1,0 +1,143 @@
+{
+  "schema_version": 3,
+  "family_id": "zarubinvibe-pantheon",
+  "catalog_version": "2026-09-05",
+  "dress": "full",
+  "project": {
+    "slug": "iriz",
+    "deity": "Iris",
+    "symbol": "herald staff and a gold ribbon of voice"
+  },
+  "visuals": {
+    "style_anchor_sha256": "ce524f9d22cb0092cb17aa280832e1b2ab2a77a0e01602065ec502232a3bb2d2",
+    "column_reference_sha256": "9d32edd56ac55c4dd6d0425a28a2ac35035e9ab09073fc8ce0c1414b2edfb1bd",
+    "presentation": {
+      "min_width": 1600,
+      "aspect_ratio": "16:9",
+      "readme_width": "100%",
+      "published_width": 1664,
+      "published_height": 936
+    },
+    "bible": {
+      "character_sheet": {
+        "published_path": "docs/assets/pantheon/bible-character.png",
+        "published_sha256": "5ff407694adc22f497af22819bde47b61204f55629a3aded4d4caca1edd2f7af",
+        "alt": "Карта персонажа: Ирида из белого мрамора в четырех видах с мраморными крыльями, жезлом вестницы, табличкой и золотой лентой голоса, рядом этюды предметов"
+      },
+      "prop_sheet": {
+        "published_path": "docs/assets/pantheon/bible-props.png",
+        "published_sha256": "ad9275c7948b65915d8757b8eea6633e1ddcc81420f18689ff7c08ae0b668152",
+        "alt": "Карта предметов: жезл с гладким кольцом, мраморная табличка с одной бороздой, крылатая сандалия, золотая лента голоса, мраморная клавиша и чаша на слоновой кости"
+      }
+    },
+    "hero": {
+      "source_path": "docs/assets/pantheon/hero-source.png",
+      "source_sha256": "9fa6a4e6ae3867707636ac60f781603c46bae45e64217373922119b9503683c5",
+      "published_path": "docs/assets/pantheon/hero.png",
+      "published_sha256": "ff02cfbef989f040db9e729265b84636ff0a94f5120718d1e94a066bc4381fb4"
+    },
+    "emblem": {
+      "source_path": "docs/assets/pantheon/emblem-source.png",
+      "source_sha256": "e228f8333ee8d6752f4f2ad7c08229ca65bc4060f50d154f10d5c401490b220b",
+      "published_path": "docs/assets/pantheon/emblem.png",
+      "published_sha256": "daf6fd93f9ab2aa98274b0085be08b1e0a47042873b358cd550639cbdfbc6d47"
+    },
+    "takt": {
+      "source_path": "docs/assets/pantheon/takt.png",
+      "source_sha256": "dc462a5d9123d3bd5c8157b94e28c2376f94440d5e830b18c8f810eecee94c50",
+      "plate_geometry": ".github/pantheon/takt-plity.json",
+      "languages": {
+        "en": {
+          "published_path": "docs/assets/pantheon/takt-en.png",
+          "published_sha256": "5f8d8c6d93fb6cee05d2df02329699dc0329aa01787033919ed312e17e3965c6",
+          "alt": "Four marble plates in a row, each carved with one step of the work, linked by a gold ribbon of voice that runs from the left edge"
+        },
+        "ru": {
+          "published_path": "docs/assets/pantheon/takt-ru.png",
+          "published_sha256": "aaf52a857b69ea378505d7dce17b109e6a1084b5e17388f0e0b66a1fe2f928f0",
+          "alt": "Четыре мраморные плиты в ряд, на каждой высечен один шаг работы, их связывает золотая лента голоса, идущая от левой кромки"
+        },
+        "zh": {
+          "published_path": "docs/assets/pantheon/takt-zh.png",
+          "published_sha256": "23fc0293f84bbc6b3510cc45308a6cd894b1ef8029964dc713a6a42f91401c96",
+          "alt": "四块大理石板排成一行，每块刻着一个步骤，一条从左边进来的金色声音丝带把它们串起来"
+        }
+      }
+    },
+    "stages": [
+      {
+        "id": "key",
+        "title_en": "Press your key",
+        "title_ru": "Нажмите свою клавишу",
+        "title_zh": "按下你的那个键",
+        "diagram_en": "Key",
+        "diagram_ru": "Клавиша",
+        "diagram_zh": "按键"
+      },
+      {
+        "id": "voice",
+        "title_en": "Say it out loud",
+        "title_ru": "Скажите вслух",
+        "title_zh": "说出来",
+        "diagram_en": "Voice",
+        "diagram_ru": "Голос",
+        "diagram_zh": "说话"
+      },
+      {
+        "id": "decode",
+        "title_en": "The Mac decodes it",
+        "title_ru": "Мак разбирает сказанное",
+        "title_zh": "Mac 本机识别",
+        "diagram_en": "Decode",
+        "diagram_ru": "Разбор",
+        "diagram_zh": "识别"
+      },
+      {
+        "id": "insert",
+        "title_en": "The text lands in the field",
+        "title_ru": "Текст встает в поле",
+        "title_zh": "文字落进输入框",
+        "diagram_en": "Text",
+        "diagram_ru": "Текст",
+        "diagram_zh": "落字"
+      }
+    ],
+    "doc_frames": {
+      "contributing": {
+        "published_path": "docs/assets/pantheon/doc-contributing.png",
+        "published_sha256": "d1cfa5ca7a5a50a3492d90e2f9ac5a07a7481b8e450031fe303c2718a87ba133",
+        "alt": "Две одинаковые мраморные таблички на низком столе, в левой лежит золотая лента голоса, правая пустая и ждет, рядом стоит жезл вестницы",
+        "pages": {
+          "en": "CONTRIBUTING.md",
+          "ru": "CONTRIBUTING.ru.md",
+          "zh": "CONTRIBUTING.zh.md"
+        }
+      }
+    },
+    "doc_pages": [
+      {
+        "path": "docs/ONBOARDING.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/ONBOARDING.ru.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/ONBOARDING.zh.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      }
+    ]
+  },
+  "receipts": {
+    "generation_path": ".github/pantheon/generation-receipt.json",
+    "visual_judge_path": ".github/pantheon/visual-judge-receipt.json",
+    "prompt_path": ".github/pantheon/hero-source-prompt.txt"
+  }
+}

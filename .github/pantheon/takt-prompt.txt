@@ -1,0 +1,17 @@
+Use case: stylized-concept
+Asset type: workflow diagram frame for a project of the Olympuz family, rendered in the canon instead of drawn with box characters
+Primary request: one wide frame that shows the four steps of the work as four empty marble plates in a row, connected in order, so that captions can be carved into the plates afterwards.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the marble tablet, the herald staff and the gold ribbon must match those sheets.
+Subject: four rectangular white-marble plates of the SAME size stand in one straight horizontal row across the middle of the frame, evenly spaced, each resting on the ivory ground and casting a shadow. Their faces are smooth, empty and slightly tilted toward the viewer. One continuous muted-gold ribbon enters from the left edge, runs behind the row and touches each plate in turn from left to right, ending at the right edge of the last plate. Below the row, three thin sky-blue paths run flat along the ground from the left and end under the first plate.
+Composition/framing: 16:9 landscape. The four plates are the main subject and occupy the middle band of the frame. A classical white-marble column stands at the far right as the family signature, clearly separated from the plates. Generous empty ivory space above and below the row. Nothing overlaps a plate face, nothing is cropped.
+Style/medium: premium restrained 3D marble render, physically plausible materials, warm ivory Apple-like presentation, museum plate feeling
+Lighting/mood: soft daylight from upper left, one gentle shadow under each plate, identical lighting across the row. Gold glows softly from within.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the ribbon only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Constraints:
+- The plate faces are COMPLETELY EMPTY: no carving, no letters, no digits, no ornament, no frame line. Captions are cut into them later by a separate instrument, and any writing generated here would be invented text.
+- All four plates are the same width and the same height, standing in one straight line at the same depth, with equal gaps.
+- Every plate rests on the ground and casts a shadow. Nothing hovers.
+- The gold ribbon is one continuous piece touching every plate in order, never a chain of separate segments.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: writing of any kind, letters, digits, numbers on the plates, arrows drawn as glyphs, boxes drawn with lines, screens, keyboards, cables, figures, faces, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image. The plate faces stay empty.

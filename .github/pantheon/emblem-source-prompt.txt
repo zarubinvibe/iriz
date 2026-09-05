@@ -1,0 +1,18 @@
+Use case: stylized-concept
+Asset type: square emblem for a project of the Olympuz family
+Primary request: one square emblem that reads at a glance and stays readable when shrunk - the messenger's staff and the voice becoming a written line.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the herald staff, the marble tablet and the gold ribbon must match those sheets exactly.
+Subject: a single composition on a plain ivory ground: the marble writing tablet lying flat and slightly tilted toward the viewer, the muted-gold herald staff resting diagonally across its upper corner, and one continuous muted-gold ribbon curving down from the upper left and ending flat inside the single carved groove on the tablet face.
+Composition/framing: perfect square, the composition centred with generous empty ivory margin on all four sides, nothing cropped, no column in this frame.
+Style/medium: premium restrained 3D marble and gold render, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, one gentle shadow under each object. Gold glows softly from within, never lit by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the staff and the ribbon only, charcoal #3E3A36
+Constraints:
+- Only three objects in the frame: tablet, staff, ribbon. Nothing else.
+- Every object rests on the surface and casts a shadow. Nothing hovers.
+- The staff head is a plain smooth ring with no snakes, no wings and no engraving.
+- The tablet face carries exactly one groove and no writing.
+- The shapes stay large and simple so the emblem survives being shrunk to a small icon.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, figures, faces, wings of cloth, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image.

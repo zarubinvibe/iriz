@@ -1,0 +1,82 @@
+# Негативный набор этапа 7: `smltlk fix` НЕ должен изменить ни одну строку.
+# Разнородная деловая и техническая фактура: номера дел, аббревиатуры, команды,
+# пути, идентификаторы, URL, версии. Одна строка = один прогон CLI.
+# Пустые строки и строки с '#' пропускаются.
+
+# — деловые сокращения и номера
+ООО
+АО
+ПАО
+ИП
+А00-12345/2026
+А40-56789/2025
+ГПК
+АПК
+КАС
+
+# — команды и инструменты разработчика
+git
+npm
+npx
+curl
+tls
+ssh
+ssl
+sudo
+brew
+zsh
+bash
+swift
+json
+yaml
+toml
+arm64
+x86_64
+macOS
+iOS
+
+# — camelCase и идентификаторы
+getUserName
+isValidWord
+autoSwitchEnabled
+handleAutoConvert
+bundleIdentifier
+
+# — ALL_CAPS
+HTTP
+HTTPS
+API
+URL
+JSON
+SSH
+TLS
+DNS
+TCP
+ID
+
+# — сетевое
+https://example.com
+https://github.com/rashn/RuSwitcher
+http://localhost:8080/api/v1
+user@example.com
+
+# — пути
+/usr/bin
+/etc/hosts
+/Applications/smltlk.app
+~/Library
+
+# — версии, числа, адреса
+6.3.3
+v3.1.1
+26.5
+25F71
+192.168.0.1
+12345
+
+# — имена файлов
+README.md
+Package.swift
+Info.plist
+status.json
+counters.json

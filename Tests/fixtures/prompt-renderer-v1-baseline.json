@@ -1,0 +1,579 @@
+[
+  {
+    "synthetic": true,
+    "id": "short-clear-command",
+    "categories": ["short-clear-command"],
+    "raw": "Проверь орфографию.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "passthrough",
+      "goal": { "text": "Проверь орфографию.", "evidence": "Проверь орфографию." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Проверь орфографию."],
+      "notContains": ["Контекст\n", "Рабочий протокол"],
+      "preservedTokens": ["орфографию"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Проверь орфографию."
+  },
+  {
+    "synthetic": true,
+    "id": "fragmented-repetition-self-correction",
+    "categories": ["fragmented-speech", "repetition", "self-correction"],
+    "raw": "Так, сделай, сделай таблицу рисков, нет, не таблицу, составь список рисков.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Составь список рисков.", "evidence": "составь список рисков" },
+      "context": [],
+      "requirements": [],
+      "constraints": [
+        { "text": "Не делай таблицу.", "evidence": "нет, не таблицу" }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Составь список рисков.", "Не делай таблицу."],
+      "notContains": ["сделай, сделай"],
+      "preservedTokens": ["таблицу", "список рисков"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Составь список рисков.\n\nОграничения\n- Не делай таблицу."
+  },
+  {
+    "synthetic": true,
+    "id": "negations-and-exact-numbers",
+    "categories": ["negations", "exact-numbers"],
+    "raw": "Сравни ровно 3 варианта, не больше 3, и не используй платные источники.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Сравни ровно 3 варианта.", "evidence": "Сравни ровно 3 варианта" },
+      "context": [],
+      "requirements": [
+        { "text": "Не больше 3 вариантов.", "evidence": "не больше 3" }
+      ],
+      "constraints": [
+        { "text": "Не используй платные источники.", "evidence": "не используй платные источники" }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["ровно 3 варианта", "Не больше 3 вариантов.", "Не используй платные источники."],
+      "notContains": ["4 варианта"],
+      "preservedTokens": ["3", "платные источники"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Сравни ровно 3 варианта.\n\nТребования\n- Не больше 3 вариантов.\n\nОграничения\n- Не используй платные источники."
+  },
+  {
+    "synthetic": true,
+    "id": "dependent-steps",
+    "categories": ["dependent-steps"],
+    "raw": "Сначала собери требования, затем создай прототип и только после этого запусти тесты.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Собери прототип по требованиям.", "evidence": "собери требования, затем создай прототип" },
+      "context": [],
+      "requirements": [
+        { "text": "Сначала собери требования.", "evidence": "Сначала собери требования" },
+        { "text": "Затем создай прототип.", "evidence": "затем создай прототип" },
+        { "text": "После этого запусти тесты.", "evidence": "после этого запусти тесты" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": ["orderedSteps"]
+    },
+    "expected": {
+      "contains": ["Сначала собери требования.", "После этого запусти тесты.", "сохрани их порядок"],
+      "notContains": ["Опирайся на указанные источники"],
+      "preservedTokens": ["требования", "прототип", "тесты"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Собери прототип по требованиям.\n\nТребования\n- Сначала собери требования.\n- Затем создай прототип.\n- После этого запусти тесты.\n\nРабочий протокол\n- Раздели зависимые действия на шаги и сохрани их порядок."
+  },
+  {
+    "synthetic": true,
+    "id": "coding-task",
+    "categories": ["coding"],
+    "raw": "В Parser.swift исправь разбор пустой строки и добавь тест на этот случай.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "coding",
+      "goal": { "text": "Исправь разбор пустой строки в Parser.swift.", "evidence": "В Parser.swift исправь разбор пустой строки" },
+      "context": [],
+      "requirements": [
+        { "text": "Добавь тест на этот случай.", "evidence": "добавь тест на этот случай" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Parser.swift", "Добавь тест на этот случай."],
+      "notContains": ["Рабочий протокол"],
+      "preservedTokens": ["Parser.swift", "пустой строки"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Исправь разбор пустой строки в Parser.swift.\n\nТребования\n- Добавь тест на этот случай."
+  },
+  {
+    "synthetic": true,
+    "id": "research-task",
+    "categories": ["research"],
+    "raw": "Исследуй официальную документацию API, не используй блоги и приложи ссылки на источники.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "research",
+      "goal": { "text": "Исследуй официальную документацию API.", "evidence": "Исследуй официальную документацию API" },
+      "context": [],
+      "requirements": [],
+      "constraints": [
+        { "text": "Не используй блоги.", "evidence": "не используй блоги" }
+      ],
+      "outputRequirements": [
+        { "text": "Приложи ссылки на источники.", "evidence": "приложи ссылки на источники" }
+      ],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": ["grounding"]
+    },
+    "expected": {
+      "contains": ["официальную документацию API", "Не используй блоги.", "факты от предположений"],
+      "notContains": ["социальные сети"],
+      "preservedTokens": ["API", "ссылки на источники"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Исследуй официальную документацию API.\n\nОграничения\n- Не используй блоги.\n\nФормат результата\n- Приложи ссылки на источники.\n\nРабочий протокол\n- Опирайся на указанные источники; явно отделяй факты от предположений."
+  },
+  {
+    "synthetic": true,
+    "id": "writing-task",
+    "categories": ["writing"],
+    "raw": "Напиши короткое приглашение на встречу в нейтральном тоне.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "writing",
+      "goal": { "text": "Напиши короткое приглашение на встречу.", "evidence": "Напиши короткое приглашение на встречу" },
+      "context": [],
+      "requirements": [],
+      "constraints": [
+        { "text": "Сохрани нейтральный тон.", "evidence": "в нейтральном тоне" }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["короткое приглашение", "Сохрани нейтральный тон."],
+      "notContains": ["торжественный тон"],
+      "preservedTokens": ["приглашение", "короткое"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Напиши короткое приглашение на встречу.\n\nОграничения\n- Сохрани нейтральный тон."
+  },
+  {
+    "synthetic": true,
+    "id": "agentic-task",
+    "categories": ["agentic"],
+    "raw": "Открой локальный журнал, запусти проверку и сохрани отчёт рядом, ничего наружу не отправляй.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "agentic",
+      "goal": { "text": "Проверь локальный журнал и сохрани отчёт рядом.", "evidence": "Открой локальный журнал, запусти проверку и сохрани отчёт рядом" },
+      "context": [],
+      "requirements": [
+        { "text": "Открой локальный журнал.", "evidence": "Открой локальный журнал" },
+        { "text": "Запусти проверку.", "evidence": "запусти проверку" }
+      ],
+      "constraints": [
+        { "text": "Ничего наружу не отправляй.", "evidence": "ничего наружу не отправляй" }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": ["orderedSteps", "actionBoundaries"]
+    },
+    "expected": {
+      "contains": ["Открой локальный журнал.", "Ничего наружу не отправляй.", "Внешние и необратимые действия"],
+      "notContains": ["Опубликуй"],
+      "preservedTokens": ["локальный журнал", "отчёт", "не отправляй"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Проверь локальный журнал и сохрани отчёт рядом.\n\nТребования\n- Открой локальный журнал.\n- Запусти проверку.\n\nОграничения\n- Ничего наружу не отправляй.\n\nРабочий протокол\n- Раздели зависимые действия на шаги и сохрани их порядок.\n- Внешние и необратимые действия выполняй только в явно разрешённых границах."
+  },
+  {
+    "synthetic": true,
+    "id": "current-project-context",
+    "categories": ["current-project"],
+    "raw": "В текущем проекте почини сборку.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "coding",
+      "goal": { "text": "Почини сборку.", "evidence": "почини сборку" },
+      "context": [
+        { "text": "Работай в текущем проекте.", "evidence": "В текущем проекте" }
+      ],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Почини сборку.", "Работай в текущем проекте."],
+      "notContains": ["Нужно уточнить до выполнения"],
+      "preservedTokens": ["текущем проекте", "сборку"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Почини сборку.\n\nКонтекст\n- Работай в текущем проекте."
+  },
+  {
+    "synthetic": true,
+    "id": "current-voice-feature-context",
+    "categories": ["current-voice-feature"],
+    "raw": "Доведи текущую голосовую фичу до рабочего состояния в этом проекте: найди реализацию, исправь оставшиеся ошибки и запусти тесты.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "coding",
+      "goal": { "text": "Доведи текущую голосовую фичу до рабочего состояния.", "evidence": "Доведи текущую голосовую фичу до рабочего состояния" },
+      "context": [
+        { "text": "Работай с реализацией голосовой фичи в этом проекте.", "evidence": "текущую голосовую фичу до рабочего состояния в этом проекте" }
+      ],
+      "requirements": [
+        { "text": "Найди текущую реализацию.", "evidence": "найди реализацию" },
+        { "text": "Исправь оставшиеся ошибки.", "evidence": "исправь оставшиеся ошибки" },
+        { "text": "Запусти тесты.", "evidence": "запусти тесты" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [
+        { "text": "Голосовая фича работает, тесты проходят.", "evidence": "до рабочего состояния" }
+      ],
+      "ambiguities": [],
+      "modules": ["orderedSteps", "finalCheck"]
+    },
+    "expected": {
+      "contains": ["текущую голосовую фичу", "Работай с реализацией голосовой фичи в этом проекте.", "Найди текущую реализацию.", "Запусти тесты.", "сохрани их порядок"],
+      "notContains": ["Нужно уточнить до выполнения"],
+      "preservedTokens": ["текущую голосовую фичу", "этом проекте", "оставшиеся ошибки"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Доведи текущую голосовую фичу до рабочего состояния.\n\nКонтекст\n- Работай с реализацией голосовой фичи в этом проекте.\n\nТребования\n- Найди текущую реализацию.\n- Исправь оставшиеся ошибки.\n- Запусти тесты.\n\nКритерии готовности\n- Голосовая фича работает, тесты проходят.\n\nРабочий протокол\n- Раздели зависимые действия на шаги и сохрани их порядок.\n- Перед ответом один раз сверь результат с критериями готовности и исправь найденные несоответствия."
+  },
+  {
+    "synthetic": true,
+    "id": "this-design-context",
+    "categories": ["this-design"],
+    "raw": "Переделай этот дизайн в тёмной теме.",
+    "spec": {
+      "status": "needsClarification",
+      "taskKind": "general",
+      "goal": { "text": "Переделай этот дизайн в тёмной теме.", "evidence": "Переделай этот дизайн в тёмной теме." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [
+        { "description": "Неясно, какой дизайн нужно переделать.", "evidence": "этот дизайн", "blocking": true }
+      ],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Переделай этот дизайн", "Неясно, какой дизайн нужно переделать."],
+      "notContains": ["Рабочий протокол"],
+      "preservedTokens": ["этот дизайн", "тёмной теме"],
+      "ambiguity": "blocking",
+      "failureStage": null
+    },
+    "v1Prompt": "Переделай этот дизайн в тёмной теме.\n\nНужно уточнить до выполнения\n- Неясно, какой дизайн нужно переделать."
+  },
+  {
+    "synthetic": true,
+    "id": "where-stopped-context",
+    "categories": ["where-stopped"],
+    "raw": "Продолжи с того места, где остановились.",
+    "spec": {
+      "status": "needsClarification",
+      "taskKind": "general",
+      "goal": { "text": "Продолжи с того места, где остановились.", "evidence": "Продолжи с того места, где остановились." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [
+        { "description": "Не указано, на каком результате продолжать работу.", "evidence": "где остановились", "blocking": true }
+      ],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Продолжи с того места", "Не указано, на каком результате продолжать работу."],
+      "notContains": ["Неясности\n"],
+      "preservedTokens": ["где остановились"],
+      "ambiguity": "blocking",
+      "failureStage": null
+    },
+    "v1Prompt": "Продолжи с того места, где остановились.\n\nНужно уточнить до выполнения\n- Не указано, на каком результате продолжать работу."
+  },
+  {
+    "synthetic": true,
+    "id": "addition-to-previous-prompt",
+    "categories": ["addition-to-previous-prompt"],
+    "raw": "Добавь к предыдущему промпту требование проверить ссылки.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Добавь к предыдущему промпту требование проверить ссылки.", "evidence": "Добавь к предыдущему промпту требование проверить ссылки." },
+      "context": [
+        { "text": "Основа: предыдущий промпт.", "evidence": "предыдущему промпту" }
+      ],
+      "requirements": [
+        { "text": "Проверь ссылки.", "evidence": "проверить ссылки" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["предыдущему промпту", "Основа: предыдущий промпт.", "Проверь ссылки."],
+      "notContains": ["Замени"],
+      "preservedTokens": ["предыдущему промпту", "проверить ссылки"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Добавь к предыдущему промпту требование проверить ссылки.\n\nКонтекст\n- Основа: предыдущий промпт.\n\nТребования\n- Проверь ссылки."
+  },
+  {
+    "synthetic": true,
+    "id": "correction-of-previous-prompt",
+    "categories": ["correction-of-previous-prompt"],
+    "raw": "В предыдущем промпте замени два отчёта на три отчёта.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "В предыдущем промпте замени два отчёта на три отчёта.", "evidence": "В предыдущем промпте замени два отчёта на три отчёта." },
+      "context": [
+        { "text": "Исправь предыдущий промпт.", "evidence": "предыдущем промпте" }
+      ],
+      "requirements": [
+        { "text": "Замени два отчёта на три отчёта.", "evidence": "замени два отчёта на три отчёта" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["предыдущем промпте", "Замени два отчёта на три отчёта."],
+      "notContains": ["четыре отчёта"],
+      "preservedTokens": ["два отчёта", "три отчёта"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "В предыдущем промпте замени два отчёта на три отчёта.\n\nКонтекст\n- Исправь предыдущий промпт.\n\nТребования\n- Замени два отчёта на три отчёта."
+  },
+  {
+    "synthetic": true,
+    "id": "blocking-money-ambiguity",
+    "categories": ["blocking-ambiguity"],
+    "raw": "Переведи 5000 рублей на счёт Алексея.",
+    "spec": {
+      "status": "needsClarification",
+      "taskKind": "agentic",
+      "goal": { "text": "Переведи 5000 рублей на счёт Алексея.", "evidence": "Переведи 5000 рублей на счёт Алексея." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [
+        { "description": "Неясно, какой счёт Алексея использовать.", "evidence": "счёт Алексея", "blocking": true }
+      ],
+      "modules": ["actionBoundaries"]
+    },
+    "expected": {
+      "contains": ["5000 рублей", "Неясно, какой счёт Алексея использовать.", "Внешние и необратимые действия"],
+      "notContains": ["Выполни перевод немедленно."],
+      "preservedTokens": ["5000", "Алексея"],
+      "ambiguity": "blocking",
+      "failureStage": null
+    },
+    "v1Prompt": "Переведи 5000 рублей на счёт Алексея.\n\nНужно уточнить до выполнения\n- Неясно, какой счёт Алексея использовать.\n\nРабочий протокол\n- Внешние и необратимые действия выполняй только в явно разрешённых границах."
+  },
+  {
+    "synthetic": true,
+    "id": "external-action-prohibited",
+    "categories": ["external-action-prohibition"],
+    "raw": "Подготовь письмо поставщику, но не отправляй его без моего подтверждения.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "agentic",
+      "goal": { "text": "Подготовь письмо поставщику.", "evidence": "Подготовь письмо поставщику" },
+      "context": [],
+      "requirements": [],
+      "constraints": [
+        { "text": "Не отправляй письмо без моего подтверждения.", "evidence": "не отправляй его без моего подтверждения" }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": ["actionBoundaries"]
+    },
+    "expected": {
+      "contains": ["Подготовь письмо поставщику.", "Не отправляй письмо без моего подтверждения.", "Внешние и необратимые действия"],
+      "notContains": ["Отправь письмо."],
+      "preservedTokens": ["поставщику", "без моего подтверждения"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Подготовь письмо поставщику.\n\nОграничения\n- Не отправляй письмо без моего подтверждения.\n\nРабочий протокол\n- Внешние и необратимые действия выполняй только в явно разрешённых границах."
+  },
+  {
+    "synthetic": true,
+    "id": "research-before-implementation",
+    "categories": ["research-before-implementation"],
+    "raw": "Сначала изучи официальное описание API, потом реализуй адаптер и проверь его тестами.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "coding",
+      "goal": { "text": "Реализуй адаптер и проверь его тестами.", "evidence": "реализуй адаптер и проверь его тестами" },
+      "context": [],
+      "requirements": [
+        { "text": "Сначала изучи официальное описание API.", "evidence": "Сначала изучи официальное описание API" },
+        { "text": "Потом реализуй адаптер.", "evidence": "потом реализуй адаптер" },
+        { "text": "После реализации проверь адаптер тестами.", "evidence": "проверь его тестами" }
+      ],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [
+        { "text": "Тесты адаптера проходят.", "evidence": "проверь его тестами" }
+      ],
+      "ambiguities": [],
+      "modules": ["orderedSteps", "grounding", "finalCheck"]
+    },
+    "expected": {
+      "contains": ["Сначала изучи официальное описание API.", "Потом реализуй адаптер.", "Опирайся на указанные источники", "Перед ответом один раз сверь результат"],
+      "notContains": ["Сначала реализуй"],
+      "preservedTokens": ["официальное описание API", "адаптер", "тестами"],
+      "ambiguity": "none",
+      "failureStage": null
+    },
+    "v1Prompt": "Реализуй адаптер и проверь его тестами.\n\nТребования\n- Сначала изучи официальное описание API.\n- Потом реализуй адаптер.\n- После реализации проверь адаптер тестами.\n\nКритерии готовности\n- Тесты адаптера проходят.\n\nРабочий протокол\n- Раздели зависимые действия на шаги и сохрани их порядок.\n- Опирайся на указанные источники; явно отделяй факты от предположений.\n- Перед ответом один раз сверь результат с критериями готовности и исправь найденные несоответствия."
+  },
+  {
+    "synthetic": true,
+    "id": "generator-invalid-spec",
+    "categories": ["generator-failure"],
+    "raw": "Собери два макета.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Собери три макета.", "evidence": "Собери два макета." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": [],
+      "notContains": [],
+      "preservedTokens": [],
+      "ambiguity": "none",
+      "failureStage": "generator"
+    },
+    "v1Prompt": null
+  },
+  {
+    "synthetic": true,
+    "id": "verifier-added-negation",
+    "categories": ["verifier-failure"],
+    "raw": "Собери отчёт.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "general",
+      "goal": { "text": "Собери отчёт.", "evidence": "Собери отчёт." },
+      "context": [],
+      "requirements": [],
+      "constraints": [
+        { "text": "Не удаляй черновики.", "evidence": "Собери отчёт." }
+      ],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Не удаляй черновики."],
+      "notContains": ["Рабочий протокол"],
+      "preservedTokens": ["отчёт"],
+      "ambiguity": "none",
+      "failureStage": "verifier"
+    },
+    "v1Prompt": "Собери отчёт.\n\nОграничения\n- Не удаляй черновики."
+  },
+  {
+    "synthetic": true,
+    "id": "insertion-not-delivered",
+    "categories": ["insertion-failure"],
+    "raw": "Вставь готовый заголовок в поле редактора.",
+    "spec": {
+      "status": "ready",
+      "taskKind": "passthrough",
+      "goal": { "text": "Вставь готовый заголовок в поле редактора.", "evidence": "Вставь готовый заголовок в поле редактора." },
+      "context": [],
+      "requirements": [],
+      "constraints": [],
+      "outputRequirements": [],
+      "acceptance": [],
+      "ambiguities": [],
+      "modules": []
+    },
+    "expected": {
+      "contains": ["Вставь готовый заголовок в поле редактора."],
+      "notContains": ["Контекст\n"],
+      "preservedTokens": ["заголовок", "поле редактора"],
+      "ambiguity": "none",
+      "failureStage": "insertion"
+    },
+    "v1Prompt": "Вставь готовый заголовок в поле редактора."
+  }
+]

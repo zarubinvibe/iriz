@@ -1,0 +1,16 @@
+Use case: stylized-concept
+Asset type: document page frame for the contributing page of a project of the Olympuz family
+Primary request: one wide frame for the page that explains how somebody else can help - a second tablet is placed beside the first, so the reader sees room made for their work.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the tablet, the herald staff and the gold ribbon must match those sheets exactly.
+Subject: two marble writing tablets of the same size lie side by side on a low marble table at the centre of the frame, each with its single carved groove facing the viewer. One continuous muted-gold ribbon curves down from the upper left and ends inside the groove of the left tablet; the right tablet is empty and waiting. The herald staff rests upright against the right end of the table, its butt on the ground.
+Composition/framing: 16:9 landscape. The table with both tablets reads clearly at the centre. A classical white-marble column stands at the far right as the family signature. Generous empty ivory space, no figure in this frame, nothing cropped.
+Style/medium: premium restrained 3D marble render, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm. Gold glows softly from within, never lit by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the ribbon and the staff only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Constraints:
+- Three thin sky-blue paths run flat along the ground from the left edge and end at the foot of the table.
+- Both tablets rest on the table, the table rests on the ground, the staff touches the ground. Nothing hovers, everything casts a shadow.
+- The two tablets are identical in size and thickness: the second is room made for somebody else, not a smaller copy.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: figures, faces, rainbow of many colors, prismatic colors, screens, keyboards, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image.

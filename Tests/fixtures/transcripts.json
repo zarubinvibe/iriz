@@ -1,0 +1,86 @@
+[
+  {
+    "id": "synthetic-correction-01",
+    "synthetic": true,
+    "text": "Фиолетовый робот смолток готовит промп.",
+    "expectedText": "Фиолетовый робот iriz готовит промпт.",
+    "expectedAppliedCorrections": 2
+  },
+  {
+    "id": "synthetic-correction-02",
+    "synthetic": true,
+    "text": "Макет нещатно проверяет эцп.",
+    "expectedText": "Макет нещадно проверяет ЭЦП.",
+    "expectedAppliedCorrections": 2
+  },
+  {
+    "id": "synthetic-correction-03",
+    "synthetic": true,
+    "text": "Клод и кими обсуждают гидхаб.",
+    "expectedText": "Claude и Kimi обсуждают гитхаб.",
+    "expectedAppliedCorrections": 3
+  },
+  {
+    "id": "synthetic-correction-04",
+    "synthetic": true,
+    "text": "Сова запускает клода и открывает гидхаб.",
+    "expectedText": "Сова запускает Claude и открывает гитхаб.",
+    "expectedAppliedCorrections": 2
+  },
+  {
+    "id": "synthetic-correction-05",
+    "synthetic": true,
+    "text": "Макет рисует карту для омвд и гибдд про промп.",
+    "expectedText": "Макет рисует карту для ОМВД и ГИБДД про промпт.",
+    "expectedAppliedCorrections": 3
+  },
+  {
+    "id": "synthetic-correction-06",
+    "synthetic": true,
+    "text": "Ип считает ндс, а мвд ждёт макет.",
+    "expectedText": "ИП считает НДС, а МВД ждёт макет.",
+    "expectedAppliedCorrections": 3
+  },
+  {
+    "id": "synthetic-correction-07",
+    "synthetic": true,
+    "text": "Синий смолток проверяет пустой куб.",
+    "expectedText": "Синий iriz проверяет пустой куб.",
+    "expectedAppliedCorrections": 1
+  },
+  {
+    "id": "synthetic-correction-08",
+    "synthetic": true,
+    "text": "Робот SmallTalk строит бумажный мост.",
+    "expectedText": "Робот iriz строит бумажный мост.",
+    "expectedAppliedCorrections": 1
+  },
+  {
+    "id": "synthetic-trap-01",
+    "synthetic": true,
+    "text": "Этот дизайн, гражданский кодекс, промпты и гитхаба не меняются.",
+    "expectedText": "Этот дизайн, гражданский кодекс, промпты и гитхаба не меняются.",
+    "expectedAppliedCorrections": 0
+  },
+  {
+    "id": "synthetic-trap-02",
+    "synthetic": true,
+    "text": "Кимика и кимии смотрят на дополнить и исполнить.",
+    "expectedText": "Кимика и кимии смотрят на дополнить и исполнить.",
+    "expectedAppliedCorrections": 0
+  },
+  {
+    "id": "synthetic-idempotent-01",
+    "synthetic": true,
+    "text": "ЭЦП и ГИБДД уже записаны верно.",
+    "expectedText": "ЭЦП и ГИБДД уже записаны верно.",
+    "expectedAppliedCorrections": 2
+  },
+  {
+    "id": "synthetic-correction-09",
+    "synthetic": true,
+    "text": "Проект Кими просит Клода открыть Smalltalk.",
+    "expectedText": "Проект Kimi просит Claude открыть iriz.",
+    "expectedAppliedCorrections": 3
+  }
+]

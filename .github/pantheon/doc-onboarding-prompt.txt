@@ -1,0 +1,17 @@
+Use case: stylized-concept
+Asset type: document page frame for the first-steps page of a project of the Olympuz family
+Primary request: one wide frame for the page that walks a newcomer through the first install - the messenger sets her tablet down within reach and steps back, so the reader sees an invitation rather than a performance.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the figure, the herald staff, the marble tablet and the gold ribbon must match those sheets exactly.
+Subject: the marble writing tablet lies flat on a low marble table at the centre of the frame, its single carved groove facing the viewer, with one continuous muted-gold ribbon curving down from the upper left and ending inside that groove. Iris stands to the left of the table, turned three-quarters toward it, her right hand closed around the herald staff whose butt rests on the ground, her left hand open and lowered, having just set the tablet down.
+Composition/framing: 16:9 landscape. The tablet reads clearly at the centre, the figure occupies the left third and never overlaps the tablet. A classical white-marble column stands at the far right as the family signature. Generous empty ivory space, nothing cropped.
+Style/medium: premium restrained 3D marble sculpture render, monumental carving with deep drapery, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm and welcoming. Gold glows softly from within, never lit by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the ribbon and the staff only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Constraints:
+- Three thin sky-blue paths run flat along the ground from the left edge and end at the foot of the table. They lie on the ground along their whole length.
+- The table rests on the ground and casts a shadow. The tablet rests on the table. Nothing hovers.
+- Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, wings folded, exactly as on the character sheet.
+- Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, floating tablet, floating staff, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image.

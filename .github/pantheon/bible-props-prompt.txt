@@ -1,0 +1,19 @@
+Use case: stylized-concept
+Asset type: prop reference sheet for a project of the Olympuz family, binding for every later frame
+Primary request: one wide sheet that fixes the objects of this project once and for all, so each one can be reproduced identically in every later scene.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column.
+Subject: six objects laid out on a plain ivory surface, each shown alone, each large enough to read: (1) the herald staff, a slender muted-gold rod as long as a forearm with a plain smooth ring at its head; (2) the marble writing tablet, a flat rectangular white-marble slab with ONE carved horizontal groove across its face; (3) the winged sandal, a low white-marble sandal with a small carved wing at the ankle; (4) the gold voice ribbon alone, one continuous muted-gold band curving once and lying flat at its lower end; (5) a white-marble key-cap, a cube of marble with softly rounded corners and one shallow round dish carved into its top face; (6) a small white-marble bowl of the same family as the other pieces, empty, its full base resting on the surface.
+Composition/framing: 16:9 landscape. A classical white-marble column stands at the far right as the family signature, clearly separated from the objects. The six objects sit in two rows of three with equal spacing, each fully inside the frame, nothing overlapping, nothing cropped. Generous empty ivory space between them.
+Style/medium: premium restrained 3D marble and gold render, physically plausible materials, warm ivory Apple-like presentation, museum plate feeling
+Lighting/mood: soft daylight from upper left, long gentle shadows, identical lighting on every object. Gold surfaces glow softly FROM WITHIN, never lit by a lamp, a neon tube or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the staff and the ribbon only, sky blue #B8D6EA used nowhere on this sheet, charcoal #3E3A36
+Constraints:
+- Every object rests on the surface and casts a shadow. Nothing hovers, nothing balances on a point.
+- The staff head is a plain smooth ring: NO snakes, NO wings, NO letters, NO engraving.
+- The tablet carries exactly ONE groove and no writing of any kind.
+- The gold ribbon is one continuous piece, not a chain and not a string of segments.
+- The key-cap is marble, not plastic, and its dish is shallow and smooth.
+- These are the SAME objects that the character sheet shows in her hands: same proportions, same materials, same details.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, keyboards, microphones, phones, laptops, screens, cables, modern devices, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
+Text (verbatim): No readable text, no letters, no digits, no measurement marks, no callout labels anywhere in the image.

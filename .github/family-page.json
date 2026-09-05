@@ -1,0 +1,402 @@
+{
+  "schema_version": 1,
+  "owner": "zarubinvibe",
+  "slug": "iriz",
+  "license_badge": "MIT",
+  "status_badge": "working",
+  "languages": [
+    "en",
+    "ru",
+    "zh"
+  ],
+  "quick_code": "git clone https://github.com/zarubinvibe/iriz.git ~/iriz\ncd ~/iriz\nbash install.sh          # просто терминал, без единого агента\ncode .                   # или откройте папку в редакторе\nclaude                   # или пустите агента: он проведет установку разговором\n",
+  "text": {
+    "en": {
+      "title": "iriz",
+      "name": "iriz",
+      "tagline": "Speak and the text appears. Your speech is decoded on your own Mac, not in somebody's cloud.",
+      "hero_alt": "Iris in white marble with marble wings beside the classical column, a gold ribbon of voice landing in the groove of her tablet",
+      "what": "iriz lives in the menu bar and does three things. It fixes a phrase typed in the wrong keyboard layout. It types what you dictate: press a key, speak, press again. And it turns rambling dictation into a ready task for an agent. Speech is decoded on the Mac itself, on the Neural Engine.",
+      "why": "Cloud dictation cleans up speech better than anything local. But what travels up there is a conversation with a client, a draft filing, names and amounts. For someone bound by professional privilege that trade never pays off. So recognition stays local here, and the single trip to the network is one you start yourself.",
+      "advantage": "recognition runs on your machine, and during dictation the network is shut by a switch, not by a promise.",
+      "better": "The switch sits inside the recognition library and returns to its place even when a download fails. Documentation does not prove that: a script pins the set of networking symbols in the built binary and asks the kernel whether the running app holds a single socket.",
+      "how": "Press the key, say your sentence, press again. The text lands where the cursor was blinking: an email, a chat, a terminal. If it does not land, the plate opens into a panel and you take the text from there.",
+      "quick_intro": "You need a Mac on macOS 14 or newer. Building from source also wants Xcode with Swift 6. Three doors from here, any of them works.",
+      "quick_extra": "Do not want to build? Take the ready disk image from Releases: open it, drag the icon onto Applications. No Git? Download [the ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), unpack it, and run the same command inside. First time? Open the project in Claude Code and run `/iriz-setup`: the install goes as a conversation, one question at a time, and nothing is installed without your yes.",
+      "quick_result": "the installer says what this is, looks at what your machine is missing, runs the tree selfcheck, and names the next step. It installs nothing until you ask.",
+      "compare": [
+        [
+          "**iriz**",
+          "You dictate work material and cannot hand it out",
+          "Layout, local dictation, speech into a task",
+          "Nowhere; the Mac decodes it",
+          "Yes, English and Russian",
+          "Russian first, no notarization yet"
+        ],
+        [
+          "Doing it by hand",
+          "One short phrase, once",
+          "Full control over every letter",
+          "Nowhere",
+          "No",
+          "Long texts eat your evening"
+        ],
+        [
+          "Punto Switcher",
+          "Layout only",
+          "Years of layout repair",
+          "Nowhere",
+          "Yes",
+          "No dictation at all"
+        ],
+        [
+          "macOS built-in dictation",
+          "An occasional sentence",
+          "It is already installed",
+          "Apple, unless the offline model is on",
+          "No",
+          "Weak on terms, no task building"
+        ],
+        [
+          "Wispr Flow and the like",
+          "Rambling speech into smooth text",
+          "The best cleanup there is",
+          "Their server",
+          "No",
+          "Your client names travel with it"
+        ],
+        [
+          "Local Whisper apps",
+          "Dictation without a cloud",
+          "Also decodes on your machine",
+          "Nowhere",
+          "No",
+          "No layout repair, no task from speech"
+        ]
+      ],
+      "glossary": [
+        [
+          "Neural Engine",
+          "A separate part of the Apple chip for neural networks: it keeps recognition fast and the machine cool"
+        ],
+        [
+          "Speech model",
+          "The weight files that turn sound into letters. It lives on your disk and downloads once"
+        ]
+      ],
+      "safety": [
+        "Audio is never saved. It lives exactly as long as it takes to decode what you said.",
+        "The screen is not read. No ScreenCaptureKit, no window captures.",
+        "Other apps' fields are not read: the permission is there to learn whether a field accepts text, not to take text out of it.",
+        "Where you dictated is not recorded. Otherwise the disk would collect metadata about who you work with and when.",
+        "The clipboard is put back after the paste.",
+        "Transcripts sit under 0700 and 0600 and stay on your disk."
+      ],
+      "safety_tail": "One thing goes out, and only on your button: the one-time speech model download. Prompt mode is off by default, and switching it on means agreeing that the transcript reaches the agent you picked.",
+      "status": "Status: working, the author dictates with it every day.",
+      "limits": [
+        "macOS 14 and newer only. No Windows, no Linux, no iPad.",
+        "Automatic layout switching covers the English and Russian pair.",
+        "No notarization yet: a downloaded build opens through a right-click the first time.",
+        "The universal binary carries an Intel slice, but the author owns no Intel Mac and never verified it there."
+      ],
+      "docs": "Deeper: [the step-by-step walkthrough](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), dependency licenses in [THIRD-PARTY](THIRD-PARTY).",
+      "license": "MIT. See [LICENSE](LICENSE).",
+      "welcome": "Hello. I am a lawyer with two daughters and a coffee business, and I dictate a lot: filings, letters, tasks for agents. The polished dictation tools clean up speech beautifully, except the text travels to somebody else's server, and mine carries client names and amounts.\n\niriz came out of that. It decodes speech on my Mac and says nothing outward. If you need the same, take it and make it yours.",
+      "compare_header": [
+        "Choice",
+        "Best when",
+        "What you get",
+        "Where speech goes",
+        "Layout repair",
+        "Trade-off"
+      ]
+    },
+    "ru": {
+      "title": "iriz",
+      "name": "iriz",
+      "tagline": "Говорите - появляется текст. Речь разбирается на вашем Маке, а не в чужом облаке.",
+      "hero_alt": "Ирида из белого мрамора с мраморными крыльями у классической колонны, золотая лента голоса ложится в борозду на табличке",
+      "what": "iriz живет в строке меню и делает три вещи. Чинит раскладку, когда фраза набрана не в той. Пишет текст под диктовку: нажали клавишу, сказали, отпустили. И превращает сбивчивую надиктовку в готовое задание для агента. Речь разбирается прямо на Маке, на Neural Engine.",
+      "why": "Облачная диктовка чистит речь лучше любой местной. Но наружу уезжает разговор с доверителем, черновик заявления, имена и суммы. Для человека под профессиональной тайной такой обмен не окупается ничем. Поэтому распознавание тут местное, а единственный поход в сеть вы начинаете сами кнопкой.",
+      "advantage": "распознавание идет на вашей машине, и в диктовке сеть запрещена рубильником, а не обещанием.",
+      "better": "Рубильник стоит внутри библиотеки распознавания и возвращается на место даже когда загрузка падает. Проверяет это не документация: скрипт пинует набор сетевых символов в собранном бинарнике и спрашивает у ядра, есть ли у работающего приложения хоть один сокет.",
+      "how": "Нажали клавишу, сказали фразу, нажали еще раз. Текст встает туда, где мигал курсор: в письмо, в чат, в терминал. Не доехал - плашка раскрывается в панель, откуда его можно забрать целиком.",
+      "quick_intro": "Нужен Мак на macOS 14 или новее. Для сборки из исходников еще Xcode со Swift 6. Дверей три, годится любая.",
+      "quick_extra": "Не хотите собирать - возьмите готовый образ в разделе Releases: открыли, перетащили значок в Applications. Нет Git? Скачайте [ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), распакуйте и запустите в нем ту же команду. Первый раз? Откройте проект в Claude Code и запустите `/iriz-setup`: установка пройдет разговором, по одному вопросу, и ничего не поставится без вашего «да».",
+      "quick_result": "установщик объясняет, что это, смотрит, чего не хватает на машине, гоняет самопроверку дерева и называет следующий шаг. Ничего не ставит, пока вы не попросите.",
+      "compare": [
+        [
+          "**iriz**",
+          "Диктуете рабочее и отдать не можете",
+          "Раскладка, местная диктовка, речь в задание",
+          "Никуда, разбирает Мак",
+          "Да, английский и русский",
+          "Русский первым, нотаризации пока нет"
+        ],
+        [
+          "Делать руками",
+          "Одна короткая фраза, один раз",
+          "Полный контроль над каждой буквой",
+          "Никуда",
+          "Нет",
+          "Длинный текст съедает вечер"
+        ],
+        [
+          "Punto Switcher",
+          "Нужна только раскладка",
+          "Годы работы над раскладкой",
+          "Никуда",
+          "Да",
+          "Диктовки нет вовсе"
+        ],
+        [
+          "Встроенная диктовка macOS",
+          "Изредка одна фраза",
+          "Уже стоит на машине",
+          "В Apple, если не включена офлайн-модель",
+          "Нет",
+          "Слаба на терминах, задание не собирает"
+        ],
+        [
+          "Wispr Flow и подобные",
+          "Сбивчивая речь в гладкий текст",
+          "Лучшая чистка речи",
+          "На их сервер",
+          "Нет",
+          "Имена доверителей уезжают вместе с текстом"
+        ],
+        [
+          "Местная диктовка на Whisper",
+          "Диктовать без облака",
+          "Тоже считает у вас",
+          "Никуда",
+          "Нет",
+          "Раскладку не чинит, задание из речи не собирает"
+        ]
+      ],
+      "glossary": [
+        [
+          "Neural Engine",
+          "Отдельный кусок процессора Apple под нейросети: держит распознавание быстрым и не греет машину"
+        ],
+        [
+          "Модель распознавания",
+          "Файлы весов, по которым звук превращается в буквы. Живет у вас на диске, скачивается один раз"
+        ]
+      ],
+      "safety": [
+        "Звук нигде не сохраняется: он живет ровно столько, сколько нужно, чтобы разобрать сказанное.",
+        "Экран не читается. Ни ScreenCaptureKit, ни снимков окон.",
+        "Чужие поля не читаются: доступ нужен, чтобы понять, можно ли в поле писать, а не чтобы забрать оттуда текст.",
+        "Куда вы диктовали, не записывается. Иначе на диске копились бы метаданные о том, с кем и когда вы работаете.",
+        "Буфер обмена возвращается на место после вставки.",
+        "Расшифровки лежат под правами 0700 и 0600 и остаются на вашем диске."
+      ],
+      "safety_tail": "В сеть уходит одно и по вашей кнопке: разовая загрузка модели распознавания. Промпт-режим выключен по умолчанию, и включая его, вы соглашаетесь, что расшифровка уйдет выбранному агенту.",
+      "status": "Статус: работает, автор диктует им каждый день.",
+      "limits": [
+        "Только macOS 14 и новее. Ни Windows, ни Linux, ни iPad.",
+        "Автопереключение раскладки работает для пары английский и русский.",
+        "Нотаризации пока нет: первый запуск скачанной сборки открывается правым щелчком.",
+        "Универсальный бинарник содержит срез под Intel, но живого Intel-Мака у автора нет, и проверено это не было."
+      ],
+      "docs": "Глубже: [пошаговое знакомство](docs/ONBOARDING.ru.md), [как помочь](CONTRIBUTING.ru.md), лицензии зависимостей в [THIRD-PARTY](THIRD-PARTY).",
+      "license": "MIT. Текст в файле [LICENSE](LICENSE).",
+      "welcome": "Привет. Я юрист, у меня две дочки и кофейное дело, и диктую я много: заявления, письма, задания агентам. Готовые диктовки чистят речь отлично, только текст при этом уезжает на чужой сервер, а у меня там имена доверителей и суммы.\n\niriz появился из этого. Он разбирает речь на моем Маке и молчит наружу. Если вам нужно то же самое, забирайте и делайте своим.",
+      "compare_header": [
+        "Вариант",
+        "Когда подходит",
+        "Что получаете",
+        "Куда уходит речь",
+        "Чинит раскладку",
+        "Минус"
+      ]
+    },
+    "zh": {
+      "title": "iriz",
+      "name": "iriz",
+      "tagline": "开口说，字就出现。识别在你自己的 Mac 上完成，不去别人的云里绕一圈。",
+      "hero_alt": "白色大理石的伊里斯长着大理石翅膀，站在古典石柱旁，金色的声音丝带落进石板上的凹槽里",
+      "what": "iriz 待在菜单栏里，做三件事。一句话敲成了另一套键盘布局，它换回来。听写：按一下键，说话，再按一下，字就落在光标那里。第三件是把颠三倒四的一段口述整理成能交给智能体的任务。识别在 Mac 本机完成，跑在 Neural Engine 上，用的是 CoreML 格式的 Parakeet TDT v3。\n\n先把丑话说在前面：这套东西对中文用户基本用不上。语音模型认的是十八种欧洲语言，里面没有中文；自动换布局管的是英俄这一对，跟拼音、五笔这类中文输入法完全是两回事；应用界面目前只有俄文。",
+      "why": "云端听写把口语收拾得比本地干净，这是实话。可传上去的东西，是和委托人的对话、是起草到一半的文书、是名字和金额。对一个受职业保密约束的人来说，这笔交换怎么算都不划算。所以识别留在本机，唯一一次联网由你按按钮开始。",
+      "advantage": "识别在你自己的机器上跑，听写期间由识别库里的一道总闸切断联网，不是靠一句承诺。",
+      "better": "开关叫 `DownloadUtils.enforceOffline`，位置在识别库内部，连下载失败的时候也会自己归位。光有文档不算数：自检脚本盯住编译好的二进制里那一组网络符号，再去问系统，运行中的应用手上有没有一个套接字。",
+      "how": "按下热键，说完一句，再按一次。文字落在光标刚才闪的地方：邮件、聊天窗口、终端都行。没落进去也不要紧，菜单栏下面那条小提示会展开成一块面板，从那里把文字整段拿走。",
+      "quick_intro": "需要一台 macOS 14 或更新的 Mac，还有三项系统权限：麦克风、辅助功能、输入监控。从源码构建另外要 Xcode 和 Swift 6。接下来有三条路，走哪条都行。",
+      "quick_extra": "不想构建？到 Releases 拿现成的磁盘映像：打开，把图标拖进 Applications。没有 Git？下载 [ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip)，解压后在里面执行同一条命令。第一次用？在 Claude Code 里打开项目并运行 `/iriz-setup`：安装以对话的方式进行，一次问一个问题，没有你点头不会装任何东西。",
+      "quick_result": "安装脚本先说清楚这是什么，再看你的机器缺什么，跑一遍 `bash scripts/selfcheck.sh --selftest`，最后告诉你下一步该做什么。你不开口，它什么都不装。真要构建，加一个参数：`bash install.sh --build`。",
+      "compare": [
+        [
+          "**iriz**",
+          "口述的是工作材料，不能交出去",
+          "布局、本机听写、口述变任务",
+          "哪儿也不去，Mac 本机识别",
+          "管，英俄这一对",
+          "俄语优先，还没做公证"
+        ],
+        [
+          "自己手打",
+          "就一句话，偶尔一次",
+          "每个字都在你手里",
+          "哪儿也不去",
+          "不管",
+          "长文本要吃掉一晚上"
+        ],
+        [
+          "Punto Switcher",
+          "只需要换布局",
+          "多年打磨的布局纠正",
+          "哪儿也不去",
+          "管",
+          "完全没有听写"
+        ],
+        [
+          "macOS 自带听写",
+          "偶尔说一两句",
+          "系统里已经有了",
+          "除非开了离线模型，否则去 Apple",
+          "不管",
+          "专业词很弱，也不会整理成任务"
+        ],
+        [
+          "Wispr Flow 这类",
+          "把颠三倒四的话理顺",
+          "清洗效果目前最好",
+          "它们的服务器",
+          "不管",
+          "当事人的名字跟着文本一起走"
+        ],
+        [
+          "本地 Whisper 应用",
+          "不想用云的听写",
+          "同样在你机器上算",
+          "哪儿也不去",
+          "不管",
+          "不纠正布局，也不把口述整理成任务"
+        ]
+      ],
+      "glossary": [
+        [
+          "Neural Engine",
+          "苹果芯片里只管神经网络的那一块：识别快，机器也不发烫"
+        ],
+        [
+          "Parakeet TDT v3",
+          "把声音变成字的那份模型权重，CoreML 格式。它不在安装包里，第一次用的时候由应用自己下载，大约半个 GB，只下这一回"
+        ]
+      ],
+      "safety": [
+        "录音不落盘：它只活到把你说的话解出来为止。",
+        "不读屏幕。没有 ScreenCaptureKit，也不截窗口。",
+        "不读别人应用里的输入框：那项权限是用来判断这个框能不能写字，不是用来把字取出来。",
+        "你在哪里听写过，不记录。否则磁盘上会攒起你和谁、在什么时候工作的痕迹。",
+        "粘贴之后，剪贴板放回原样。",
+        "转写文件的权限是 0700 和 0600，留在你自己的磁盘上。"
+      ],
+      "safety_tail": "往外走的只有一件事，而且要你按按钮：识别模型那一次性的下载。提示词模式默认关着；打开它，就等于同意把转写交给你自己装好、自己登录的那个智能体命令行，比如 Codex CLI，走那条路时文本会发到它背后的服务商。翻译走的是同一条路：你说俄语，落下来的是英文。",
+      "status": "状态：可用，作者每天用它口述。",
+      "limits": [
+        "语音模型认十八种欧洲语言，中文不在其中：中文口述它听不懂。",
+        "自动换键盘布局只管英语和俄语这一对，对拼音、五笔这类中文输入法不适用。",
+        "应用界面目前只有俄文，说明文档才有中文。",
+        "只支持 macOS 14 及以上。没有 Windows，没有 Linux，也没有 iPad。",
+        "还没有做公证：下载来的构建第一次打开要用右键的“打开”。",
+        "通用二进制里带着 Intel 那一片，可是作者手上没有 Intel 的 Mac，从来没在上面验过。"
+      ],
+      "docs": "想看更深的：[一步一步的上手引导](docs/ONBOARDING.zh.md)、[怎么参与](CONTRIBUTING.zh.md)，依赖的许可证在 [THIRD-PARTY](THIRD-PARTY)。",
+      "license": "MIT。见 [LICENSE](LICENSE)。",
+      "welcome": "你好。我是一名律师，有两个女儿和一份咖啡生意，口述的量很大：文书、信件、给智能体的任务。那些做得好的听写工具确实把口语收拾得漂亮，只是文字要跑到别人的服务器上，而我这边写着委托人的名字和金额。\n\niriz 就是从这儿长出来的。它在我的 Mac 上把话解开，对外一声不吭。你要是也需要这么一件东西，拿去，把它变成你自己的。",
+      "compare_header": [
+        "方案",
+        "适合什么时候",
+        "你会得到",
+        "语音去哪儿",
+        "管不管布局",
+        "代价"
+      ]
+    }
+  },
+  "stages": {
+    "key": {
+      "en": {
+        "short": "One key, the same one in every app",
+        "body": "By default it is the right Command key. You press it, and nothing else on the Mac has to change: no window to open, no field to focus first. If that key is already taken on your machine, you swap it during the walkthrough, not in a settings maze.",
+        "result": "a key that answers in the editor, the mail client and the terminal alike.",
+        "alt": "Iriz stage 1: press your key, drawn as a wide Pantheon marble scene"
+      },
+      "ru": {
+        "short": "Одна клавиша, и та же самая в любой программе",
+        "body": "По умолчанию это правый Command. Вы нажимаете ее, и больше на Маке менять нечего: ни окна открывать, ни курсор куда-то ставить заранее. Если клавиша у вас занята, поменять ее можно прямо в знакомстве, а не искать в настройках.",
+        "result": "клавиша, которая отвечает и в редакторе, и в почте, и в терминале.",
+        "alt": "Этап 1 iriz: нажмите свою клавишу, снятый широким кадром канона Пантеона"
+      },
+      "zh": {
+        "short": "一个键，在哪个程序里都一样",
+        "body": "默认是右边的 Command。按下去就行，Mac 上别的什么都不用改：不用先开窗口，也不用先把光标放到哪儿。这个键要是被占了，在引导里当场换掉，不用去设置里翻。",
+        "result": "一个在编辑器、邮件和终端里都答应的键。",
+        "alt": "iriz 第一步：按下你的那个键，用潘忒翁大理石宽幅场景表现"
+      }
+    },
+    "voice": {
+      "en": {
+        "short": "You speak, a plate shows it is listening",
+        "body": "A small plate appears near the cursor and its wave follows your voice, so you can see you are being heard rather than guess. The sound lives in memory only as long as it takes to decode it, and is never written to disk.",
+        "result": "a recording that exists for seconds and leaves nothing behind.",
+        "alt": "Iriz stage 2: say it out loud, drawn as a wide Pantheon marble scene"
+      },
+      "ru": {
+        "short": "Вы говорите, и плашка показывает, что слышит",
+        "body": "Рядом с курсором появляется небольшая плашка, ее волна идет за вашим голосом, и видно, что вас слышат, а не приходится гадать. Звук живет в памяти ровно столько, сколько нужно на разбор, и на диск не попадает.",
+        "result": "запись, которая существует секунды и не оставляет следа.",
+        "alt": "Этап 2 iriz: скажите вслух, снятый широким кадром канона Пантеона"
+      },
+      "zh": {
+        "short": "你说话，小提示条告诉你它在听",
+        "body": "光标旁边会出现一条小提示，上面的波形跟着你的声音走，能看出来它在听，不用猜。声音只在内存里待到识别完成，不写进磁盘。",
+        "result": "一段只活几秒、什么都不留下的录音。",
+        "alt": "iriz 第二步：说出来，用潘忒翁大理石宽幅场景表现"
+      }
+    },
+    "decode": {
+      "en": {
+        "short": "The Mac turns it into letters, on its own chip",
+        "body": "Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Nothing is sent anywhere, and while dictation runs the recognition library keeps its downloader shut.",
+        "result": "a transcript that was never anywhere but your machine.",
+        "alt": "Iriz stage 3: the Mac decodes it, drawn as a wide Pantheon marble scene"
+      },
+      "ru": {
+        "short": "Мак превращает сказанное в буквы своим же чипом",
+        "body": "Распознавание идет на Neural Engine вашего Мака: семь секунд речи разбираются примерно за десятую долю секунды. Никуда ничего не отправляется, а пока идет диктовка, загрузчик внутри библиотеки распознавания закрыт рубильником.",
+        "result": "расшифровка, которая нигде, кроме вашей машины, не была.",
+        "alt": "Этап 3 iriz: Мак разбирает сказанное, снятый широким кадром канона Пантеона"
+      },
+      "zh": {
+        "short": "Mac 用自己的芯片把话变成字",
+        "body": "识别跑在这台 Mac 的 Neural Engine 上：七秒话大约一成秒就出结果。什么都不往外发；听写进行的时候，识别库里的下载开关是关着的。",
+        "result": "一份从没离开过你机器的转写。",
+        "alt": "iriz 第三步：Mac 本机识别，用潘忒翁大理石宽幅场景表现"
+      }
+    },
+    "insert": {
+      "en": {
+        "short": "The text lands where the cursor was blinking",
+        "body": "It goes into the field you were already in: an email, a chat, a terminal. If the field refuses it, the plate opens into a panel holding the whole text, and one click puts it on the clipboard. Nothing is lost while you reach for it.",
+        "result": "text in the field, or text you can still take from the panel.",
+        "alt": "Iriz stage 4: the text lands in the field, drawn as a wide Pantheon marble scene"
+      },
+      "ru": {
+        "short": "Текст встает туда, где мигал курсор",
+        "body": "Он попадает в то поле, в котором вы и были: письмо, чат, терминал. Если поле его не приняло, плашка раскрывается в панель с целым текстом, и один щелчок кладет его в буфер. Пока вы до него тянетесь, он никуда не денется.",
+        "result": "текст в поле или текст, который еще можно забрать из панели.",
+        "alt": "Этап 4 iriz: текст встает в поле, снятый широким кадром канона Пантеона"
+      },
+      "zh": {
+        "short": "文字落在光标刚才闪的地方",
+        "body": "它进的是你本来就待着的那个输入框：邮件、聊天窗口、终端。要是那个框不收，小提示会展开成一块面板，整段文字都在里面，点一下就进剪贴板。你伸手去拿的这段时间里，它不会丢。",
+        "result": "文字进了框，或者还能从面板里整段拿走。",
+        "alt": "iriz 第四步：文字落进输入框，用潘忒翁大理石宽幅场景表现"
+      }
+    }
+  }
+}

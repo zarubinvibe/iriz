@@ -1,0 +1,19 @@
+Use case: stylized-concept
+Asset type: wide hero image for the README of a project of the Olympuz family
+Primary request: one wide scene that says in a single look what this project does - a spoken sentence is carried by the messenger and lands as written text on the person's own tablet, without ever leaving the room.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the figure, her costume, her wings, the herald staff, the marble tablet, the winged sandals and the gold voice ribbon must match those sheets exactly.
+Subject: Iris stands slightly left of centre, turned three-quarters toward the viewer, her marble wings folded close to her back. Her right hand closes around the herald staff, whose butt rests on the ground beside her foot. Her left hand holds the marble writing tablet at waist height, its face turned toward the viewer. One continuous muted-gold ribbon of voice rises from just below her chin, curves once through the air and lands flat inside the single carved groove on the tablet face, where it becomes a straight carved line of writing.
+Composition/framing: 16:9 landscape, generous empty ivory space, the figure occupying the left half and the tablet reading clearly at the centre. A classical white-marble column stands at the right as the family signature, clearly separated from the figure. Nothing overlaps the figure, nothing is cropped by any edge.
+Style/medium: premium restrained 3D marble sculpture render, monumental carving with deep drapery and real weight, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm and welcoming. The gold ribbon and the gold fittings glow softly FROM WITHIN, as if lit by their own material, never by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the voice ribbon and the metal fittings only, sky blue #B8D6EA for the incoming paths only, charcoal #3E3A36
+Constraints:
+- The gold ribbon is the person's own voice and therefore gold. It is one continuous piece from her chin to the tablet, it touches the tablet, and it never breaks into segments and never floats free.
+- Three thin sky-blue paths run flat along the ground from the left edge and end at the butt of the herald staff. They lie on the ground along their whole length and never rise into the air.
+- Everything carried is held by a closed hand. Everything standing rests on the ground and casts a shadow. Nothing hovers.
+- Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, exactly as on the character sheet.
+- Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
+- No screens, no keyboards, no microphones, no cables, no modern devices anywhere in the frame.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, scales, sword, owl, spear, hearth, fire, floating staff, floating tablet, a ribbon floating free of the figure, cloth wings, screens, keyboards, microphones, phones, laptops, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image. The carved line on the tablet is a plain groove, not writing.

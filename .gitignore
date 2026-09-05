@@ -1,0 +1,33 @@
+_parts/
+*_stdout.log
+*_judge.log
+prompt_*.md
+.DS_Store
+.claude_private/
+/soul
+/catalog
+.landing/
+.build/
+build/
+*.app
+graphify-out/
+.kimi-runs/
+__pycache__/
+/03_impl/runs/
+/04_merge/BRIEF_MERGE.md
+/04_merge/COUNCIL.md
+/04_merge/EXTRACT_MAP.md
+/04_merge/PLAN_MERGE.md
+/04_merge/diverge/
+/04_merge/proof/prompts/
+/04_merge/runs/
+/04_merge/samples/
+/04_merge/council/
+/05_next/council/
+/05_next/diverge/
+
+# Рантайм конвейера Гелиоза: маркеры, квитанции, сжатые промты, логи
+.helioz/
+
+# журналы съемки кадров Пантеона
+docs/assets/pantheon/*.png.log
