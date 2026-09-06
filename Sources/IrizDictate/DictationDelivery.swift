@@ -162,6 +162,13 @@ func transcriptionTimeoutSeconds(
     return min(ceilingSeconds, max(floorSeconds, clipSeconds * realtimeFactor))
 }
 
+/// Сколько ждать прогрев модели, если владелец начал говорить раньше.
+///
+/// Три минуты: первая загрузка Whisper после перезагрузки macOS шла 85 секунд
+/// на машине владельца, и запас нужен вдвое. Дольше - это уже не прогрев, а
+/// поломка, и честная ошибка полезнее вечного ожидания.
+let dictationWarmUpWaitLimitSeconds: Double = 180
+
 // MARK: - Отказ старта записи
 
 /// Почему запись не стартует. `secureInputActive` — новый класс отказа:
@@ -173,12 +180,24 @@ enum DictationStartRefusal: String, Equatable {
     case transcriptionInFlight
 }
 
+/// Отказать ли старту.
+///
+/// `modelWarming` отделяет «модель ещё грузится» от «модели нет». Разница
+/// стоила владельцу рабочего утра: после перезагрузки macOS сбрасывает
+/// скомпилированный кэш CoreML, первая загрузка Whisper идёт до полутора минут,
+/// и всё это время каждое нажатие отбивалось - 24 отказа подряд в логе.
+///
+/// ЗАПИСЬ МОДЕЛИ НЕ ТРЕБУЕТ. Модель нужна расшифровке, которая идёт ПОСЛЕ.
+/// Поэтому пока модель грузится, запись начинается как обычно, а расшифровка
+/// дожидается загрузки. Отказ остаётся только там, где распознавать нечем
+/// вообще: модель не скачана или сломана.
 func dictationStartRefusal(modelReady: Bool,
                            isRecording: Bool,
                            isBusy: Bool,
-                           secureInputActive: Bool) -> DictationStartRefusal? {
+                           secureInputActive: Bool,
+                           modelWarming: Bool = false) -> DictationStartRefusal? {
     if secureInputActive { return .secureInputActive }
-    if !modelReady { return .modelNotReady }
+    if !modelReady, !modelWarming { return .modelNotReady }
     if isRecording { return .alreadyRecording }
     if isBusy { return .transcriptionInFlight }
     return nil

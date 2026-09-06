@@ -48,7 +48,9 @@ struct EngineShutdownTests {
         _ = capture.endRecording()
         #expect(capture.idleStopPending == true)
 
-        let deadline = ContinuousClock.now + .seconds(2)
+        // Тот же запас и по той же причине, что у сторожа расшифровки: таймер
+        // ставится на 0,05 с, а очередь под нагрузкой приходит позже.
+        let deadline = ContinuousClock.now + .seconds(20)
         while capture.policyStopRequestCount == 0, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }

@@ -37,7 +37,15 @@ Speak and the text appears. Your speech is decoded on your own Mac, not in someb
 
 ## What This Is
 
-iriz lives in the menu bar and does three things. It fixes a phrase typed in the wrong keyboard layout. It types what you dictate: press a key, speak, press again. And it turns rambling dictation into a ready task for an agent. Speech is decoded on the Mac itself, on the Neural Engine.
+iriz lives in the menu bar. It fixes a phrase typed in the wrong keyboard layout. It types what you dictate: press the key, speak, press again. It turns rambling speech into a finished task for an agent, and it translates on the way.
+
+![The main window: dictation history and settings](docs/assets/screens/page-history.png)
+
+Then comes the part it was polished for. Fix a word after it lands and iriz notices, then offers to remember the replacement. Speech is cleaned of stumbles and repeats on your own machine. A recording of a meeting or a court hearing is split by speaker, names go in by hand, and the transcript lands next to the audio.
+
+![Meetings: drop a recording, the transcript lands beside it](docs/assets/screens/page-meetings.png)
+
+Speech is decoded on the Mac, on the Neural Engine.
 
 ## Why It Helps
 
@@ -51,7 +59,11 @@ Cloud dictation cleans up speech better than anything local. But what travels up
 
 ## How It Works
 
-Press the key, say your sentence, press again. The text lands where the cursor was blinking: an email, a chat, a terminal. If it does not land, the plate opens into a panel and you take the text from there.
+Press the key, say your sentence, press again. The text lands where the cursor was blinking: an email, a chat, a terminal. If it does not arrive, the pill opens into a panel and you take the text from there.
+
+The language switches from the pill itself, on a right click. People change it a second before they speak, and walking to Settings for that makes no sense.
+
+![Dictation settings: where speech gets cleaned](docs/assets/screens/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 

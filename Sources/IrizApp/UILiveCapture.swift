@@ -98,13 +98,14 @@ private func captureBareGlass(kind: IrizBackdrop, dark: Bool, to url: URL) throw
 
 @MainActor
 private func captureOverBackdrop(kind: IrizBackdrop, dark: Bool, to url: URL,
-                                 bare: Bool = false) throws {
+                                 bare: Bool = false,
+                                 page: SettingsPage = .keys) throws {
     guard let screen = NSScreen.main else {
         throw NSError(domain: "iriz.uilive", code: 1,
                       userInfo: [NSLocalizedDescriptionKey: "Экрана нет."])
     }
 
-    let window = makeIrizSettingsWindow(preview: true)
+    let window = makeIrizSettingsWindow(preview: true, page: page)
     if bare {
         // То же окно с теми же флагами, но вместо интерфейса - одно стекло.
         // Потолок меряется ТЕМ ЖЕ стеклом, что отгружается. Прежде здесь
@@ -153,9 +154,17 @@ func captureSettingsWindowLive(to directory: URL) throws -> [URL] {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                             attributes: [.posixPermissions: 0o700])
     var written: [URL] = []
+    // Тёмный и светлый вид первой страницы: по ним судят вид окна.
     for dark in [true, false] {
         let url = directory.appendingPathComponent("settings-live-\(dark ? "dark" : "light").png")
-        try captureOverBackdrop(kind: .gradient, dark: dark, to: url)
+        try captureOverBackdrop(kind: .gradient, dark: dark, to: url, page: .keys)
+        written.append(url)
+    }
+    // Страницы, которые показывают функции продукта. Каждая снимается сама, а
+    // не описывается словами: снимок, собранный руками, устаревает первым.
+    for page in [SettingsPage.history, .dictation, .meetings, .dictionary, .files] {
+        let url = directory.appendingPathComponent("page-\(page.rawValue).png")
+        try captureOverBackdrop(kind: .gradient, dark: false, to: url, page: page)
         written.append(url)
     }
     return written

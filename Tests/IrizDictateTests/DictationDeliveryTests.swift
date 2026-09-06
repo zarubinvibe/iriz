@@ -398,7 +398,12 @@ struct HungTranscriptionTests {
         #expect(controller.isBusyForTesting)
         #expect(controller.state == .transcribing)
 
-        let deadline = ContinuousClock.now + .seconds(3)
+        // Срок ожидания щедрый нарочно. Сторож срабатывает через 0,05 с, и
+        // три секунды выглядели запасом в шестьдесят раз - пока набор не пошёл
+        // параллельно с тяжёлыми соседями. Под нагрузкой планировщик отдаёт
+        // очередь не сразу, и проба падала не на дефекте, а на занятости
+        // машины. Проба, падающая от занятости, приучает не верить красному.
+        let deadline = ContinuousClock.now + .seconds(20)
         while controller.isBusyForTesting, ContinuousClock.now < deadline {
             try await Task.sleep(for: .milliseconds(10))
         }
@@ -449,5 +454,38 @@ struct DictationStartRefusalTests {
                                       isBusy: false, secureInputActive: false) == .alreadyRecording)
         #expect(dictationStartRefusal(modelReady: true, isRecording: false,
                                       isBusy: true, secureInputActive: false) == .transcriptionInFlight)
+    }
+}
+
+@Suite("Прогрев модели не отменяет запись")
+struct WarmUpDoesNotBlockRecordingTests {
+    @Test("пока модель грузится, запись начинается")
+    func покаГрузитсяЗаписьНачинается() {
+        // Стоило владельцу рабочего утра: после перезагрузки macOS сбрасывает
+        // скомпилированный кэш CoreML, первая загрузка Whisper идёт до полутора
+        // минут, и каждое нажатие в этом окне отбивалось - 24 отказа в логе.
+        // Записи модель не нужна, она нужна расшифровке, которая идёт после.
+        #expect(dictationStartRefusal(modelReady: false, isRecording: false,
+                                      isBusy: false, secureInputActive: false,
+                                      modelWarming: true) == nil)
+    }
+
+    @Test("без модели вовсе отказ остаётся")
+    func безМоделиОтказОстаётся() {
+        // «Грузится» и «нет вовсе» - разные состояния. Во втором случае
+        // записывать бессмысленно: расшифровывать будет нечем никогда.
+        #expect(dictationStartRefusal(modelReady: false, isRecording: false,
+                                      isBusy: false, secureInputActive: false,
+                                      modelWarming: false) == .modelNotReady)
+    }
+
+    @Test("прочие отказы прогрев не отменяет")
+    func прочиеОтказыОстаются() {
+        #expect(dictationStartRefusal(modelReady: false, isRecording: true,
+                                      isBusy: false, secureInputActive: false,
+                                      modelWarming: true) == .alreadyRecording)
+        #expect(dictationStartRefusal(modelReady: false, isRecording: false,
+                                      isBusy: false, secureInputActive: true,
+                                      modelWarming: true) == .secureInputActive)
     }
 }

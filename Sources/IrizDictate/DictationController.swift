@@ -59,6 +59,13 @@ public final class DictationController {
     private var isBusy = false
     private var isRecording = false
     private var modelReady = false
+    /// Идёт ли прогрев прямо сейчас. Отдельно от `modelReady`, потому что
+    /// «грузится» и «нет вовсе» - разные состояния с разными последствиями.
+    private var warmUpTask: Task<Void, Never>?
+    private var modelWarming: Bool { warmUpTask != nil && !modelReady }
+    /// Задача прогрева, если он ещё идёт. Спрашивается из конвейера, которому
+    /// нужна готовая модель.
+    var pendingWarmUp: Task<Void, Never>? { modelReady ? nil : warmUpTask }
     private var recordingPurpose: DictationRecordingPurpose = .dictation
     private var recordedTargetPID: pid_t?
     /// РЕШЕНИЕ, а не приложение. Идентификатор того, что было спереди, живёт
@@ -150,7 +157,9 @@ public final class DictationController {
         if modelReady {
             state = .ready
         } else {
-            Task { [weak self] in
+            // Задача прогрева хранится: её ждёт расшифровка, если владелец
+            // начал говорить раньше, чем модель встала.
+            warmUpTask = Task { [weak self] in
                 await self?.warmUpModel()
             }
         }
@@ -441,7 +450,8 @@ public final class DictationController {
         dictationStartRefusal(modelReady: modelReady,
                               isRecording: isRecording,
                               isBusy: isBusy,
-                              secureInputActive: Permissions.isSecureInputActive)
+                              secureInputActive: Permissions.isSecureInputActive,
+                              modelWarming: modelWarming)
     }
 
     /// Смена аудиоустройства посреди записи: крючок AudioCapture до этого
@@ -610,6 +620,27 @@ public final class DictationController {
                                       playSounds: playSounds)
 
         pipelineTask = Task { [weak self] in
+            // Владелец мог начать говорить, пока модель ещё грузилась. Ждём её
+            // ЗДЕСЬ, а не отказываем на нажатии: запись уже снята, и терять её
+            // из-за холодного кэша CoreML нельзя. После перезагрузки macOS
+            // сбрасывает скомпилированный кэш, и первая загрузка Whisper идёт
+            // до полутора минут.
+            if let warm = await self?.pendingWarmUp {
+                log("dictation: жду прогрев модели, запись уже снята")
+                // Ожидание ОГРАНИЧЕНО. Прогрев, который не кончился, - это
+                // поломка, и висеть на ней бесконечно нельзя: запись тогда
+                // пропадает молча, а владелец видит вечное «распознаю».
+                // По истечении срока идём дальше и получаем честную ошибку
+                // расшифровки вместо тишины.
+                await withTaskGroup(of: Void.self) { group in
+                    group.addTask { await warm.value }
+                    group.addTask {
+                        try? await Task.sleep(for: .seconds(dictationWarmUpWaitLimitSeconds))
+                    }
+                    await group.next()
+                    group.cancelAll()
+                }
+            }
             guard let self else { return }
             defer { self.finishTranscription(generation: generation) }
             // Легло ли сырьё на диск. Нужно плашке провала: обещать историю,
