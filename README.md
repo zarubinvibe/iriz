@@ -1,6 +1,6 @@
 # iriz
 
-Speak and the text appears. Your speech is decoded on your own Mac, not in somebody's cloud.
+Speak out loud and the text appears. Your Mac does the decoding, and nothing travels to somebody else's cloud.
 
 [Русский](README.ru.md) · [中文](README.zh.md)
 
@@ -37,31 +37,39 @@ Speak and the text appears. Your speech is decoded on your own Mac, not in someb
 
 ## What This Is
 
-iriz lives in the menu bar. It fixes a phrase typed in the wrong keyboard layout. It types what you dictate: press the key, speak, press again. It turns rambling speech into a finished task for an agent, and it translates on the way.
+This is a Mac app that types for you while you talk.
 
-![The main window: dictation history and settings](docs/assets/screens/page-history.png)
+Here is how it goes. You press one key, speak in your normal voice, press it again. The text lands where the cursor was: an email, a chat, a search box. Nothing to switch to, no window to open.
 
-Then comes the part it was polished for. Fix a word after it lands and iriz notices, then offers to remember the replacement. Speech is cleaned of stumbles and repeats on your own machine. A recording of a meeting or a court hearing is split by speaker, names go in by hand, and the transcript lands next to the audio.
+What sets it apart from similar apps is where the speech gets decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your own Mac does the work, and the audio never leaves the machine.
+
+![The main window: what you said, and the settings](docs/assets/screens/page-history.png)
+
+It does more than that. It repairs a phrase typed in the wrong keyboard layout. Fix a word after it lands and the app offers to remember the correction. It takes the stumbles and repeats out of speech. It splits a recording of a meeting or a court hearing by voice and puts a finished transcript next to the audio.
 
 ![Meetings: drop a recording, the transcript lands beside it](docs/assets/screens/page-meetings.png)
 
-Speech is decoded on the Mac, on the Neural Engine.
-
 ## Why It Helps
 
-Cloud dictation cleans up speech better than anything local. But what travels up there is a conversation with a client, a draft filing, names and amounts. For someone bound by professional privilege that trade never pays off. So recognition stays local here, and the single trip to the network is one you start yourself.
+Anyone who writes for a living loses hours to typing. The same thought comes out faster and whole when spoken: typing, you hunt for words; speaking, you do not.
+
+One thing gets in the way. Cloud dictation cleans speech better than anything local, but what you said leaves the machine: a client call, a draft, names and figures. For a doctor, a lawyer, a therapist, that trade never pays off.
+
+So here your Mac does the decoding, and the app reaches the network only when you press the button.
 
 ## The Main Advantage
 
-**Main advantage:** recognition runs on your machine, and during dictation the network is shut by a switch, not by a promise.
+**Main advantage:** your Mac decodes the speech, and during dictation the network is closed by a switch in the code rather than a promise in the text.
 
 **Why this is better:** The switch sits inside the recognition library and returns to its place even when a download fails. Documentation does not prove that: a script pins the set of networking symbols in the built binary and asks the kernel whether the running app holds a single socket.
 
 ## How It Works
 
-Press the key, say your sentence, press again. The text lands where the cursor was blinking: an email, a chat, a terminal. If it does not arrive, the pill opens into a panel and you take the text from there.
+Press the key, say your sentence, press again. The text lands where the cursor was blinking.
 
-The language switches from the pill itself, on a right click. People change it a second before they speak, and walking to Settings for that makes no sense.
+If it could not be pasted, nothing is lost: the small pill at the bottom of the screen opens into a panel and you take the text from there.
+
+The language switches on the pill itself, with a right click. People change it a second before they speak, and walking to Settings for that makes no sense.
 
 ![Dictation settings: where speech gets cleaned](docs/assets/screens/page-dictation.png)
 
@@ -156,7 +164,7 @@ One thing goes out, and only on your button: the one-time speech model download.
 
 ## Limits
 
-Status: working, the author dictates with it every day.
+Status: working. The author dictates with it every day.
 
 - macOS 14 and newer only. No Windows, no Linux, no iPad.
 - Automatic layout switching covers the English and Russian pair.

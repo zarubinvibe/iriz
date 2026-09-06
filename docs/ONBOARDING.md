@@ -2,6 +2,9 @@
 
 <p align="center"><img src="assets/pantheon/doc-onboarding.png" alt="Iris in white marble sets her tablet on a low table beside the classical column, a gold ribbon of voice ending in the carved groove" width="100%"></p>
 
+<p align="center"><img src="assets/pantheon/icon-wide.png" alt="The iriz icon: a marble Olympus with a voice gathered into a glass capsule above it" width="100%"></p>
+
+This is the icon that will sit in your menu bar. A marble mountain and a voice gathered into a glass capsule above it: what you say turns into text right here, on your machine, and goes nowhere else.
 This walkthrough assumes you have never installed a menu bar app that listens to your keyboard. Every step says what to type or press and what you should see afterwards. If your screen shows something else, stop at that step: the answer sits in the difference, not further down the page.
 
 You need a Mac on macOS 14 or newer, and about half a gigabyte of free disk for the speech model. Building from source also wants Xcode with Swift 6. Nothing gets installed behind your back at any point.

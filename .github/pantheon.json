@@ -118,19 +118,22 @@
       {
         "path": "docs/ONBOARDING.md",
         "frames": [
-          "assets/pantheon/doc-onboarding.png"
+          "assets/pantheon/doc-onboarding.png",
+          "assets/pantheon/icon-wide.png"
         ]
       },
       {
         "path": "docs/ONBOARDING.ru.md",
         "frames": [
-          "assets/pantheon/doc-onboarding.png"
+          "assets/pantheon/doc-onboarding.png",
+          "assets/pantheon/icon-wide.png"
         ]
       },
       {
         "path": "docs/ONBOARDING.zh.md",
         "frames": [
-          "assets/pantheon/doc-onboarding.png"
+          "assets/pantheon/doc-onboarding.png",
+          "assets/pantheon/icon-wide.png"
         ]
       }
     ]
