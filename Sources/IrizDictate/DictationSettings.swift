@@ -52,6 +52,7 @@ public final class DictationSettings: @unchecked Sendable {
     private static let keySpeechCleanupMode = "speech_cleanup_mode_v1"
     private static let keyDictationHUDSize = "dictation_hud_size_v1"
     private static let keyDictationHUDAnchor = "dictation_hud_anchor_v1"
+    private static let keyDictationRetentionDays = "dictation_retention_days_v1"
     private static let keyDictationLanguage = "dictation_language"
     private static let keyRemoveFinalPeriod = "remove_final_period_v1"
     private static let keyEnterDelayMilliseconds = "enter_delay_milliseconds_v1"
@@ -708,6 +709,22 @@ public final class DictationSettings: @unchecked Sendable {
 
     /// Размер плашки записи. Прежнее 124,2 x 36,8 pt было наследством донора,
     /// а не решением: теперь это выбор владельца из трёх.
+    /// Сколько дней держать надиктовки. `0` - держать всегда.
+    ///
+    /// Владелец 06.09.2026 попросил уборку по времени. Заводские 90 дней стоят
+    /// не из осторожности, а из смысла: за три месяца надиктовка либо
+    /// понадобилась, либо не понадобится уже никогда. Выключить уборку совсем
+    /// обязано быть можно - потому и ноль имеет значение, а не запрещён.
+    public var dictationRetentionDays: Int {
+        get {
+            guard defaults.object(forKey: Self.keyDictationRetentionDays) != nil else {
+                return DICTATION_RETENTION_DEFAULT_DAYS
+            }
+            return max(0, defaults.integer(forKey: Self.keyDictationRetentionDays))
+        }
+        set { defaults.set(max(0, newValue), forKey: Self.keyDictationRetentionDays) }
+    }
+
     public var dictationHUDSize: DictationHUDSizeChoice {
         get {
             guard let raw = defaults.string(forKey: Self.keyDictationHUDSize),

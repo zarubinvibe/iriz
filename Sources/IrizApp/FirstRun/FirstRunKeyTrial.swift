@@ -95,7 +95,7 @@ private struct LevelBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(.primary.opacity(0.12))
                 Capsule()
-                    .fill(Color.accentColor)
+                    .fill(Color(nsColor: IRIZ_FAMILY_GOLD))
                     .frame(width: max(4, geometry.size.width * min(1, max(0, level))))
                     .animation(irizAnimation(.irizQuick), value: level)
             }
@@ -131,10 +131,10 @@ private struct KeyCap: View {
             .padding(.vertical, 10)
             .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(active ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06))
+                    .fill(active ? Color(nsColor: IRIZ_FAMILY_GOLD).opacity(0.18) : Color.primary.opacity(0.06))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(active ? Color.accentColor : Color.primary.opacity(0.16),
+                            .strokeBorder(active ? Color(nsColor: IRIZ_FAMILY_GOLD) : Color.primary.opacity(0.16),
                                           lineWidth: active ? 2 : 1)
                     }
             }

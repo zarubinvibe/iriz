@@ -172,11 +172,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    /// `--capture-docs <папка>` - кадры витрины: каждая поверхность на трёх
+    /// языках. Требование владельца: «все скриншоты надо добавлять на всех
+    /// языках, то есть на русском, английском и китайском».
+    private func captureDocShotsIfRequested() -> Bool {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard arguments.first == "--capture-docs" else { return false }
+        let output = arguments.count >= 2
+            ? URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
+            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+                .appendingPathComponent("docs/assets/shots", isDirectory: true)
+        DispatchQueue.main.async {
+            do {
+                let shots = try captureDocShots(to: output, appDelegate: self)
+                print("DOC_SHOTS files=\(shots.count) directory=\(output.path)")
+                Darwin.exit(EXIT_SUCCESS)
+            } catch {
+                self.writeHUDExportError("Съёмка витрины не удалась: \(error.localizedDescription)")
+                Darwin.exit(EXIT_FAILURE)
+            }
+        }
+        return true
+    }
+
     /// `--probe-plate <папка>` - замер стекла ПЛАШКИ над тремя подложками.
     /// Кадры не для разглядывания: их читает scripts/glass_probe.py --plate.
     private func probePlateGlassIfRequested() -> Bool {
         let arguments = Array(CommandLine.arguments.dropFirst())
-        guard arguments.first == "--probe-plate" else { return false }
+        guard arguments.first == "--probe-plate" else { return captureDocShotsIfRequested() }
         let output = arguments.count >= 2
             ? URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
             : URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)

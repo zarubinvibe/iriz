@@ -49,17 +49,42 @@ public struct DictationHistoryEntry: Equatable, Identifiable {
 /// Правила отбора те же, что у перечислителя промпт-режима: только подкаталоги,
 /// только с `raw.txt`, скрытые пропускаются. Иначе история и промпт-режим
 /// разошлись бы в том, что считается надиктовкой.
-public func dictationHistoryEntries(in dictationsRoot: URL,
-                             fileManager: FileManager = .default) -> [DictationHistoryEntry] {
+/// Сколько надиктовок показывается в окне. Решение владельца 06.09.2026:
+/// «просматривать можно будет только последние, например, 100… чтобы летало».
+///
+/// Потолок стоит на ЧТЕНИИ, а не на показе готового списка: замер дал 2047
+/// записей за 1386 мс, и стоили эти миллисекунды не рисование, а шесть тысяч
+/// чтений с диска. Сотня свежих обходится тремя сотнями чтений.
+public let DICTATION_HISTORY_VISIBLE_LIMIT = 100
+
+/// Сколько надиктовок хранится. Что старше - убирает уборка.
+/// «Пусть 500 последних» - слова владельца там же.
+public let DICTATION_HISTORY_KEEP_LIMIT = 500
+
+/// Имена каталогов надиктовок - метки времени, поэтому свежесть считается
+/// СРАВНЕНИЕМ ИМЁН, а не датой файла: дата меняется от касания, имя не меняется
+/// никогда.
+public func dictationHistoryDirectories(in dictationsRoot: URL,
+                                        fileManager: FileManager = .default) -> [URL] {
     let urls = (try? fileManager.contentsOfDirectory(
         at: dictationsRoot,
         includingPropertiesForKeys: [.isDirectoryKey],
         options: [.skipsHiddenFiles]
     )) ?? []
-
     return urls
         .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
         .sorted { $0.lastPathComponent > $1.lastPathComponent }
+}
+
+public func dictationHistoryEntries(in dictationsRoot: URL,
+                             limit: Int? = nil,
+                             fileManager: FileManager = .default) -> [DictationHistoryEntry] {
+    var directories = dictationHistoryDirectories(in: dictationsRoot, fileManager: fileManager)
+    // Обрезаем ДО чтения содержимого: смысл потолка в том, чтобы не открывать
+    // тысячи файлов, а не в том, чтобы открыть их и показать сотню.
+    if let limit, directories.count > limit { directories = Array(directories.prefix(limit)) }
+
+    return directories
         .compactMap { directory -> DictationHistoryEntry? in
             let rawURL = directory.appendingPathComponent(DICTATION_RAW_FILE_NAME)
             guard let data = fileManager.contents(atPath: rawURL.path),

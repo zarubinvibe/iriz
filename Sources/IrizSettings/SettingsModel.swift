@@ -18,12 +18,12 @@ enum HotkeyAction: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .dictation: "Диктовка"
-        case .dictationAndEnter: "Диктовка с переводом строки"
-        case .prompt: "Речь → промпт"
-        case .history: "История"
-        case .layoutConversion: "Конвертация раскладки"
-        case .layoutSwitch: "Переключение раскладки"
+        case .dictation: L("hotkey.dictation", L("hotkey.dictation", "Диктовка"))
+        case .dictationAndEnter: L("hotkey.dictationEnter", "Диктовка с переводом строки")
+        case .prompt: L("hotkey.prompt", L("hotkey.prompt", "Речь → промпт"))
+        case .history: L("hotkey.history", L("hotkey.history", "История"))
+        case .layoutConversion: L("hotkey.layoutConversion", L("hotkey.layoutConversion", "Конвертация раскладки"))
+        case .layoutSwitch: L("hotkey.layoutSwitch", L("hotkey.layoutSwitch", "Переключение раскладки"))
         }
     }
 }
@@ -182,6 +182,8 @@ final class SettingsModel: ObservableObject {
     @Published var snippets: [DictationSnippet]
     /// Свои инструкции промпт-режима. Обычная диктовка их не видит.
     /// Размер плашки записи.
+    /// Через сколько дней уборка стирает надиктовку. 0 - не стирать никогда.
+    @Published var retentionDays: Int
     @Published var hudSize: DictationHUDSizeChoice
     @Published var promptGuidanceInstructions: String
     /// Примеры «как сказал - какой промпт хочу».
@@ -254,6 +256,7 @@ final class SettingsModel: ObservableObject {
         speechCleanupMode = dictationSettings.speechCleanupMode
         corrections = dictationSettings.transcriptCorrections
         snippets = dictationSettings.snippets
+        retentionDays = dictationSettings.dictationRetentionDays
         hudSize = dictationSettings.dictationHUDSize
         let guidance = dictationSettings.promptUserGuidance
         promptGuidanceInstructions = guidance.instructions
@@ -365,8 +368,18 @@ final class SettingsModel: ObservableObject {
         hotkeys[action] = HotkeyBinding(choice: choice)
     }
 
+    /// Новая замена встаёт СВЕРХУ.
+    ///
+    /// Слова владельца 06.09.2026: «логичнее, чтобы сверху, потому что чтобы
+    /// перечитать весь словарь замен, можно потратить время. А если я хочу
+    /// добавить новую, мне придётся полностью всю эту портянку прокрутить
+    /// донизу и только потом ставить».
+    ///
+    /// Порядок в словаре на подстановку не влияет: совпадение точное и по
+    /// границам слова, а не «первое подошедшее». Значит верх свободен и его
+    /// занимает то, ради чего список открыли.
     func addCorrection(source: String = "", replacement: String = "") {
-        corrections.append(TranscriptCorrection(source: source, replacement: replacement))
+        corrections.insert(TranscriptCorrection(source: source, replacement: replacement), at: 0)
     }
 
     func updateCorrection(at index: Int, source: String? = nil, replacement: String? = nil) {
@@ -385,8 +398,10 @@ final class SettingsModel: ObservableObject {
 
     // MARK: - Заготовки
 
+    /// Новая заготовка тоже встаёт сверху - по той же причине и тем же
+    /// правилом, что и замена: список читают редко, дописывают часто.
     func addSnippet(trigger: String = "", body: String = "") {
-        snippets.append(DictationSnippet(trigger: trigger, body: body))
+        snippets.insert(DictationSnippet(trigger: trigger, body: body), at: 0)
     }
 
     func updateSnippet(at index: Int, trigger: String? = nil, body: String? = nil) {
@@ -514,6 +529,7 @@ final class SettingsModel: ObservableObject {
         dictationSettings.speechCleanupMode = speechCleanupMode
         dictationSettings.transcriptCorrections = corrections
         dictationSettings.snippets = snippets
+        dictationSettings.dictationRetentionDays = retentionDays
         dictationSettings.dictationHUDSize = hudSize
         dictationSettings.promptUserGuidance = PromptUserGuidance(
             instructions: promptGuidanceInstructions,
@@ -536,6 +552,7 @@ final class SettingsModel: ObservableObject {
         agentCustomArguments = customArgumentsList.joined(separator: "\n")
         corrections = dictationSettings.transcriptCorrections
         snippets = dictationSettings.snippets
+        retentionDays = dictationSettings.dictationRetentionDays
         hudSize = dictationSettings.dictationHUDSize
         let guidance = dictationSettings.promptUserGuidance
         promptGuidanceInstructions = guidance.instructions

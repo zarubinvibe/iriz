@@ -19,6 +19,7 @@
 // Тон один и тот же, светлота подобрана под фон: это адаптация канона, а не
 // вторая палитра.
 import AppKit
+import IrizCore
 import SwiftUI
 
 /// Смысл акцента. Ролей ровно две - больше семья не различает.
@@ -118,16 +119,16 @@ public enum SettingsSectionSpec: String, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .hotkeys: return "Клавиши"
-        case .promptMode: return "Промпт-режим"
-        case .promptGuidance: return "Свои инструкции и примеры"
-        case .appProfiles: return "Профиль по приложению"
-        case .appearance: return "Плашка записи"
-        case .layout: return "Режим раскладки"
-        case .behavior: return "Вставка и запуск"
-        case .corrections: return "Словарь замен"
-        case .snippets: return "Заготовки"
-        case .transfer: return "Словарь и заготовки файлом"
+        case .hotkeys: return L("section.hotkeys", "Клавиши")
+        case .promptMode: return L("section.promptMode", "Промпт-режим")
+        case .promptGuidance: return L("section.promptGuidance", "Свои инструкции и примеры")
+        case .appProfiles: return L("section.appProfiles", "Профиль по приложению")
+        case .appearance: return L("section.appearance", "Плашка записи")
+        case .layout: return L("section.layout", "Режим раскладки")
+        case .behavior: return L("section.behavior", "Вставка и запуск")
+        case .corrections: return L("section.corrections", "Словарь замен")
+        case .snippets: return L("section.snippets", "Заготовки")
+        case .transfer: return L("section.transfer", "Словарь и заготовки файлом")
         }
     }
 
@@ -146,13 +147,16 @@ public enum SettingsSectionSpec: String, CaseIterable, Sendable {
         }
     }
 
-    /// Золото - личное владельца, голубой - поток извне и наружу.
-    public var accent: FamilyAccentRole {
-        switch self {
-        case .corrections, .snippets, .promptGuidance, .appProfiles, .transfer:
-            return .personal
-        case .hotkeys, .promptMode, .appearance, .layout, .behavior:
-            return .flow
-        }
-    }
+    /// Акцент ОДИН на все секции - золото семьи.
+    ///
+    /// Прежде их было два: золото значило «личное владельца», голубой - «поток
+    /// извне и наружу». Смысл был настоящий, но прочесть его можно было только
+    /// в исходнике: в окне это выглядело как два случайных цвета вперемешку.
+    /// Слова владельца 06.09.2026: «проверить значки, какие-то золотые, какие-то
+    /// синие. Это странно. Они должны быть, наверное, как-то одинаковые».
+    ///
+    /// Различие, которое не читается без комментария в коде, различием не
+    /// является - оно шум. Голубой при этом никуда не делся: он остаётся за
+    /// ореолом плашки, где значит «здесь работает ИИ», и там он один в кадре.
+    public var accent: FamilyAccentRole { .personal }
 }

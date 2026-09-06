@@ -21,6 +21,7 @@ enum FirstRunStep: String, CaseIterable, Equatable {
     case accessibility
     case inputMonitoring
     case tryIt
+    case plate
     case agent
     case translate
     case whenItBreaks
@@ -34,6 +35,7 @@ enum FirstRunStep: String, CaseIterable, Equatable {
         case .accessibility: return FirstRunCopy.accessibility
         case .inputMonitoring: return FirstRunCopy.inputMonitoring
         case .tryIt: return FirstRunCopy.tryIt
+        case .plate: return FirstRunCopy.plate
         case .agent: return FirstRunCopy.agent
         case .translate: return FirstRunCopy.translate
         case .whenItBreaks: return FirstRunCopy.whenItBreaks

@@ -96,6 +96,42 @@ private func captureBareGlass(kind: IrizBackdrop, dark: Bool, to url: URL) throw
     try captureOverBackdrop(kind: kind, dark: dark, to: url, bare: true)
 }
 
+/// Снять ЛЮБОЕ окно продукта поверх известной подложки.
+///
+/// Вынесено из съёмки настроек, когда кадры понадобились не только им:
+/// витрине нужны меню, история и знакомство, и каждое - в трёх языках. Копия
+/// этой процедуры на каждое окно разъехалась бы с первой же правкой отступа
+/// подложки.
+@MainActor
+func captureWindowLive(_ window: NSWindow, kind: IrizBackdrop, dark: Bool, to url: URL) throws {
+    guard let screen = NSScreen.main else {
+        throw NSError(domain: "iriz.uilive", code: 1,
+                      userInfo: [NSLocalizedDescriptionKey: "Экрана нет."])
+    }
+    window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
+    let origin = CGPoint(x: screen.frame.minX + 160, y: screen.frame.minY + 120)
+    window.setFrameOrigin(origin)
+    let frame = window.frame
+    let backdrop = makeBackdropWindow(kind: kind, frame: frame.insetBy(dx: -160, dy: -160), dark: dark)
+    window.orderFrontRegardless()
+    // Стекло сэмплирует подложку своим тактом: снимок сразу после показа ловит
+    // окно ещё без материала.
+    RunLoop.current.run(until: Date().addingTimeInterval(1.2))
+    let top = screen.frame.maxY - frame.origin.y - frame.height
+    let rect = "\(Int(frame.origin.x)),\(Int(top)),\(Int(frame.width)),\(Int(frame.height))"
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+    process.arguments = ["-x", "-o", "-R", rect, url.path]
+    try process.run()
+    process.waitUntilExit()
+    window.orderOut(nil)
+    backdrop.orderOut(nil)
+    guard process.terminationStatus == 0 else {
+        throw NSError(domain: "iriz.uilive", code: 2,
+                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect)."])
+    }
+}
+
 @MainActor
 private func captureOverBackdrop(kind: IrizBackdrop, dark: Bool, to url: URL,
                                  bare: Bool = false,

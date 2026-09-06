@@ -57,19 +57,12 @@ struct FamilyAccentTests {
         #expect(Set(titles).count == titles.count, "имена секций повторяются: \(titles)")
     }
 
-    @Test func смыслАкцентаНазванДляКаждойСекции() {
-        // Золото - личное владельца, голубой - поток. Секции без смысла
-        // не бывает: акцент по вкусу и есть декорация, которую канон запрещает.
-        let personal = SettingsSectionSpec.allCases.filter { $0.accent == .personal }
-        let flow = SettingsSectionSpec.allCases.filter { $0.accent == .flow }
-        #expect(!personal.isEmpty && !flow.isEmpty)
-        #expect(personal.count + flow.count == SettingsSectionSpec.allCases.count)
-        // Словарь и заготовки - это личное владельца по построению.
-        #expect(SettingsSectionSpec.corrections.accent == .personal)
-        #expect(SettingsSectionSpec.snippets.accent == .personal)
-        // Клавиши и вставка - поток: они про то, что приходит и уходит.
-        #expect(SettingsSectionSpec.hotkeys.accent == .flow)
-        #expect(SettingsSectionSpec.behavior.accent == .flow)
+    @Test func акцентСекцийОдинНаВсех() {
+        // Решение владельца 06.09.2026: «какие-то золотые, какие-то синие, это
+        // странно, они должны быть одинаковые». Проба стережёт именно это -
+        // второй цвет в заголовках секций не имеет права вернуться незаметно.
+        let accents = Set(SettingsSectionSpec.allCases.map(\.accent))
+        #expect(accents == [.personal], "в заголовках секций больше одного акцента: \(accents)")
     }
 
     @Test func формулаКонтрастаСчитаетИзвестныеЗначения() {

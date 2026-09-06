@@ -82,6 +82,16 @@ public func captureDictationHUDPlateScenes(to directory: URL) throws -> [URL] {
               settle: 0.9),
     ]
 
+    // Место плашки владельца прибор ОБЯЗАН вернуть. Сцена переноса тащит её в
+    // угол и отпускает, а отпускание сохраняет новое место в настройках - то
+    // есть прибор молча переставлял плашку владельцу при каждой съёмке. Видно
+    // это стало на пяти прогонах подряд: кадр «на записи» расходился на 97,8 %
+    // пикселей, потому что плашка каждый раз стояла в другом месте и стекло
+    // преломляло другой кусок подложки.
+    let settings = DictationSettings.shared
+    let ownerAnchor = settings.dictationHUDAnchor
+    defer { settings.dictationHUDAnchor = ownerAnchor }
+
     var written: [URL] = []
     for dark in [false, true] {
         let surface = DictationHUDPanelSurface()

@@ -56,15 +56,18 @@ struct SettingsSnippetsTests {
         let fixture = TransferFixture()
         let model = fixture.makeModel()
 
+        // Новая заготовка встаёт СВЕРХУ (решение владельца 06.09.2026), поэтому
+        // после двух добавлений первой в списке лежит «вторая фраза».
         model.addSnippet(trigger: "первая фраза", body: "тело")
         model.addSnippet(trigger: "вторая фраза", body: "тело")
         #expect(model.save())
-        #expect(fixture.dictationSettings.snippets.count == 2)
+        #expect(fixture.dictationSettings.snippets.map(\.trigger)
+                == ["вторая фраза", "первая фраза"])
 
         model.removeSnippet(at: 0)
         #expect(model.save())
         #expect(fixture.dictationSettings.snippets
-                == [DictationSnippet(trigger: "вторая фраза", body: "тело")])
+                == [DictationSnippet(trigger: "первая фраза", body: "тело")])
     }
 
     @Test func сбросКЗаводскимОчищаетЗаготовки() {

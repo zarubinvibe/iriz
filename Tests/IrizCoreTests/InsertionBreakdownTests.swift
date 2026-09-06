@@ -13,15 +13,35 @@ import Testing
 @Suite("счётчики: разбивка отказов вставки")
 struct InsertionBreakdownTests {
 
-    private func freshDefaults() -> UserDefaults {
+    /// Домен настроек, который сам за собой убирает.
+    ///
+    /// Прежде здесь стоял `freshDefaults()`: он чистил домен ТОЛЬКО ДО работы, и
+    /// каждый прогон тестов оставлял на диске владельца один домен и один plist.
+    /// К 06.09.2026 их накопилось 858 штук, и нашло их не внимание, а ворота
+    /// уборки `scripts/tidy_gate.sh`. Класс, а не функция, ровно ради `deinit`:
+    /// он срабатывает и когда проба падает на полпути.
+    private final class IsolatedDefaults {
         let suite = "iriz.tests.insertion.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
-        return defaults
+        let defaults: UserDefaults
+
+        init() {
+            defaults = UserDefaults(suiteName: suite)!
+            defaults.removePersistentDomain(forName: suite)
+        }
+
+        deinit {
+            defaults.removePersistentDomain(forName: suite)
+            // Одного забвения домена мало: cfprefsd дописывает plist обратно уже
+            // после выхода процесса, и файл остаётся в ~/Library/Preferences.
+            let url = FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Preferences/\(suite).plist")
+            try? FileManager.default.removeItem(at: url)
+        }
     }
 
     @Test func причинаПишетсяРядомСФактом() {
-        let stats = InsertionStats(defaults: freshDefaults())
+        let box = IsolatedDefaults()
+        let stats = InsertionStats(defaults: box.defaults)
         stats.record(delivered: false, reason: "targetNeverRequestedText")
         stats.record(delivered: false, reason: "targetNeverRequestedText")
         stats.record(delivered: false, reason: "insertionFailed")
@@ -35,7 +55,8 @@ struct InsertionBreakdownTests {
     }
 
     @Test func суммаПричинНеБольшеОбщегоЧисла() {
-        let stats = InsertionStats(defaults: freshDefaults())
+        let box = IsolatedDefaults()
+        let stats = InsertionStats(defaults: box.defaults)
         for reason in INSERTION_FAILURE_REASONS { stats.record(delivered: false, reason: reason) }
         let sum = INSERTION_FAILURE_REASONS.reduce(0) { $0 + stats.failures(reason: $1) }
         #expect(sum == stats.failures)
@@ -44,7 +65,8 @@ struct InsertionBreakdownTests {
     @Test func нечегоВставлятьСчитаетсяОтдельноОтОтказов() {
         // Вставка не провалилась - её не было. На диске эти случаи неотличимы,
         // и именно поэтому 12,6 % каталогов без вставки спорили с 5,8 % отказов.
-        let stats = InsertionStats(defaults: freshDefaults())
+        let box = IsolatedDefaults()
+        let stats = InsertionStats(defaults: box.defaults)
         stats.recordNothingToInsert()
         stats.recordNothingToInsert()
         #expect(stats.nothingToInsert == 2)
@@ -55,7 +77,8 @@ struct InsertionBreakdownTests {
     @Test func старыйВызовБезПричиныПродолжаетРаботать() {
         // История владельца лежит в общем ключе, и терять её ради красоты
         // нельзя: разбивка добавлена рядом, а не вместо.
-        let stats = InsertionStats(defaults: freshDefaults())
+        let box = IsolatedDefaults()
+        let stats = InsertionStats(defaults: box.defaults)
         stats.record(delivered: false)
         #expect(stats.failures == 1)
         #expect(stats.failureBreakdown(reasons: INSERTION_FAILURE_REASONS).isEmpty)

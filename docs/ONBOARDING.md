@@ -86,3 +86,55 @@ If iriz saved you from retyping a paragraph, give it a star: [https://github.com
 Now that you have run it end to end, you are the person who can improve it. The path is short: fork the repository, create a branch, commit your change, push the branch, then open a Pull Request. Do not push to `main` directly, the release gate rejects it.
 
 Something broke instead, or a step above lied to you? Open an issue at [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) and say what you did and what you saw. A wrong step in this file is a bug like any other.
+
+## What it looks like
+
+Every surface here was captured from the live app by an instrument: `iriz --capture-docs`. Not a mockup — the same window that will open on your Mac.
+
+### The plate
+
+<p align="center"><img src="assets/shots/plate-resting-light.png" alt="A small glass drop at the bottom of the screen with a thin green line inside" width="45%"></p>
+
+This is how it looks while you are silent. The drop floats above any window and does nothing.
+
+<p align="center"><img src="assets/shots/plate-listening-light.png" alt="The plate while recording: a green sound wave runs inside the glass" width="70%"></p>
+
+And this is how it looks while you talk. The wave inside the glass is the answer to «can it hear me».
+
+<p align="center"><img src="assets/shots/plate-hover-light.png" alt="The plate opened into a row of six round buttons: microphone, prompt, translate, RU, history, settings" width="100%"></p>
+
+Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. You can drag the plate; it snaps to one of twelve spots along the edges of the screen.
+
+<p align="center"><img src="assets/shots/plate-open-text-light.png" alt="The expanded panel: text on a solid card, a Copy button, a close cross and a row of buttons below" width="100%"></p>
+
+A click opens the panel with the text. There are three ways out: the cross, Escape, and a click past the buttons.
+
+### The menu bar
+
+<p align="center"><img src="assets/shots/menu-en.png" alt="The iriz menu: status, layout mode, layout, dictation, prompt, meetings, history, getting started, settings" width="60%"></p>
+
+Everything else opens from here. The top line tells you what the app is doing right now.
+
+### Settings
+
+<p align="center"><img src="assets/shots/settings-en.png" alt="The iriz settings window: pages in the sidebar on the left, the keys page on the right" width="100%"></p>
+
+Thirteen pages: keys, language, transcribing files, meetings, layout, dictation, the plate, replacements, snippets, prompt mode, moving in, disk space.
+
+### Dictation history
+
+<p align="center"><img src="assets/shots/history-en.png" alt="The history window: a search field, a list of dictations with dates and lengths, key hints below" width="100%"></p>
+
+The latest hundred are shown, the latest five hundred are kept. Search looks through everything that is kept.
+
+### Text that did not get pasted
+
+<p align="center"><img src="assets/shots/rescue-en.png" alt="The rescue window: the transcript on a card, «Paste again» and «Copy» buttons" width="100%"></p>
+
+If pasting did not reach the field, the text is not lost: it waits here.
+
+### Getting started
+
+<p align="center"><img src="assets/shots/firstrun-en.png" alt="The first screen of the walkthrough: a plate with a wave and the headline «You talk, I type»" width="80%"></p>
+
+Eleven screens on the first launch. You can open them again at any time from the menu.

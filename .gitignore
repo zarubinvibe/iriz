@@ -10,7 +10,12 @@ prompt_*.md
 .build/
 build/
 *.app
-graphify-out/
+# Граф знаний ЕДЕТ ВМЕСТЕ С ДОМОМ: агент в свежем клоне без него слеп.
+# Кэш при этом остаётся дома - он пересобирается и весит больше самого графа.
+graphify-out/cache/
+# Служебные файлы графа: пересобираются вместе с ним, читателю не нужны.
+graphify-out/.graphify_root
+graphify-out/manifest.json
 .kimi-runs/
 __pycache__/
 /03_impl/runs/

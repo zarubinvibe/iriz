@@ -125,13 +125,13 @@ public struct IrizSettingsView: View {
         .frame(minWidth: 900, minHeight: 620)
         .background(IrizGlassBackdrop())
         .navigationTitle("Настройки \(IRIZ_NAME)")
-        .alert("Сбросить настройки?", isPresented: $showResetConfirmation) {
-            Button("Сбросить", role: .destructive) {
-                statusMessage = model.resetToFactoryDefaults() ? "Заводские настройки восстановлены." : nil
+        .alert(L("settings.sbrositNastroyki", "Сбросить настройки?"), isPresented: $showResetConfirmation) {
+            Button(L("settings.sbrosit", "Сбросить"), role: .destructive) {
+                statusMessage = model.resetToFactoryDefaults() ? L("settings.zavodskieNastroykiVosstanovleny", "Заводские настройки восстановлены.") : nil
             }
-            Button("Отмена", role: .cancel) {}
+            Button(L("settings.otmena", "Отмена"), role: .cancel) {}
         } message: {
-            Text("Все сочетания, параметры, замены и заготовки вернутся к заводским. Отменить это действие нельзя - выгрузите словарь в файл, если он вам дорог.")
+            Text(L("settings.vseSochetaniyaParametryZameny", "Все сочетания, параметры, замены и заготовки вернутся к заводским. Отменить это действие нельзя - выгрузите словарь в файл, если он вам дорог."))
         }
     }
 
@@ -240,7 +240,7 @@ public struct IrizSettingsView: View {
     private var footerBar: some View {
         HStack(spacing: 12) {
             if let message = model.validationMessage,
-               !message.contains("Конфликт"), !message.contains("macOS") {
+               !message.contains(L("settings.konflikt", "Конфликт")), !message.contains("macOS") {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .accessibilityLabel("Ошибка настроек: \(message)")
@@ -252,16 +252,16 @@ public struct IrizSettingsView: View {
 
             Spacer()
 
-            Button("Сбросить к заводским", role: .destructive) {
+            Button(L("settings.sbrositKZavodskim", "Сбросить к заводским"), role: .destructive) {
                 showResetConfirmation = true
             }
             // Стекло и здесь: рядом со стеклянной «Сохранить» системная серая
             // таблетка читалась как чужая деталь из другого окна.
             .modifier(GlassButton())
-            .accessibilityLabel("Сбросить все настройки к заводским")
+            .accessibilityLabel(L("settings.sbrositVseNastroykiK", "Сбросить все настройки к заводским"))
 
-            Button("Сохранить") {
-                statusMessage = model.save() ? "Настройки сохранены." : nil
+            Button(L("settings.sohranit", "Сохранить")) {
+                statusMessage = model.save() ? L("settings.nastroykiSohraneny", "Настройки сохранены.") : nil
             }
             // Стекло и здесь: сплошная акцентная заливка была единственным
             // непрозрачным пятном в окне, а владелец просил прозрачное во
@@ -269,7 +269,7 @@ public struct IrizSettingsView: View {
             .modifier(GlassProminentButton())
             .keyboardShortcut(.defaultAction)
             .disabled(!model.canSave)
-            .accessibilityLabel("Сохранить настройки")
+            .accessibilityLabel(L("settings.sohranitNastroyki", "Сохранить настройки"))
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
@@ -369,11 +369,11 @@ public struct IrizSettingsView: View {
         DisclosureGroup {
             content()
         } label: {
-            Text("Подробнее")
+            Text(L("settings.podrobnee", "Подробнее"))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         }
-        .accessibilityLabel("Подробное пояснение к секции")
+        .accessibilityLabel(L("settings.podrobnoePoyasnenieKSekcii", "Подробное пояснение к секции"))
     }
 
     /// Сочетание ОДНОЙ нотацией - глифами, как их печатает сама macOS.
@@ -382,22 +382,22 @@ public struct IrizSettingsView: View {
     /// русскую: он же питает меню строки меню, и две поверхности обязаны
     /// называть одну клавишу одинаково.
     private func hotkeyLabel(_ action: HotkeyAction) -> String {
-        guard let binding = model.hotkeys[action] else { return "Записать" }
+        guard let binding = model.hotkeys[action] else { return L("settings.zapisat", "Записать") }
         return MenuKeys.russianKeyName(binding.choice)
     }
 
     private var promptModeSection: some View {
         Section {
-            Toggle("Включить дополнительный промпт-режим", isOn: $model.promptModeEnabled)
+            Toggle(L("settings.vklyuchitDopolnitelnyyPromptRezh", "Включить дополнительный промпт-режим"), isOn: $model.promptModeEnabled)
                 .toggleStyle(.switch)
-                .accessibilityLabel("Включить промпт-режим")
+                .accessibilityLabel(L("settings.vklyuchitPromptRezhim", "Включить промпт-режим"))
 
-            Picker("Агент", selection: $model.promptAgentID) {
+            Picker(L("settings.agent", "Агент"), selection: $model.promptAgentID) {
                 ForEach(PromptAgentCatalog.identifiers, id: \.self) { id in
                     Text(agentTitle(id)).tag(id)
                 }
             }
-            .accessibilityLabel("Агент, который собирает промпт")
+            .accessibilityLabel(L("settings.agentKotoryySobiraetPrompt", "Агент, который собирает промпт"))
 
             // Цена выбора стоит рядом с выбором и меняется вместе с ним.
             Label(model.agentDestinationTitle,
@@ -412,12 +412,12 @@ public struct IrizSettingsView: View {
                     .accessibilityLabel("Важно про этого агента: \(note)")
             }
 
-            LabeledContent("Путь к CLI") {
-                TextField(model.agentAdapter.executableName.isEmpty ? "Полный путь" : "Автопоиск",
+            LabeledContent(L("settings.putKCli", "Путь к CLI")) {
+                TextField(model.agentAdapter.executableName.isEmpty ? L("settings.polnyyPut", "Полный путь") : L("settings.avtopoisk", "Автопоиск"),
                           text: agentPathBinding)
                     .labelsHidden()
                     .frame(minWidth: 280)
-                    .accessibilityLabel("Путь к исполняемому файлу агента")
+                    .accessibilityLabel(L("settings.putKIspolnyaemomuFaylu", "Путь к исполняемому файлу агента"))
             }
 
             if let path = model.detectedAgentPath {
@@ -426,59 +426,59 @@ public struct IrizSettingsView: View {
                     .textSelection(.enabled)
                     .accessibilityLabel("Агент найден. \(path)")
             } else {
-                Label("Не найден", systemImage: "exclamationmark.triangle.fill")
+                Label(L("settings.neNayden", "Не найден"), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(model.promptModeEnabled ? Color.red : Color.secondary)
-                    .accessibilityLabel("Агент не найден")
+                    .accessibilityLabel(L("settings.agentNeNayden", "Агент не найден"))
             }
 
             if model.agentAdapter.requiresModel {
-                LabeledContent("Модель") {
-                    TextField("например, qwen2.5-coder:7b", text: $model.agentModel)
+                LabeledContent(L("settings.model", "Модель")) {
+                    TextField(L("settings.naprimerQwen25Coder", "например, qwen2.5-coder:7b"), text: $model.agentModel)
                         .labelsHidden()
                         .frame(minWidth: 280)
-                        .accessibilityLabel("Модель локального агента")
+                        .accessibilityLabel(L("settings.modelLokalnogoAgenta", "Модель локального агента"))
                 }
             }
 
             if model.promptAgentID == PromptAgentCatalog.customID {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Аргументы — по одному в строке")
+                    Text(L("settings.argumentyPoOdnomuV", "Аргументы — по одному в строке"))
                     TextEditor(text: $model.agentCustomArguments)
                         .font(.system(.body, design: .monospaced))
                         .frame(minHeight: 72)
-                        .accessibilityLabel("Аргументы своего CLI, по одному в строке")
-                    Text("Подстановки: {prompt} — текст промпта отдельным аргументом. Без {prompt} промпт уходит в стандартный ввод. Командная строка не собирается из строк, поэтому кавычки не нужны.")
+                        .accessibilityLabel(L("settings.argumentySvoegoCliPo", "Аргументы своего CLI, по одному в строке"))
+                    Text(L("settings.podstanovkiPromptTekstPrompta", "Подстановки: {prompt} — текст промпта отдельным аргументом. Без {prompt} промпт уходит в стандартный ввод. Командная строка не собирается из строк, поэтому кавычки не нужны."))
                         .font(.footnote)
                         .foregroundStyle(IRIZ_SUBTLE)
-                        .accessibilityLabel("Подстановка {prompt} передаёт текст отдельным аргументом. Без неё промпт уходит в стандартный ввод. Кавычки не нужны")
+                        .accessibilityLabel(L("settings.podstanovkaPromptPeredaetTekst", "Подстановка {prompt} передаёт текст отдельным аргументом. Без неё промпт уходит в стандартный ввод. Кавычки не нужны"))
                 }
             }
 
-            Picker("Распознаватель", selection: $model.speechEngine) {
+            Picker(L("settings.raspoznavatel", "Распознаватель"), selection: $model.speechEngine) {
                 ForEach(SpeechModelProfile.allCases, id: \.self) { profile in
                     Text(profile.shortName).tag(profile)
                 }
             }
-            .accessibilityLabel("Какой движок распознавания речи использовать")
+            .accessibilityLabel(L("settings.kakoyDvizhokRaspoznavaniyaRechi", "Какой движок распознавания речи использовать"))
 
             settingsNote {
-                Text("Parakeet быстрее в 11-15 раз, но транслитерирует английские термины внутри русской фразы: git rebase слышится как «гид репейс». Whisper large-v3 берет их латиницей (19 процентов ошибок на смешанной речи против 44), зато надиктовка в полминуты ждет расшифровки около 16 секунд. Оба считают на этом Маке, наружу не уходит ничего.")
+                Text(L("settings.parakeetBystreeV11", "Parakeet быстрее в 11-15 раз, но транслитерирует английские термины внутри русской фразы: git rebase слышится как «гид репейс». Whisper large-v3 берет их латиницей (19 процентов ошибок на смешанной речи против 44), зато надиктовка в полминуты ждет расшифровки около 16 секунд. Оба считают на этом Маке, наружу не уходит ничего."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
             }
 
-            Picker("Исполнитель промпта", selection: $model.promptRecipient) {
+            Picker(L("settings.ispolnitelPrompta", "Исполнитель промпта"), selection: $model.promptRecipient) {
                 ForEach(PromptRecipientProfile.allCases, id: \.self) { profile in
                     Text(recipientTitle(profile)).tag(profile)
                 }
             }
-            .accessibilityLabel("Исполнитель готового промпта по умолчанию")
+            .accessibilityLabel(L("settings.ispolnitelGotovogoPromptaPo", "Исполнитель готового промпта по умолчанию"))
 
             settingsNote {
-                Text("Этот режим необязателен. Промпт собирает выбранный агент, а профиль готовит текст для того, кто будет промпт исполнять. Пустое поле пути включает автопоиск. Обычная диктовка работает локально всегда; расшифровку наружу отдаёт только промпт-режим и только выбранному агенту. Ollama — единственный вариант, который не отправляет ничего: он считает на этом Маке. Готовый промпт вставляется без отправки, а качество проверяется здесь же — утверждение без дословной опоры на надиктовку отклоняется независимо от того, какой агент его сочинил.")
+                Text(L("settings.etotRezhimNeobyazatelenPrompt", "Этот режим необязателен. Промпт собирает выбранный агент, а профиль готовит текст для того, кто будет промпт исполнять. Пустое поле пути включает автопоиск. Обычная диктовка работает локально всегда; расшифровку наружу отдаёт только промпт-режим и только выбранному агенту. Ollama — единственный вариант, который не отправляет ничего: он считает на этом Маке. Готовый промпт вставляется без отправки, а качество проверяется здесь же — утверждение без дословной опоры на надиктовку отклоняется независимо от того, какой агент его сочинил."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Промпт-режим необязателен. Промпт собирает выбранный агент, профиль готовит текст для исполнителя. Пустое поле пути включает автопоиск. Обычная диктовка всегда локальна. Расшифровку отдаёт только промпт-режим и только выбранному агенту. Ollama считает на этом Маке и не отправляет ничего. Готовый промпт вставляется без отправки, а утверждение без дословной опоры на надиктовку отклоняется независимо от агента")
+                    .accessibilityLabel(L("settings.promptRezhimNeobyazatelenPrompt", "Промпт-режим необязателен. Промпт собирает выбранный агент, профиль готовит текст для исполнителя. Пустое поле пути включает автопоиск. Обычная диктовка всегда локальна. Расшифровку отдаёт только промпт-режим и только выбранному агенту. Ollama считает на этом Маке и не отправляет ничего. Готовый промпт вставляется без отправки, а утверждение без дословной опоры на надиктовку отклоняется независимо от агента"))
             }
         } header: {
             sectionHeader(.promptMode)
@@ -500,11 +500,11 @@ public struct IrizSettingsView: View {
         if model.promptModeEnabled {
             Section {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Чего вы хотите от формы промпта")
+                    Text(L("settings.chegoVyHotiteOt", "Чего вы хотите от формы промпта"))
                     TextEditor(text: $model.promptGuidanceInstructions)
                         .font(.system(.body))
                         .frame(minHeight: 72)
-                        .accessibilityLabel("Свои инструкции для промпт-режима")
+                        .accessibilityLabel(L("settings.svoiInstrukciiDlyaPrompt", "Свои инструкции для промпт-режима"))
                     Text("До \(PROMPT_GUIDANCE_INSTRUCTIONS_MAX) символов. Это предпочтение по ФОРМЕ, "
                          + "а не право выдумывать факты: запреты контракта сильнее.")
                         .font(.footnote)
@@ -526,20 +526,20 @@ public struct IrizSettingsView: View {
                             .buttonStyle(.borderless)
                             .accessibilityLabel("Удалить пример \(index + 1)")
                         }
-                        TextField("Как сказано вслух", text: promptExampleSpoken(at: index))
+                        TextField(L("settings.kakSkazanoVsluh", "Как сказано вслух"), text: promptExampleSpoken(at: index))
                             .labelsHidden()
                             .accessibilityLabel("Пример \(index + 1): как сказано вслух")
-                        TextField("Какой промпт нужен", text: promptExampleWanted(at: index))
+                        TextField(L("settings.kakoyPromptNuzhen", "Какой промпт нужен"), text: promptExampleWanted(at: index))
                             .labelsHidden()
                             .accessibilityLabel("Пример \(index + 1): какой промпт нужен")
                     }
                 }
 
                 if model.promptGuidanceExamples.count < PROMPT_GUIDANCE_EXAMPLES_MAX {
-                    Button("Добавить пример", systemImage: "plus") {
+                    Button(L("settings.dobavitPrimer", "Добавить пример"), systemImage: "plus") {
                         model.addPromptExample()
                     }
-                    .accessibilityLabel("Добавить пример для промпт-режима")
+                    .accessibilityLabel(L("settings.dobavitPrimerDlyaPrompt", "Добавить пример для промпт-режима"))
                 } else {
                     Text("Примеров хватит: больше \(PROMPT_GUIDANCE_EXAMPLES_MAX) уже не учат форме, а диктуют содержание.")
                         .font(.footnote)
@@ -570,9 +570,9 @@ public struct IrizSettingsView: View {
     private var appProfilesSection: some View {
         Section {
             if model.appProfiles.isEmpty {
-                Text("Список пуст — промпт для любого приложения собирается по профилю выше.")
+                Text(L("settings.spisokPustPromptDlya", "Список пуст — промпт для любого приложения собирается по профилю выше."))
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Список приложений пуст, работает профиль по умолчанию")
+                    .accessibilityLabel(L("settings.spisokPrilozheniyPustRabotaet", "Список приложений пуст, работает профиль по умолчанию"))
             }
 
             ForEach(Array(model.appProfiles.indices), id: \.self) { index in
@@ -603,10 +603,10 @@ public struct IrizSettingsView: View {
                 }
             }
 
-            Button("Добавить приложение…", systemImage: "plus") {
+            Button(L("settings.dobavitPrilozhenie", "Добавить приложение…"), systemImage: "plus") {
                 chooseApplication()
             }
-            .accessibilityLabel("Выбрать приложение и назначить ему профиль")
+            .accessibilityLabel(L("settings.vybratPrilozhenieINaznachit", "Выбрать приложение и назначить ему профиль"))
 
             if let appProfileMessage {
                 Label(appProfileMessage, systemImage: "info.circle")
@@ -619,7 +619,7 @@ public struct IrizSettingsView: View {
                 Text("Диктуете в редактор кода — промпт собирается для Codex, диктуете в почту — универсальный. \(IRIZ_NAME) смотрит только на то, какое приложение сейчас спереди: ни окно, ни поле, ни текст чужой программы не читаются. Приложение спрашивается один раз, в момент нажатия, и сразу забывается — на диск и в журнал уходит выбранный профиль, а не имя программы. Приложений, которых нет в списке, это не касается: им достаётся профиль по умолчанию.")
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Профиль выбирается по приложению, которое спереди в момент нажатия. Окно, поле и текст чужой программы не читаются. Приложение спрашивается один раз и сразу забывается: на диск и в журнал уходит профиль, а не имя программы. Приложениям вне списка достаётся профиль по умолчанию")
+                    .accessibilityLabel(L("settings.profilVybiraetsyaPoPrilozheniyu", "Профиль выбирается по приложению, которое спереди в момент нажатия. Окно, поле и текст чужой программы не читаются. Приложение спрашивается один раз и сразу забывается: на диск и в журнал уходит профиль, а не имя программы. Приложениям вне списка достаётся профиль по умолчанию"))
             }
         } header: {
             sectionHeader(.appProfiles)
@@ -641,7 +641,7 @@ public struct IrizSettingsView: View {
     private func recipientTitle(_ profile: PromptRecipientProfile) -> String {
         switch profile {
         case .codex: "Codex"
-        case .generic: "Универсальный"
+        case .generic: L("settings.universalnyy", "Универсальный")
         }
     }
 
@@ -660,7 +660,7 @@ public struct IrizSettingsView: View {
     /// файл программы, идентификатор читается из её же бандла.
     private func chooseApplication() {
         let panel = NSOpenPanel()
-        panel.title = "Выберите приложение"
+        panel.title = L("settings.vyberitePrilozhenie", "Выберите приложение")
         panel.directoryURL = URL(fileURLWithPath: "/Applications", isDirectory: true)
         panel.allowedContentTypes = [.application]
         panel.allowsMultipleSelection = false
@@ -668,17 +668,17 @@ public struct IrizSettingsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
 
         guard let bundleID = Bundle(url: url)?.bundleIdentifier else {
-            appProfileMessage = "У этой программы нет идентификатора — привязать профиль не к чему."
+            appProfileMessage = L("settings.uEtoyProgrammyNet", "У этой программы нет идентификатора — привязать профиль не к чему.")
             return
         }
 
         switch model.addAppProfile(bundleID: bundleID, profile: model.promptRecipient) {
         case .added:
-            appProfileMessage = "Добавлено. Выберите профиль и нажмите «Сохранить»."
+            appProfileMessage = L("settings.dobavlenoVyberiteProfilI", "Добавлено. Выберите профиль и нажмите «Сохранить».")
         case .updated:
-            appProfileMessage = "Эта программа уже была в списке — строка одна, профиль в ней и меняйте."
+            appProfileMessage = L("settings.etaProgrammaUzheByla", "Эта программа уже была в списке — строка одна, профиль в ней и меняйте.")
         case .invalidBundleID:
-            appProfileMessage = "Идентификатор этой программы разобрать не удалось."
+            appProfileMessage = L("settings.identifikatorEtoyProgrammyRazobr", "Идентификатор этой программы разобрать не удалось.")
         case .listFull:
             appProfileMessage = "В списке уже \(PromptAppProfileMap.maximumEntries) программ — уберите лишние."
         }
@@ -700,7 +700,7 @@ public struct IrizSettingsView: View {
             // владельца: «не маленькая, большая, средняя, а прям можно кликать».
             // Плашки настоящие: их рисуют те же классы, что рисуют живую.
             VStack(alignment: .leading, spacing: 6) {
-                Text("Размер плашки")
+                Text(L("settings.razmerPlashki", "Размер плашки"))
                     .font(.callout)
                 HStack(alignment: .bottom, spacing: 4) {
                     ForEach(DictationHUDSizeChoice.allCases, id: \.self) { choice in
@@ -712,10 +712,10 @@ public struct IrizSettingsView: View {
                     }
                 }
             }
-            .accessibilityLabel("Размер плашки записи")
+            .accessibilityLabel(L("settings.razmerPlashkiZapisi", "Размер плашки записи"))
 
             VStack(alignment: .leading, spacing: 6) {
-                Text("Как выглядит волна")
+                Text(L("settings.kakVyglyaditVolna", "Как выглядит волна"))
                     .font(.callout)
                 HStack(alignment: .bottom, spacing: 4) {
                     ForEach(DictationHUDWavePalette.allCases, id: \.self) { palette in
@@ -727,13 +727,13 @@ public struct IrizSettingsView: View {
                     }
                 }
             }
-            .accessibilityLabel("Как выглядит волна на плашке записи")
+            .accessibilityLabel(L("settings.kakVyglyaditVolnaNa", "Как выглядит волна на плашке записи"))
 
             settingsNote {
-                Text("Переливы — три тона вокруг цвета режима. Спокойная — те же тона, но разлёт вдвое уже. Монохром — без переливов вовсе. Цвет режима палитра не меняет: обычная диктовка остаётся тёплой, промпт — холодным, иначе по плашке было бы не видно, что именно записывается.")
+                Text(L("settings.perelivyTriTonaVokrug", "Переливы — три тона вокруг цвета режима. Спокойная — те же тона, но разлёт вдвое уже. Монохром — без переливов вовсе. Цвет режима палитра не меняет: обычная диктовка остаётся тёплой, промпт — холодным, иначе по плашке было бы не видно, что именно записывается."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Переливы: три тона вокруг цвета режима. Спокойная: те же тона, разлёт вдвое уже. Монохром: без переливов. Цвет режима палитра не меняет — диктовка остаётся тёплой, промпт холодным")
+                    .accessibilityLabel(L("settings.perelivyTriTonaVokrug2", "Переливы: три тона вокруг цвета режима. Спокойная: те же тона, разлёт вдвое уже. Монохром: без переливов. Цвет режима палитра не меняет — диктовка остаётся тёплой, промпт холодным"))
             }
         } header: {
             sectionHeader(.appearance)
@@ -758,7 +758,7 @@ public struct IrizSettingsView: View {
             }
 
             if let message = model.validationMessage,
-               message.contains("Конфликт") || message.contains("macOS") || message.contains("раскладка") {
+               message.contains(L("settings.konflikt", "Конфликт")) || message.contains("macOS") || message.contains(L("settings.raskladka", "раскладка")) {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .accessibilityLabel("Ошибка сочетаний: \(message)")
@@ -766,10 +766,10 @@ public struct IrizSettingsView: View {
 
             // Две сноски подряд были про одно и то же - когда сочетание
             // начинает работать. Осталась одна.
-            Text("Сочетание применяется сразу после сохранения. Отмена переключения — то же сочетание конвертации ещё раз.")
+            Text(L("settings.sochetaniePrimenyaetsyaSrazuPosl", "Сочетание применяется сразу после сохранения. Отмена переключения — то же сочетание конвертации ещё раз."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
-                .accessibilityLabel("Сочетание применяется сразу после сохранения. Отмена переключения - то же сочетание конвертации ещё раз")
+                .accessibilityLabel(L("settings.sochetaniePrimenyaetsyaSrazuPosl2", "Сочетание применяется сразу после сохранения. Отмена переключения - то же сочетание конвертации ещё раз"))
         } header: {
             sectionHeader(.hotkeys)
         }
@@ -782,13 +782,13 @@ public struct IrizSettingsView: View {
             // поэтому объяснение переехало под сам выбор и говорит про ВЫБРАННЫЙ
             // режим. Три абзаца про три режима сразу читатель всё равно не
             // сравнивает: он выбирает один.
-            Picker("Режим раскладки", selection: $model.layoutMode) {
+            Picker(L("settings.rezhimRaskladki", "Режим раскладки"), selection: $model.layoutMode) {
                 ForEach(LayoutMode.allCases) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
             .pickerStyle(.radioGroup)
-            .accessibilityLabel("Режим раскладки")
+            .accessibilityLabel(L("settings.rezhimRaskladki", "Режим раскладки"))
 
             Text(model.layoutMode.explanation)
                 .font(.footnote)
@@ -801,7 +801,7 @@ public struct IrizSettingsView: View {
 
     private var behaviorSection: some View {
         Section {
-            LabeledContent("Задержка Enter") {
+            LabeledContent(L("settings.zaderzhkaEnter", "Задержка Enter")) {
                 HStack(spacing: 6) {
                     // labelsHidden обязателен: в Form(.grouped) заголовок TextField
                     // рисуется ВТОРЫМ ярлыком рядом с ярлыком LabeledContent и
@@ -810,17 +810,17 @@ public struct IrizSettingsView: View {
                         .labelsHidden()
                         .frame(width: 72)
                         .multilineTextAlignment(.trailing)
-                        .accessibilityLabel("Задержка Enter в миллисекундах")
-                    Text("мс").foregroundStyle(IRIZ_SUBTLE)
+                        .accessibilityLabel(L("settings.zaderzhkaEnterVMillisekundah", "Задержка Enter в миллисекундах"))
+                    Text(L("settings.ms", "мс")).foregroundStyle(IRIZ_SUBTLE)
                 }
             }
 
-            Picker("Чистить речь", selection: $model.speechCleanupMode) {
+            Picker(L("settings.chistitRech", "Чистить речь"), selection: $model.speechCleanupMode) {
                 ForEach(SpeechCleanupMode.allCases, id: \.self) { mode in
                     Text(mode.title).tag(mode)
                 }
             }
-            .accessibilityLabel("Где чистится речь")
+            .accessibilityLabel(L("settings.gdeChistitsyaRech", "Где чистится речь"))
 
             // Предупреждение показывается ДО отправки, а не после: оно и есть
             // то согласие, о котором говорил владелец. Живёт ровно там, где
@@ -833,21 +833,21 @@ public struct IrizSettingsView: View {
                     .accessibilityLabel("Предупреждение: \(warning)")
             }
 
-            Picker("После вставки", selection: $model.pasteSuffix) {
-                Text("Пробел").tag(PasteSuffix.appendSpace)
-                Text("Ничего").tag(PasteSuffix.none)
-                Text("Перевод строки").tag(PasteSuffix.appendNewline)
+            Picker(L("settings.posleVstavki", "После вставки"), selection: $model.pasteSuffix) {
+                Text(L("settings.probel", "Пробел")).tag(PasteSuffix.appendSpace)
+                Text(L("settings.nichego", "Ничего")).tag(PasteSuffix.none)
+                Text(L("settings.perevodStroki", "Перевод строки")).tag(PasteSuffix.appendNewline)
             }
-            .accessibilityLabel("Суффикс после вставки")
+            .accessibilityLabel(L("settings.suffiksPosleVstavki", "Суффикс после вставки"))
 
-            Toggle("Запускать при входе в систему", isOn: $model.launchAtLogin)
+            Toggle(L("settings.zapuskatPriVhodeV", "Запускать при входе в систему"), isOn: $model.launchAtLogin)
                 .toggleStyle(.switch)
                 .accessibilityLabel("Запускать \(IRIZ_NAME) при входе в систему")
 
-            Toggle("Показывать окно, если текст никуда не вставился",
+            Toggle(L("settings.pokazyvatOknoEsliTekst", "Показывать окно, если текст никуда не вставился"),
                    isOn: $model.rescueWindowEnabled)
                 .toggleStyle(.switch)
-                .accessibilityLabel("Показывать окно с текстом, когда вставка не удалась")
+                .accessibilityLabel(L("settings.pokazyvatOknoSTekstom", "Показывать окно с текстом, когда вставка не удалась"))
 
             settingsNote {
                 Text("Вставка не дошла до поля — \(IRIZ_NAME) поднимает окно с готовым текстом: скопировать или вставить ещё раз, Esc — закрыть. Когда сработал запасной прямой ввод, окна не будет: там текст, скорее всего, уже в поле, и предлагать вставить его второй раз опаснее, чем промолчать.")
@@ -863,18 +863,18 @@ public struct IrizSettingsView: View {
     private var correctionsSection: some View {
         Section {
             if model.corrections.isEmpty {
-                Text("Замен пока нет.")
+                Text(L("settings.zamenPokaNet", "Замен пока нет."))
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Словарь замен пуст")
+                    .accessibilityLabel(L("settings.slovarZamenPust", "Словарь замен пуст"))
             } else {
                 // Подписи колонок ОДИН раз. Прежде каждая строка несла свои две:
                 // на четырнадцати заменах это двадцать восемь повторов «Как
                 // распозналось» и «На что менять», из-за которых сами слова
                 // владельца терялись в служебном тексте.
                 HStack(spacing: 8) {
-                    Text("Как распозналось")
+                    Text(L("settings.kakRaspoznalos", "Как распозналось"))
                     Spacer(minLength: 8)
-                    Text("На что менять")
+                    Text(L("settings.naChtoMenyat", "На что менять"))
                     Spacer().frame(width: CORRECTION_TRASH_WIDTH)
                 }
                 .font(.caption)
@@ -884,13 +884,13 @@ public struct IrizSettingsView: View {
 
             ForEach(Array(model.corrections.indices), id: \.self) { index in
                 HStack(spacing: 8) {
-                    TextField("Как распозналось", text: correctionSource(at: index))
+                    TextField(L("settings.kakRaspoznalos", "Как распозналось"), text: correctionSource(at: index))
                         .labelsHidden()
                         .accessibilityLabel("Как распозналось, замена \(index + 1)")
                     Image(systemName: "arrow.right")
                         .foregroundStyle(IRIZ_SUBTLE)
                         .accessibilityHidden(true)
-                    TextField("На что менять", text: correctionReplacement(at: index))
+                    TextField(L("settings.naChtoMenyat", "На что менять"), text: correctionReplacement(at: index))
                         .labelsHidden()
                         .accessibilityLabel("На что менять, замена \(index + 1)")
                     Button(role: .destructive) {
@@ -903,10 +903,10 @@ public struct IrizSettingsView: View {
                 }
             }
 
-            Button("Добавить замену", systemImage: "plus") {
+            Button(L("settings.dobavitZamenu", "Добавить замену"), systemImage: "plus") {
                 model.addCorrection()
             }
-            .accessibilityLabel("Добавить пару в словарь замен")
+            .accessibilityLabel(L("settings.dobavitParuVSlovar", "Добавить пару в словарь замен"))
         } header: {
             sectionHeader(.corrections)
         }
@@ -917,15 +917,15 @@ public struct IrizSettingsView: View {
     private var snippetsSection: some View {
         Section {
             if model.snippets.isEmpty {
-                Text("Заготовок пока нет.")
+                Text(L("settings.zagotovokPokaNet", "Заготовок пока нет."))
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Список заготовок пуст")
+                    .accessibilityLabel(L("settings.spisokZagotovokPust", "Список заготовок пуст"))
             }
 
             ForEach(Array(model.snippets.indices), id: \.self) { index in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
-                        TextField("Что произносится", text: snippetTrigger(at: index))
+                        TextField(L("settings.chtoProiznositsya", "Что произносится"), text: snippetTrigger(at: index))
                             .accessibilityLabel("Фраза заготовки \(index + 1)")
                         Button(role: .destructive) {
                             model.removeSnippet(at: index)
@@ -942,16 +942,16 @@ public struct IrizSettingsView: View {
                 .padding(.vertical, 2)
             }
 
-            Button("Добавить заготовку", systemImage: "plus") {
+            Button(L("settings.dobavitZagotovku", "Добавить заготовку"), systemImage: "plus") {
                 model.addSnippet()
             }
-            .accessibilityLabel("Добавить заготовку")
+            .accessibilityLabel(L("settings.dobavitZagotovku", "Добавить заготовку"))
 
             settingsNote {
-                Text("Произнесённая фраза заменяется сохранённым текстом — так вставляются шапки, реквизиты и стандартные формулировки. Совпадение точное и по границам слова: «иск» внутри «иска» не сработает, регистр значения не имеет. Заготовки и словарь замен подставляются одним проходом, поэтому текст заготовки словарь уже не переписывает. Сырая расшифровка на диске остаётся нетронутой, а промпт-режим заготовок не видит вовсе.")
+                Text(L("settings.proiznesennayaFrazaZamenyaetsyaS", "Произнесённая фраза заменяется сохранённым текстом — так вставляются шапки, реквизиты и стандартные формулировки. Совпадение точное и по границам слова: «иск» внутри «иска» не сработает, регистр значения не имеет. Заготовки и словарь замен подставляются одним проходом, поэтому текст заготовки словарь уже не переписывает. Сырая расшифровка на диске остаётся нетронутой, а промпт-режим заготовок не видит вовсе."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Произнесённая фраза заменяется сохранённым текстом: шапки, реквизиты, стандартные формулировки. Совпадение точное и по границам слова, регистр не важен. Заготовки и словарь подставляются одним проходом, текст заготовки словарь не переписывает. Сырая расшифровка на диске не меняется, промпт-режим заготовок не видит")
+                    .accessibilityLabel(L("settings.proiznesennayaFrazaZamenyaetsyaS2", "Произнесённая фраза заменяется сохранённым текстом: шапки, реквизиты, стандартные формулировки. Совпадение точное и по границам слова, регистр не важен. Заготовки и словарь подставляются одним проходом, текст заготовки словарь не переписывает. Сырая расшифровка на диске не меняется, промпт-режим заготовок не видит"))
             }
         } header: {
             sectionHeader(.snippets)
@@ -961,15 +961,15 @@ public struct IrizSettingsView: View {
     private var transferSection: some View {
         Section {
             HStack {
-                Button("Экспортировать…", systemImage: "square.and.arrow.up") {
+                Button(L("settings.eksportirovat", "Экспортировать…"), systemImage: "square.and.arrow.up") {
                     exportDictionary()
                 }
-                .accessibilityLabel("Экспортировать словарь и заготовки в файл")
+                .accessibilityLabel(L("settings.eksportirovatSlovarIZagotovki", "Экспортировать словарь и заготовки в файл"))
 
-                Button("Импортировать…", systemImage: "square.and.arrow.down") {
+                Button(L("settings.importirovat", "Импортировать…"), systemImage: "square.and.arrow.down") {
                     importDictionary()
                 }
-                .accessibilityLabel("Импортировать словарь и заготовки из файла")
+                .accessibilityLabel(L("settings.importirovatSlovarIZagotovki", "Импортировать словарь и заготовки из файла"))
             }
 
             if let transferMessage {
@@ -981,10 +981,10 @@ public struct IrizSettingsView: View {
             }
 
             settingsNote {
-                Text("Файл — обычный JSON, его можно открыть и поправить руками. Это единственная копия словаря: всё остальное живёт в настройках системы и исчезает вместе с ними. При импорте совпавшие по фразе записи берутся из файла, а те, которых в файле нет, остаются на месте — импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи: половина восстановленного словаря хуже честного отказа. Импортированное попадает в настройки после кнопки «Сохранить».")
+                Text(L("settings.faylObychnyyJsonEgo", "Файл — обычный JSON, его можно открыть и поправить руками. Это единственная копия словаря: всё остальное живёт в настройках системы и исчезает вместе с ними. При импорте совпавшие по фразе записи берутся из файла, а те, которых в файле нет, остаются на месте — импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи: половина восстановленного словаря хуже честного отказа. Импортированное попадает в настройки после кнопки «Сохранить»."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Файл — обычный JSON, его можно поправить руками. Это единственная копия словаря. При импорте совпавшие по фразе записи берутся из файла, остальные остаются на месте, импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи. Импортированное попадает в настройки после кнопки Сохранить")
+                    .accessibilityLabel(L("settings.faylObychnyyJsonEgo2", "Файл — обычный JSON, его можно поправить руками. Это единственная копия словаря. При импорте совпавшие по фразе записи берутся из файла, остальные остаются на месте, импорт ничего не удаляет. Негодный файл отклоняется целиком, с номером испорченной записи. Импортированное попадает в настройки после кнопки Сохранить"))
             }
         } header: {
             sectionHeader(.transfer)
@@ -993,7 +993,7 @@ public struct IrizSettingsView: View {
 
     private func exportDictionary() {
         let panel = NSSavePanel()
-        panel.title = "Экспорт словаря и заготовок"
+        panel.title = L("settings.eksportSlovaryaIZagotovok", "Экспорт словаря и заготовок")
         panel.nameFieldStringValue = DictionaryTransfer.suggestedFileName
         panel.allowedContentTypes = [.json]
         panel.isExtensionHidden = false
@@ -1011,7 +1011,7 @@ public struct IrizSettingsView: View {
 
     private func importDictionary() {
         let panel = NSOpenPanel()
-        panel.title = "Импорт словаря и заготовок"
+        panel.title = L("settings.importSlovaryaIZagotovok", "Импорт словаря и заготовок")
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
@@ -1021,7 +1021,7 @@ public struct IrizSettingsView: View {
             let data = try Data(contentsOf: url)
             let summary = try model.importDictionaryData(data)
             transferFailed = false
-            transferMessage = summary + " Нажмите «Сохранить», чтобы записать."
+            transferMessage = summary + L("settings.nazhmiteSohranitChtobyZapisat", " Нажмите «Сохранить», чтобы записать.")
         } catch let error as DictionaryTransferError {
             transferFailed = true
             transferMessage = error.message
@@ -1038,8 +1038,8 @@ public struct IrizSettingsView: View {
         Section {
             if diskEntries.isEmpty {
                 Text(diskCounting
-                     ? "Считаю…"
-                     : "Пока ничего не занято: ни модели, ни надиктовок на диске нет.")
+                     ? L("settings.schitayu", "Считаю…")
+                     : L("settings.pokaNichegoNeZanyato", "Пока ничего не занято: ни модели, ни надиктовок на диске нет."))
                     .foregroundStyle(IRIZ_SUBTLE)
             } else {
                 ForEach(diskEntries) { entry in
@@ -1054,14 +1054,14 @@ public struct IrizSettingsView: View {
                         Text(diskUsageSizeText(entry.bytes))
                             .monospacedDigit()
                             .foregroundStyle(IRIZ_SUBTLE)
-                        Button("Показать") {
+                        Button(L("settings.pokazat", "Показать")) {
                             NSWorkspace.shared.activateFileViewerSelecting([entry.url])
                         }
                         .modifier(GlassButton())
                     }
                 }
                 HStack {
-                    Text("Всего")
+                    Text(L("settings.vsego", "Всего"))
                     Spacer()
                     Text(diskUsageSizeText(diskEntries.reduce(0) { $0 + $1.bytes }))
                         .monospacedDigit()
@@ -1069,13 +1069,29 @@ public struct IrizSettingsView: View {
                 .font(.system(size: 13, weight: .semibold))
             }
 
-            Text("Удалить отсюда нельзя намеренно: в этих каталогах лежат ваши надиктовки, "
-                 + "а кнопка «очистить», нажатая не глядя, стоит дороже сэкономленного "
-                 + "гигабайта. Чистка живёт там, где видно, что именно чистишь, - в окне истории.")
+            Picker(L("settings.hranitNadiktovki", "Хранить надиктовки"), selection: $model.retentionDays) {
+                Text(L("settings.vsegda", "Всегда")).tag(0)
+                Text(L("settings.30Dney", "30 дней")).tag(30)
+                Text(L("settings.90Dney", "90 дней")).tag(90)
+                Text(L("settings.god", "Год")).tag(365)
+            }
+            .pickerStyle(.menu)
+
+            Text(L("settings.srokSchitaetsyaPoDate", "Срок считается по дате папки. Что старше — уходит при следующем запуске, "
+                 + "молча и без корзины. «Всегда» выключает уборку совсем.\n\n"
+                 + "Мусор убирается в любом случае и сроку не подчиняется: распакованный "
+                 + "архив модели, рядом с которым лежит распакованная папка, и карантин "
+                 + "старше месяца. Терять там нечего — это копии того, что уже есть."))
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+
+            Text(L("settings.knopkiOchistitVseZdes", "Кнопки «очистить всё» здесь нет намеренно: нажатая не глядя, она стоит "
+                 + "дороже сэкономленного гигабайта. Выборочная чистка живёт там, где видно, "
+                 + "что именно чистишь, - в окне истории."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         } header: {
-            Text("Место на диске")
+            Text(L("settings.mestoNaDiske", "Место на диске"))
         }
         .task(id: page) {
             guard page == .disk, diskEntries.isEmpty, !diskCounting else { return }
@@ -1090,7 +1106,7 @@ public struct IrizSettingsView: View {
     /// настройки на незнакомом языке, ищет именно ее.
     private var languageSection: some View {
         Section {
-            Picker("Язык интерфейса", selection: $languageChoice) {
+            Picker(L("settings.yazykInterfeysa", "Язык интерфейса"), selection: $languageChoice) {
                 ForEach(IrizLanguage.allCases, id: \.self) { language in
                     Text(language == .auto
                          ? "\(language.ownName) (\(irizResolvedLanguage(choice: .auto, systemPreferred: Locale.preferredLanguages).ownName))"
@@ -1101,37 +1117,37 @@ public struct IrizSettingsView: View {
             .pickerStyle(.inline)
             .onChange(of: languageChoice) { _, choice in
                 setIrizLanguageChoice(choice)
-                statusMessage = "Язык сменится после перезапуска."
+                statusMessage = L("settings.yazykSmenitsyaPoslePerezapuska", "Язык сменится после перезапуска.")
             }
 
-            Text("«Авто» берет язык системы. Выбор руками старше системного: "
+            Text(L("settings.avtoBeretYazykSistemy", "«Авто» берет язык системы. Выбор руками старше системного: "
                  + "macOS может быть на английском, а интерфейс вам нужен русский.\n\n"
                  + "Смена языка вступает в силу после перезапуска приложения: "
-                 + "тексты собираются один раз при старте.")
+                 + "тексты собираются один раз при старте."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         } header: {
-            Text("Язык")
+            Text(L("settings.yazyk", "Язык"))
         }
     }
 
     /// Расшифровка файлов: бросил запись - получил текст рядом с ней.
     private var filesSection: some View {
         Section {
-            IrizDropZone(title: "Перенесите записи сюда",
-                         subtitle: "Диктофон, звонок, экспорт из встречи. Текст ляжет рядом с файлом.",
+            IrizDropZone(title: L("settings.perenesiteZapisiSyuda", "Перенесите записи сюда"),
+                         subtitle: L("settings.diktofonZvonokEksportIz", "Диктофон, звонок, экспорт из встречи. Текст ляжет рядом с файлом."),
                          extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
                 enqueue(urls, into: $fileQueue)
             }
             ForEach(fileQueue) { item in
                 IrizDropRow(item: item) { fileQueue.removeAll { $0.id == item.id } }
             }
-            Text("Расшифровка идёт на этом Маке тем же движком, что и диктовка. "
-                 + "Звук никуда не отправляется, а сам файл остаётся там, где лежал.")
+            Text(L("settings.rasshifrovkaIdetNaEtom", "Расшифровка идёт на этом Маке тем же движком, что и диктовка. "
+                 + "Звук никуда не отправляется, а сам файл остаётся там, где лежал."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         } header: {
-            Text("Расшифровка файлов")
+            Text(L("settings.rasshifrovkaFaylov", "Расшифровка файлов"))
         }
     }
 
@@ -1149,7 +1165,7 @@ public struct IrizSettingsView: View {
     private var historySection: some View {
         Section {
             if historyEntries.isEmpty {
-                Text("Пока пусто. Надиктованное появится здесь.")
+                Text(L("settings.pokaPustoNadiktovannoePoyavitsya", "Пока пусто. Надиктованное появится здесь."))
                     .foregroundStyle(IRIZ_SUBTLE)
             } else {
                 // Системная оправа `.roundedBorder` рисуется непрозрачной
@@ -1158,9 +1174,9 @@ public struct IrizSettingsView: View {
                 HStack(spacing: 8) {
                     IrizGlyphView(.history, size: 13)
                         .foregroundStyle(IRIZ_SUBTLE)
-                    TextField("Поиск по надиктовкам", text: $historyQuery)
+                    TextField(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"), text: $historyQuery)
                         .textFieldStyle(.plain)
-                        .accessibilityLabel("Поиск по надиктовкам")
+                        .accessibilityLabel(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"))
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 7)
@@ -1182,12 +1198,12 @@ public struct IrizSettingsView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
                     .contextMenu {
-                        Button("Копировать") { copyHistory(entry) }
+                        Button(L("settings.kopirovat", "Копировать")) { copyHistory(entry) }
                     }
                 }
             }
         } header: {
-            Text("История надиктовок")
+            Text(L("settings.istoriyaNadiktovok", "История надиктовок"))
         }
         .onAppear { loadHistory() }
     }
@@ -1196,19 +1212,28 @@ public struct IrizSettingsView: View {
         // Читается с диска при каждом открытии страницы, а не держится в
         // памяти: диктовки пишутся другим процессом окна, и кэш разъехался бы
         // с диском ровно тогда, когда владелец ищет только что сказанное.
-        historyEntries = (try? dictationHistoryEntries(in: DictationStore.dictationsDirectory())) ?? []
+        //
+        // В ФОНЕ и с потолком. Здесь стоял тот же дефект, что в окне истории:
+        // две тысячи каталогов по три файла читались синхронно, 1386 мс, и всё
+        // это время окно настроек не рисовалось. Владелец поймал это дважды -
+        // сперва в окне, потом на этой странице.
+        guard let root = try? DictationStore.dictationsDirectory() else { return }
+        Task.detached(priority: .userInitiated) {
+            let found = dictationHistoryEntries(in: root, limit: DICTATION_HISTORY_VISIBLE_LIMIT)
+            await MainActor.run { historyEntries = found }
+        }
     }
 
     private func copyHistory(_ entry: DictationHistoryEntry) {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(entry.displayText, forType: .string)
-        statusMessage = "Скопировано в буфер обмена."
+        statusMessage = L("settings.skopirovanoVBuferObmena", "Скопировано в буфер обмена.")
     }
 
     private var meetingsSection: some View {
         Section {
-            IrizDropZone(title: "Перенесите запись встречи",
-                         subtitle: "Запись заседания или созвона. Рядом ляжет протокол.",
+            IrizDropZone(title: L("settings.perenesiteZapisVstrechi", "Перенесите запись встречи"),
+                         subtitle: L("settings.zapisZasedaniyaIliSozvona", "Запись заседания или созвона. Рядом ляжет протокол."),
                          extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
                 enqueue(urls, into: $meetingQueue)
             }
@@ -1217,10 +1242,10 @@ public struct IrizSettingsView: View {
             }
 
             if !meetingQueue.isEmpty {
-                Button("Разобрать записи") { runMeetings() }
+                Button(L("settings.razobratZapisi", "Разобрать записи")) { runMeetings() }
                     .modifier(GlassProminentButton())
                     .disabled(meetingProgress != nil)
-                    .accessibilityLabel("Разобрать записи встреч")
+                    .accessibilityLabel(L("settings.razobratZapisiVstrech", "Разобрать записи встреч"))
             }
 
             if let meetingProgress {
@@ -1243,13 +1268,13 @@ public struct IrizSettingsView: View {
             // Здесь продукт нарушает собственное правило, и молчать об этом
             // нельзя: в диктовке звук не сохраняется никогда, а у встречи он
             // остаётся вместе с расшифровкой. Иначе протокол нечем сверить.
-            Text("Разница с диктовкой названа прямо: у встречи сохраняется и звук, и расшифровка. "
+            Text(L("settings.raznicaSDiktovkoyNazvana", "Разница с диктовкой названа прямо: у встречи сохраняется и звук, и расшифровка. "
                  + "В обычной диктовке звук не сохраняется никогда. Файлы лежат на вашем диске "
-                 + "открытым текстом под правами 0600: шифрование диска даёт FileVault, а не приложение.")
+                 + "открытым текстом под правами 0600: шифрование диска даёт FileVault, а не приложение."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         } header: {
-            Text("Встречи")
+            Text(L("settings.vstrechi", "Встречи"))
         }
     }
 
@@ -1295,7 +1320,7 @@ public struct IrizSettingsView: View {
             }
             meetingProgress = nil
             meetingFailed = !failures.isEmpty
-            let base = done > 0 ? "Разобрано записей: \(done)." : "Разобрать не удалось."
+            let base = done > 0 ? "Разобрано записей: \(done)." : L("settings.razobratNeUdalos", "Разобрать не удалось.")
             meetingReport = failures.isEmpty ? base : base + " " + failures.joined(separator: "; ")
         }
     }
@@ -1391,19 +1416,19 @@ public enum SettingsPage: String, CaseIterable, Identifiable, Hashable {
 
     public var title: String {
         switch self {
-        case .history: return "История"
-        case .language: return "Язык"
-        case .files: return "Расшифровка файлов"
-        case .meetings: return "Встречи"
-        case .keys: return "Клавиши"
-        case .layout: return "Раскладка"
-        case .dictation: return "Диктовка"
-        case .plate: return "Плашка"
-        case .dictionary: return "Словарь замен"
-        case .snippets: return "Заготовки"
-        case .prompt: return "Промпт-режим"
-        case .transfer: return "Перенос"
-        case .disk: return "Место на диске"
+        case .history: return L("settings.istoriya", "История")
+        case .language: return L("settings.yazyk", "Язык")
+        case .files: return L("settings.rasshifrovkaFaylov", "Расшифровка файлов")
+        case .meetings: return L("settings.vstrechi", "Встречи")
+        case .keys: return L("settings.klavishi", "Клавиши")
+        case .layout: return L("settings.raskladka2", "Раскладка")
+        case .dictation: return L("settings.diktovka", "Диктовка")
+        case .plate: return L("settings.plashka", "Плашка")
+        case .dictionary: return L("settings.slovarZamen", "Словарь замен")
+        case .snippets: return L("settings.zagotovki", "Заготовки")
+        case .prompt: return L("settings.promptRezhim", "Промпт-режим")
+        case .transfer: return L("settings.perenos", "Перенос")
+        case .disk: return L("settings.mestoNaDiske", "Место на диске")
         }
     }
 }

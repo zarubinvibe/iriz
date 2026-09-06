@@ -6,6 +6,7 @@
       "repo": "zarubinvibe/iriz-checkpoints"
     }
   },
+  "telemetry": false,
   "checkpoints": {
     "primary": {
       "type": "git-refs"

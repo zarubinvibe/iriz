@@ -1,0 +1,17 @@
+Use case: stylized-concept
+Asset type: wide workflow scene for a project of the Olympuz family
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the figure, the herald staff, the marble tablet and the gold ribbon must match those sheets exactly.
+Composition/framing: 16:9 landscape. The subject reads clearly at the centre, the figure never overlaps it. A classical white-marble column stands at the far right as the family signature. Generous empty ivory space, nothing cropped.
+Style/medium: premium restrained 3D marble sculpture render, monumental carving with deep drapery, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm and unhurried. Gold glows softly from within, never lit by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the ribbon and the staff only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Primary request: the third step - the machine that stands right here does the work. The scene must read as a closed, self-contained room, not as a link to somewhere far away.
+Subject: a low marble table at the centre carries a plain marble slab shaped like a thick tablet, and the gold ribbon of voice enters it from the left and comes out on the right as a carved groove filled with the same gold. Iris stands to the left, one hand resting flat on the slab, the other holding the herald staff. Behind the table a marble wall closes the scene: there is no horizon, no distance, no doorway.
+Constraints:
+- The wall behind the table is unbroken marble. No window, no arch, no opening of any kind.
+- Everything rests on the ground and casts a shadow. Nothing hovers.
+- Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, wings folded, exactly as on the character sheet.
+- Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, floating objects, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image.

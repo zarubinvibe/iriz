@@ -20,7 +20,11 @@ final class DictationHUDStripView: NSView {
     }
     var onAction: ((DictationHUDActionID) -> Void)?
     /// Что сейчас под мышью. `nil` - ничего.
-    var onHover: ((DictationHUDAction?) -> Void)?
+    /// Что под мышью и ГДЕ оно стоит. Кадр кнопки нужен подписи: без него она
+    /// центрируется по всей плашке и у крайних кнопок читается съехавшей -
+    /// поймано владельцем на кадре 06.09.2026 («тут тоже видно, как всё
+    /// съехало, там, где шестерёнка»).
+    var onHover: ((DictationHUDAction?, CGRect?) -> Void)?
     /// Плашка стоит боком - ряд идёт столбиком. Решение владельца: «если это
     /// сбоку примагничивание, значит должна быть раскладка боком».
     var vertical: Bool = false { didSet { needsLayout = true } }
@@ -48,7 +52,9 @@ final class DictationHUDStripView: NSView {
         buttons = actions.map { action in
             let button = DictationHUDActionButton(action: action)
             button.onPress = { [weak self] id in self?.onAction?(id) }
-            button.onHover = { [weak self] action in self?.onHover?(action) }
+            button.onHover = { [weak self, weak button] action in
+                self?.onHover?(action, action == nil ? nil : button?.frame)
+            }
             addSubview(button)
             return button
         }

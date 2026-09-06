@@ -1,0 +1,17 @@
+Use case: stylized-concept
+Asset type: wide workflow scene for a project of the Olympuz family
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project character sheet and Image 4 the project prop sheet - the figure, the herald staff, the marble tablet and the gold ribbon must match those sheets exactly.
+Composition/framing: 16:9 landscape. The subject reads clearly at the centre, the figure never overlaps it. A classical white-marble column stands at the far right as the family signature. Generous empty ivory space, nothing cropped.
+Style/medium: premium restrained 3D marble sculpture render, monumental carving with deep drapery, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm and unhurried. Gold glows softly from within, never lit by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the ribbon and the staff only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Primary request: the second step - speech leaves the mouth and becomes a visible ribbon. The scene must read as a calm exhale, not a shout.
+Subject: Iris stands at the centre-left in profile, chin slightly lifted, lips barely parted. One continuous muted-gold ribbon rises from in front of her mouth in a single unbroken curve and travels to the right across the frame, widening gently into a soft wave shape at its midpoint. Her right hand holds the herald staff upright, the butt on the ground. Nothing else is in the air.
+Constraints:
+- The ribbon is one continuous band, never broken into pieces, never a rainbow.
+- Everything rests on the ground and casts a shadow. Nothing hovers.
+- Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, wings folded, exactly as on the character sheet.
+- Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, floating objects, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image.

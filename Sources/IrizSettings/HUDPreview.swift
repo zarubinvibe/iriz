@@ -55,9 +55,23 @@ struct HUDPreviewChoice<Value: Equatable>: View {
             selection = value
         } label: {
             VStack(spacing: 8) {
+                // Плашка стоит на ПЛИТЕ, как текст рядом.
+                //
+                // Стекло самой плашки прозрачное - решение владельца 06.09.2026,
+                // и в жизни оно правильное: плашка висит поверх чужого окна, и
+                // сквозь неё видно работу. Но здесь под ней не чужое окно, а
+                // стекло НАШЕГО окна, и прозрачное на прозрачном не читается
+                // вовсе. Слова владельца: «должна быть плашка такая же, как и
+                // под текстом, а она очень прозрачная, я ничего не понимаю».
+                //
+                // Плотность даёт подложка, а не подмена стекла: подменить стиль
+                // значило бы показывать в настройках не то, что владелец увидит
+                // на экране.
                 HUDPreview(size: size, palette: palette, purpose: purpose, animates: isSelected)
                     .frame(width: dictationHUDCollapsedSize(size).width,
                            height: dictationHUDCollapsedSize(size).height)
+                    .padding(6)
+                    .background(IrizFloatingPlate())
                 Text(title)
                     .font(.callout)
                     .foregroundStyle(isSelected ? Color.primary : IRIZ_SUBTLE)

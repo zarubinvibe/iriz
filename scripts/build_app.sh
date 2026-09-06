@@ -29,6 +29,23 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/IrizApp "$APP/Contents/MacOS/iriz"
 cp .build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 
+# Ресурсные бандлы SwiftPM. Сборщик копирует ТОЛЬКО исполняемый файл, а таблицы
+# перевода и картинки живут в `*_*.bundle` рядом с ним в `.build`. Без этой
+# строки `Bundle.module` в приложении не находит ничего, и продукт молча
+# показывает русский на любом выбранном языке: английский и китайский падают в
+# оригинал, потому что `L()` возвращает исходную строку, когда таблицы нет.
+# Поймано кадром 06.09.2026: `settings-zh.png` вышел целиком по-русски.
+# `-L`, потому что `.build/release` - симлинк на каталог с тройкой платформы,
+# а find без него по симлинку не идёт и молча находит пусто.
+BUNDLES=$(find -L .build/release -maxdepth 1 -type d -name '*.bundle')
+if [ -z "$BUNDLES" ]; then
+    echo "build_app: ресурсные бандлы не найдены - переводов в приложении не будет" >&2
+    exit 1
+fi
+for bundle in $BUNDLES; do
+    cp -R "$bundle" "$APP/Contents/Resources/"
+done
+
 # Движок кандидата приходит бинарным фреймворком SwiftPM (whisper.cpp собран
 # заранее, исходников у него в пакете нет). В бандл он сам не попадает: сборщик
 # копирует только исполняемый файл. Без этой строки приложение падало на старте

@@ -227,6 +227,8 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     /// подсказка при наведении: заводить второй вид ради одной строки значило
     /// бы держать два способа сказать одно и то же.
     private var stripLabel: String?
+    /// Над какой точкой плашки стоит подпись. `nil` - по середине плашки.
+    private var stripLabelAnchorX: CGFloat?
 
     private var openToggledHandler: (() -> Void)?
 
@@ -935,7 +937,9 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         container.addSubview(hint)
         let strip = DictationHUDStripView(frame: .zero)
         strip.onAction = { [weak self] id in self?.performAction(id) }
-        strip.onHover = { [weak self] action in self?.showStripLabel(action?.title) }
+        strip.onHover = { [weak self] action, frame in
+            self?.showStripLabel(action?.title, over: frame)
+        }
         strip.isHidden = true
 
         if #available(macOS 26.0, *) {
@@ -1049,7 +1053,10 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     /// Владелец: «должно быть понимание, что это такое. То есть просто так по
     /// значкам непонятно». Значок сам себя не объясняет никому, кроме того,
     /// кто его рисовал.
-    private func showStripLabel(_ title: String?) {
+    private func showStripLabel(_ title: String?, over button: CGRect? = nil) {
+        // Середина кнопки в координатах плашки. Полоска перевёрнута, а окно нет,
+        // но по горизонтали это неважно: подпись двигается только вбок.
+        stripLabelAnchorX = button.map(\.midX)
         guard stripLabel != title else { return }
         stripLabel = title
         hint?.lines = title.map { [$0] } ?? []
@@ -1651,7 +1658,16 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         let hintY = hintOpensBelow
             ? slide
             : collapsedSize.height + DICTATION_HUD_HINT_GAP - slide
-        hint.frame = CGRect(x: (width - hintSize.width) / 2,
+        // Подпись стоит НАД СВОЕЙ кнопкой, а не по середине плашки. Кромку она
+        // при этом не переходит: у крайних кнопок подпись шире их самих, и без
+        // упора она уезжала бы за стекло.
+        let hintX: CGFloat
+        if let anchor = stripLabelAnchorX, hintSize.width < width {
+            hintX = min(max(0, anchor - hintSize.width / 2), width - hintSize.width)
+        } else {
+            hintX = (width - hintSize.width) / 2
+        }
+        hint.frame = CGRect(x: hintX,
                             y: hintY,
                             width: hintSize.width,
                             height: hintSize.height)

@@ -37,17 +37,19 @@
 
 ## 这是什么
 
-这是一个 Mac 上的小程序：你说话，它替你打字。
+这是一个 Mac 应用：你说话，它替你打字。
 
-用法是这样。按一下键，用平常的语气说话，再按一下。文字落在光标原来的位置：邮件里、聊天窗口里、搜索框里。不用切换到别的地方，也没有额外的窗口。
+用起来是这样。按一下键，用平常的声音说话，再按一下。文字会落在光标原来的位置：邮件里、聊天里、搜索框里。不用切换到别的地方，也没有单独的窗口。
 
-它和同类程序最大的区别，在于识别发生在哪里。通常你的声音要传到别人的服务器，在那边变成文字再传回来。这里由你自己的 Mac 计算，声音不离开这台机器。
+和同类应用最大的区别在于语音在哪里被解码。通常你的声音会被送到别人的服务器，在那里变成文字再回来。这里是你的 Mac 在计算，声音不会离开这台机器。
 
-![主窗口：你说过的话，以及设置](docs/assets/screens/page-history.png)
+**为什么叫「iriz」。** 伊里斯是希腊神话里众神的信使，也是彩虹——连接天与地的桥。她不编造消息，只把它完整地带到。这个应用做的正是这件事：把你说的话原样搬进文字，不添加自己的东西。
 
-它还会别的。输入法切错了，它把那句话改回来。文字落下后你改了一个词，它会问要不要记住。口语里的停顿和重复，它替你清掉。会议或者庭审的录音，它按发言人分开，并把整理好的记录放在录音旁边。
+![菜单栏：状态、模式、口述、会议、历史](docs/assets/shots/menu-zh.png)
 
-![会议：把录音拖进来，记录就在旁边](docs/assets/screens/page-meetings.png)
+它还会别的。它能修好用错键盘布局打出来的句子。粘贴之后你改了一个词，它会问要不要记住这个替换。它会去掉话里的停顿和重复。它能把会议或庭审录音按说话人分开，并在音频旁边放上写好的纪要。
+
+![会议：把录音拖进来，纪要会放在旁边](docs/assets/screens/page-meetings.png)
 
 ## 它解决什么问题
 
@@ -65,13 +67,19 @@
 
 ## 工作流程
 
-按键，说一句话，再按一次。文字落在光标刚才闪动的地方。
+按键，说一句话，再按一下。文字会落在光标闪烁的地方。
 
-万一没能贴进去，东西也没丢：屏幕下方那颗小胶囊会展开成面板，你从那里取走文字。
+这段时间里，屏幕下方一直有一颗玻璃水滴。你不说话时它很小。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。
 
-识别语言直接在胶囊上右键切换。人总在开口前一秒才决定说哪种语言，为这个跑去设置没有道理。
+![录音中的浮窗：玻璃里的声波](docs/assets/shots/plate-listening-light.png)
 
-![口述设置：语音在哪里清理](docs/assets/screens/page-dictation.png)
+把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换，不用专门去设置里找。
+
+![鼠标下的浮窗：一排六个按钮](docs/assets/shots/plate-hover-light.png)
+
+如果没能粘贴上，什么也不会丢：同一个浮窗会展开成面板，文字从那里拿走。
+
+![口述设置：在哪里清理口语](docs/assets/screens/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 
@@ -90,11 +98,15 @@
 
 默认是右边的 Command。按下去就行，Mac 上别的什么都不用改：不用先开窗口，也不用先把光标放到哪儿。这个键要是被占了，在引导里当场换掉，不用去设置里翻。
 
+<p align="center"><img src="docs/assets/pantheon/workflow/01-key.png" alt="iriz 第一步：按下你的那个键，用潘忒翁大理石宽幅场景表现" width="100%"></p>
+
 **你会得到：** 一个在编辑器、邮件和终端里都答应的键。
 
 ### 第 2 步：说出来
 
 光标旁边会出现一条小提示，上面的波形跟着你的声音走，能看出来它在听，不用猜。声音只在内存里待到识别完成，不写进磁盘。
+
+<p align="center"><img src="docs/assets/pantheon/workflow/02-voice.png" alt="iriz 第二步：说出来，用潘忒翁大理石宽幅场景表现" width="100%"></p>
 
 **你会得到：** 一段只活几秒、什么都不留下的录音。
 
@@ -102,11 +114,15 @@
 
 识别跑在这台 Mac 的 Neural Engine 上：七秒话大约一成秒就出结果。什么都不往外发；听写进行的时候，识别库里的下载开关是关着的。
 
+<p align="center"><img src="docs/assets/pantheon/workflow/03-decode.png" alt="iriz 第三步：Mac 本机识别，用潘忒翁大理石宽幅场景表现" width="100%"></p>
+
 **你会得到：** 一份从没离开过你机器的转写。
 
 ### 第 4 步：文字落进输入框
 
 它进的是你本来就待着的那个输入框：邮件、聊天窗口、终端。要是那个框不收，小提示会展开成一块面板，整段文字都在里面，点一下就进剪贴板。你伸手去拿的这段时间里，它不会丢。
+
+<p align="center"><img src="docs/assets/pantheon/workflow/04-insert.png" alt="iriz 第四步：文字落进输入框，用潘忒翁大理石宽幅场景表现" width="100%"></p>
 
 **你会得到：** 文字进了框，或者还能从面板里整段拿走。
 
@@ -173,7 +189,7 @@ claude                   # или пустите агента: он провед
 - 还没有做公证：下载来的构建第一次打开要用右键的“打开”。
 - 通用二进制里带着 Intel 那一片，可是作者手上没有 Intel 的 Mac，从来没在上面验过。
 
-想看更深的：[一步一步的上手引导](docs/ONBOARDING.zh.md)、[怎么参与](CONTRIBUTING.zh.md)，依赖的许可证在 [THIRD-PARTY](THIRD-PARTY)。
+更深入：[逐步上手，每个界面都有截图](docs/ONBOARDING.zh.md)、[如何参与](CONTRIBUTING.zh.md)、[安全](SECURITY.zh.md)。
 
 ## 点亮星标与参与
 
@@ -199,6 +215,8 @@ claude                   # или пустите агента: он провед
 | 项目 | Zeuz | 工作流工厂：把一个想法变成带规则、闸门、可观测性和回放的多智能体系统。 | [仓库](https://github.com/zarubinvibe/zeuz) · [ZIP](https://github.com/zarubinvibe/zeuz/archive/refs/heads/main.zip) |
 | 项目 | Lynceuz | 以零成本收集公开网页证据；安全路径走完时，它会给出诚实的理由并停下。 | [仓库](https://github.com/zarubinvibe/lynceuz) · [ZIP](https://github.com/zarubinvibe/lynceuz/archive/refs/heads/main.zip) |
 | 项目 | Iriz | macOS 菜单栏听写：语音在你自己的 Mac 上解码，键盘布局自动纠正，口述可以直接变成给智能体的任务。 | [仓库](https://github.com/zarubinvibe/iriz) · [ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip) |
+| 项目 | Mantoz | 把一个想法摆到五百个并不存在的人面前，然后告诉你每个群体是怎么答的。 | [仓库](https://github.com/zarubinvibe/mantoz) · [ZIP](https://github.com/zarubinvibe/mantoz/archive/refs/heads/main.zip) |
+| 项目 | Koiz | 所有项目共用一份教训库。每次失败都追到原因，原因不被钩子、闸门或测试关掉，就一直挂在那里。 | [仓库](https://github.com/zarubinvibe/koiz) · [ZIP](https://github.com/zarubinvibe/koiz/archive/refs/heads/main.zip) |
 <!-- pantheon-family:end -->
 
 ## 许可证

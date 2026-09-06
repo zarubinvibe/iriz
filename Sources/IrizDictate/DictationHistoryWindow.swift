@@ -61,12 +61,12 @@ final class DictationHistoryPresenter {
     private func present(rescue: DictationRescue?) {
         let entries: [DictationHistoryEntry]
         if rescue == nil {
-            do {
-                entries = dictationHistoryEntries(in: try dictationsRoot())
-            } catch {
-                log("history: cannot reach dictations directory: \(error.localizedDescription)")
-                return
-            }
+            // Список читается ПОСЛЕ показа окна, в фоне. Владелец: «открываю
+            // историю, и он как будто зависает». Замер подтвердил: 2047 записей
+            // на диске - это 2047 каталогов и по три файла в каждом, шесть
+            // тысяч чтений, 1386 мс НА ГЛАВНОМ ПОТОКЕ. Всё это время окно не
+            // рисуется вовсе, потому что рисовать его некому.
+            entries = []
         } else {
             // В режиме спасения список не показывается, и читать каталог незачем.
             // Важнее другое: недоступный каталог НЕ имеет права отменить показ.
@@ -100,6 +100,7 @@ final class DictationHistoryPresenter {
         model.onCopy = { [weak self] entry in self?.copy(text: entry.displayText) }
         model.onDelete = { [weak self] entry in self?.delete(entry) }
         model.onClearAll = { [weak self] in self?.clearAll() }
+        model.onCloseWindow = { [weak self] in self?.close(returningFocus: true) }
         model.onInsertRescue = { [weak self] in self?.insertRescue() }
         model.onCopyRescue = { [weak self] in self?.copyRescue() }
 
@@ -114,6 +115,14 @@ final class DictationHistoryPresenter {
         // Поля поиска в режиме спасения нет — фокусировать нечего.
         model.focusSearchField = rescue == nil
         installKeyMonitor()
+        if rescue == nil {
+            model.didLoadAll = false
+            model.onSearchStarted = { [weak self, weak model] in
+                guard let self, let model else { return }
+                self.loadAllForSearch(into: model)
+            }
+            loadEntriesInBackground(into: model)
+        }
         if let rescue {
             // Ни имени приложения, ни самого текста в логе: лог живёт на диске
             // постоянно, а это речь клиента. Длины и класса провала для отладки
@@ -121,6 +130,55 @@ final class DictationHistoryPresenter {
             log("rescue: window shown (\(rescue.text.count) chars, \(rescue.failure.rawValue))")
         } else {
             log("history: window shown (\(entries.count) entries)")
+        }
+    }
+
+    /// Прочитать надиктовки с диска и отдать их окну, когда прочитаются.
+    ///
+    /// Отдельным ходом, а не внутри показа: чтение занимает секунды на большом
+    /// каталоге, а окно обязано открыться мгновенно. Пока список едет, в окне
+    /// стоит честная строка «Читаю надиктовки…», а не пустота, которую легко
+    /// прочитать как «ничего нет».
+    private func loadEntriesInBackground(into model: DictationHistoryModel) {
+        model.isLoading = true
+        let root = try? dictationsRoot()
+        guard let root else {
+            model.isLoading = false
+            log("history: cannot reach dictations directory")
+            return
+        }
+        Task.detached(priority: .userInitiated) {
+            let startedAt = ProcessInfo.processInfo.systemUptime
+            let found = dictationHistoryEntries(in: root, limit: DICTATION_HISTORY_VISIBLE_LIMIT)
+            let spent = (ProcessInfo.processInfo.systemUptime - startedAt) * 1000
+            await MainActor.run {
+                model.load(found)
+                model.isLoading = false
+                log(String(format: "history: %d записей прочитано за %.0f мс (в фоне)",
+                           found.count, spent))
+            }
+        }
+    }
+
+    /// Догрузить остальное хранимое - по первому же поиску.
+    ///
+    /// Окно открывается сотней свежих: их хватает, чтобы забрать вчерашнее.
+    /// Но поиск по сотне врал бы молча - человек ищет фразу, которая лежит
+    /// двухсотой, и получает «ничего не нашлось». Поэтому первый ввод в поле
+    /// поиска дочитывает всё, что хранится, и делает это один раз за показ.
+    private func loadAllForSearch(into model: DictationHistoryModel) {
+        guard !model.didLoadAll else { return }
+        model.didLoadAll = true
+        guard let root = try? dictationsRoot() else { return }
+        Task.detached(priority: .userInitiated) {
+            let startedAt = ProcessInfo.processInfo.systemUptime
+            let found = dictationHistoryEntries(in: root, limit: DICTATION_HISTORY_KEEP_LIMIT)
+            let spent = (ProcessInfo.processInfo.systemUptime - startedAt) * 1000
+            await MainActor.run {
+                model.load(found)
+                log(String(format: "history: поиск дочитал %d записей за %.0f мс",
+                           found.count, spent))
+            }
         }
     }
 
@@ -360,9 +418,9 @@ final class DictationHistoryPresenter {
         let alert = NSAlert()
         alert.alertStyle = .warning
         alert.messageText = dictationHistoryClearConfirmation(count: doomed.count)
-        alert.informativeText = "Папки надиктовок уедут в Корзину — оттуда их можно вернуть."
-        alert.addButton(withTitle: "В Корзину")
-        alert.addButton(withTitle: "Отмена")
+        alert.informativeText = L("history.trashNote", "Папки надиктовок уедут в Корзину — оттуда их можно вернуть.")
+        alert.addButton(withTitle: L("history.toTrash", "В Корзину"))
+        alert.addButton(withTitle: L("history.cancel", "Отмена"))
 
         // Листом на панель, а не runModal(): панель на уровне .floating, и
         // отдельное модальное окно системного уровня ушло бы ПОД неё —
@@ -487,10 +545,25 @@ private final class DictationHistoryPanel: NSPanel {
 final class DictationHistoryModel: ObservableObject {
     @Published private(set) var entries: [DictationHistoryEntry] = []
     @Published var query: String = "" {
-        didSet { guard query != oldValue else { return }; clampSelection() }
+        didSet {
+            guard query != oldValue else { return }
+            clampSelection()
+            // Первый же символ запроса дочитывает всё хранимое: искать по
+            // видимой сотне значит молча врать «ничего не нашлось».
+            if !query.isEmpty { onSearchStarted?() }
+        }
     }
     @Published private(set) var selection: Int = 0
     @Published var focusSearchField = false
+    /// Список ещё читается с диска. Отдельный признак, а не пустой список:
+    /// «пока ничего нет» и «ещё не прочитал» - разные вещи, и путать их значит
+    /// врать владельцу, у которого две тысячи надиктовок.
+    @Published var isLoading = false
+    /// Дочитано ли всё хранимое. Показ начинается с сотни свежих; поиск
+    /// дочитывает остальное один раз.
+    var didLoadAll = false
+    /// Кого звать, когда владелец начал искать.
+    var onSearchStarted: (() -> Void)?
     /// Не `nil` — окно показывает не список, а текст, который не доехал до поля.
     @Published private(set) var rescue: DictationRescue?
     /// Почему не сработал повтор вставки. Звука тут мало: владелец должен
@@ -501,6 +574,9 @@ final class DictationHistoryModel: ObservableObject {
     var onCopy: ((DictationHistoryEntry) -> Void)?
     var onDelete: ((DictationHistoryEntry) -> Void)?
     var onClearAll: (() -> Void)?
+    /// Кого звать по крестику. Окно закрывается тремя путями - крестиком,
+    /// Escape и уходом фокуса, - и все три ведут в одну точку презентера.
+    var onCloseWindow: (() -> Void)?
     var onInsertRescue: (() -> Void)?
     var onCopyRescue: (() -> Void)?
 
@@ -635,14 +711,14 @@ struct DictationHistoryView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(.quaternary)
             )
-            .accessibilityLabel("Текст, который не вставился")
+            .accessibilityLabel(L("history.rescueTitle", "Текст, который не вставился"))
 
             HStack(spacing: 10) {
-                Button("Вставить ещё раз") { model.onInsertRescue?() }
+                Button(L("history.insertAgain", "Вставить ещё раз")) { model.onInsertRescue?() }
                     .buttonStyle(.borderedProminent)
-                    .accessibilityLabel("Вставить этот текст ещё раз")
-                Button("Скопировать") { model.onCopyRescue?() }
-                    .accessibilityLabel("Скопировать этот текст")
+                    .accessibilityLabel(L("history.insertAgainHint", "Вставить этот текст ещё раз"))
+                Button(L("history.copy", "Скопировать")) { model.onCopyRescue?() }
+                    .accessibilityLabel(L("history.copyHint", "Скопировать этот текст"))
                 Spacer()
                 Text("\(rescue.text.count) симв.")
                     .font(.system(size: 11))
@@ -658,9 +734,9 @@ struct DictationHistoryView: View {
             }
 
             HStack(spacing: 12) {
-                hint("⏎", "вставить")
-                hint("⌘C", "копировать · буфер очистится через 2 мин")
-                hint("esc", "закрыть")
+                hint("⏎", L("history.legendInsert", "вставить"))
+                hint("⌘C", L("history.legendCopyTimed", "копировать · буфер очистится через 2 мин"))
+                hint("esc", L("history.legendClose", "закрыть"))
                 Spacer()
             }
         }
@@ -689,6 +765,25 @@ struct DictationHistoryView: View {
                 .background(
                     Capsule(style: .continuous).fill(Color.primary.opacity(0.08))
                 )
+            // Крестик. Светофор macOS с этого окна снят по канону продукта, и
+            // вместе с ним ушёл единственный ВИДИМЫЙ выход: оставались Escape и
+            // уход фокуса, а о них надо знать. Владелец 06.09.2026: «так и не
+            // сделал кнопочку закрыть в истории расшифровок, которая
+            // открывается через саму плашку».
+            Button(action: { model.onCloseWindow?() }) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(IRIZ_SUBTLE)
+                    .frame(width: 18, height: 18)
+                    .background(Circle().fill(Color.primary.opacity(0.08)))
+            }
+            .buttonStyle(.plain)
+            // Escape НЕ вешается сюда: он уже разобран монитором клавиш окна, и
+            // там у него есть старшинство - сначала закрыть вопрос «очистить
+            // всё», и только потом окно. Второй обработчик той же клавиши это
+            // старшинство обошёл бы и закрыл окно прямо из-под вопроса.
+            .help(L("history.close", "Закрыть окно"))
+            .accessibilityLabel(L("history.close", "Закрыть окно"))
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -701,7 +796,7 @@ struct DictationHistoryView: View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(IRIZ_SUBTLE)
-            TextField("Поиск по надиктовкам", text: $model.query)
+            TextField(L("history.searchPlaceholder", "Поиск по надиктовкам"), text: $model.query)
                 .textFieldStyle(.plain)
                 .font(.system(size: 13))
                 .focused($searchFocused)
@@ -712,7 +807,7 @@ struct DictationHistoryView: View {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(IRIZ_SUBTLE)
                 }
                 .buttonStyle(.plain)
-                .help("Очистить поиск")
+                .help(L("history.searchClear", "Очистить поиск"))
             }
         }
         .padding(.horizontal, 10)
@@ -726,11 +821,20 @@ struct DictationHistoryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 6) {
-            Text(model.entries.isEmpty ? "Надиктовок пока нет" : "Ничего не нашлось")
+            // Три разных состояния, а не два: «читаю», «пусто» и «не нашлось».
+            // Пока список ехал с диска, окно показывало «надиктовок пока нет» -
+            // прямую ложь человеку, у которого их две тысячи.
+            Text(model.isLoading
+                 ? L("history.loading", "Читаю надиктовки…")
+                 : (model.entries.isEmpty
+                    ? L("history.emptyTitle", "Надиктовок пока нет")
+                    : L("history.notFoundTitle", "Ничего не нашлось")))
                 .font(.system(size: 14, weight: .medium))
-            Text(model.entries.isEmpty
-                 ? "Продиктуйте что-нибудь — запись появится здесь."
-                 : "Попробуйте другое слово.")
+            Text(model.isLoading
+                 ? L("history.loadingBody", "Показываю последние сто. Остальные найдёт поиск.")
+                 : (model.entries.isEmpty
+                    ? L("history.emptyBody", "Продиктуйте что-нибудь — запись появится здесь.")
+                    : L("history.notFoundBody", "Попробуйте другое слово.")))
                 .font(.system(size: 12))
                 .foregroundStyle(IRIZ_SUBTLE)
         }
@@ -788,10 +892,10 @@ struct DictationHistoryView: View {
         // были третьим способом подсветки в одном продукте.
         .irizSelected(isSelected, in: historySelection, group: "history")
         .contextMenu {
-            Button("Вставить") { model.onInsert?(entry) }
-            Button("Копировать") { model.onCopy?(entry) }
+            Button(L("history.insert", "Вставить")) { model.onInsert?(entry) }
+            Button(L("history.copyButton", "Копировать")) { model.onCopy?(entry) }
             Divider()
-            Button("Переместить в Корзину", role: .destructive) { model.onDelete?(entry) }
+            Button(L("history.trashOne", "Переместить в Корзину"), role: .destructive) { model.onDelete?(entry) }
         }
     }
 
@@ -805,12 +909,12 @@ struct DictationHistoryView: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
-                hint("⏎", "вставить")
-                hint("⌘C", "копировать")
-                hint("esc", "закрыть")
+                hint("⏎", L("history.legendInsert", "вставить"))
+                hint("⌘C", L("history.legendCopy", "копировать"))
+                hint("esc", L("history.legendClose", "закрыть"))
                 // Удаление НЕ на клавише: ⌘⌫ — системный шорткат поля поиска, и по
                 // мышечной памяти он сносил бы расшифровку. Только правым щелчком.
-                Text("удалить — правым щелчком")
+                Text(L("history.legendDelete", "удалить — правым щелчком"))
                     .font(.system(size: 11))
                     .foregroundStyle(IRIZ_SUBTLE)
                     .lineLimit(1)
@@ -822,10 +926,10 @@ struct DictationHistoryView: View {
             // возвращается к прежнему»: через две минуты буфер владельца пуст.
             // Решение верное (подменённый старый текст в договоре не заметен,
             // а «⌘V ничего не вставил» заметен сразу), но молчать о нём нельзя.
-            Text("Скопированное держится в буфере 2 минуты, потом буфер чистится.")
+            Text(L("history.clipboardNote", "Скопированное держится в буфере 2 минуты, потом буфер чистится."))
                 .font(.system(size: 11))
                 .foregroundStyle(IRIZ_SUBTLE)
-                .accessibilityLabel("Скопированное держится в буфере две минуты, потом буфер чистится")
+                .accessibilityLabel(L("history.clipboardNoteVoice", "Скопированное держится в буфере две минуты, потом буфер чистится"))
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -836,16 +940,16 @@ struct DictationHistoryView: View {
     /// продукта.
     @ViewBuilder
     private var clearAllButton: some View {
-        let label = Text("Очистить всё").font(.system(size: 12, weight: .medium))
+        let label = Text(L("history.clearAll", "Очистить всё")).font(.system(size: 12, weight: .medium))
         if #available(macOS 26.0, *) {
             Button(action: { model.onClearAll?() }) { label }
                 .buttonStyle(.glass)
                 .disabled(model.entries.isEmpty)
-                .help("Переместить все надиктовки в Корзину")
+                .help(L("history.clearAllHint", "Переместить все надиктовки в Корзину"))
         } else {
             Button(action: { model.onClearAll?() }) { label }
                 .disabled(model.entries.isEmpty)
-                .help("Переместить все надиктовки в Корзину")
+                .help(L("history.clearAllHint", "Переместить все надиктовки в Корзину"))
         }
     }
 

@@ -143,6 +143,16 @@ public final class DictationController {
             log("WARNING: registry override env var(s) set: \(hostile.joined(separator: ", ")) — ignored, offline enforced")
         }
 
+        // Уборка ПЕРЕД работой и в фоне: продукт не имеет права копить мусор на
+        // чужом диске. Повод измеренный - 06.09.2026 диск владельца встал на
+        // нуле байт, и 1,1 ГБ из этого был архив, распакованный каталог
+        // которого лежал рядом. В фоне потому, что обход тысячи каталогов не
+        // имеет права задерживать первое нажатие клавиши.
+        let retention = settings.dictationRetentionDays
+        DispatchQueue.global(qos: .utility).async {
+            dictationHousekeepingRun(retentionDays: retention)
+        }
+
         wireLearning()
         wireHotkeys()
         wireAudioConfigurationRecovery()

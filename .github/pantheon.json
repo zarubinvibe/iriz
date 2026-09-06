@@ -72,7 +72,11 @@
         "title_zh": "按下你的那个键",
         "diagram_en": "Key",
         "diagram_ru": "Клавиша",
-        "diagram_zh": "按键"
+        "diagram_zh": "按键",
+        "source_path": "docs/assets/pantheon/workflow/01-key.png",
+        "source_sha256": "3fbbe7ed08d6648403944f42d95fcbb649dab67f758becfcad161570721fee1c",
+        "published_path": "docs/assets/pantheon/workflow/01-key.png",
+        "published_sha256": "3fbbe7ed08d6648403944f42d95fcbb649dab67f758becfcad161570721fee1c"
       },
       {
         "id": "voice",
@@ -81,7 +85,11 @@
         "title_zh": "说出来",
         "diagram_en": "Voice",
         "diagram_ru": "Голос",
-        "diagram_zh": "说话"
+        "diagram_zh": "说话",
+        "source_path": "docs/assets/pantheon/workflow/02-voice.png",
+        "source_sha256": "b682dcd0b9ac73af0a865739abc757780e05071134087696e068bdff0ec0be5e",
+        "published_path": "docs/assets/pantheon/workflow/02-voice.png",
+        "published_sha256": "b682dcd0b9ac73af0a865739abc757780e05071134087696e068bdff0ec0be5e"
       },
       {
         "id": "decode",
@@ -90,7 +98,11 @@
         "title_zh": "Mac 本机识别",
         "diagram_en": "Decode",
         "diagram_ru": "Разбор",
-        "diagram_zh": "识别"
+        "diagram_zh": "识别",
+        "source_path": "docs/assets/pantheon/workflow/03-decode.png",
+        "source_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd",
+        "published_path": "docs/assets/pantheon/workflow/03-decode.png",
+        "published_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd"
       },
       {
         "id": "insert",
@@ -99,7 +111,11 @@
         "title_zh": "文字落进输入框",
         "diagram_en": "Text",
         "diagram_ru": "Текст",
-        "diagram_zh": "落字"
+        "diagram_zh": "落字",
+        "source_path": "docs/assets/pantheon/workflow/04-insert.png",
+        "source_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc",
+        "published_path": "docs/assets/pantheon/workflow/04-insert.png",
+        "published_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc"
       }
     ],
     "doc_frames": {
@@ -135,12 +151,50 @@
           "assets/pantheon/doc-onboarding.png",
           "assets/pantheon/icon-wide.png"
         ]
+      },
+      {
+        "path": "docs/ONBOARDING-CHAT.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/ONBOARDING-CHAT.ru.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/ONBOARDING-CHAT.zh.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "SECURITY.md",
+        "frames": [
+          "docs/assets/pantheon/window-wash-source.png"
+        ]
+      },
+      {
+        "path": "SECURITY.ru.md",
+        "frames": [
+          "docs/assets/pantheon/window-wash-source.png"
+        ]
+      },
+      {
+        "path": "SECURITY.zh.md",
+        "frames": [
+          "docs/assets/pantheon/window-wash-source.png"
+        ]
       }
     ]
   },
   "receipts": {
     "generation_path": ".github/pantheon/generation-receipt.json",
     "visual_judge_path": ".github/pantheon/visual-judge-receipt.json",
-    "prompt_path": ".github/pantheon/hero-source-prompt.txt"
+    "prompt_path": ".github/pantheon/hero-source-prompt.txt",
+    "stage_generation_path": ".github/pantheon/stage-generation-receipt.json",
+    "stage_visual_judge_path": ".github/pantheon/stage-visual-judge-receipt.json"
   }
 }

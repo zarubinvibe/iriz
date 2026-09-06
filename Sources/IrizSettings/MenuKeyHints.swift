@@ -1,3 +1,4 @@
+import IrizCore
 import CoreGraphics
 import Foundation
 import IrizDictate
@@ -72,13 +73,19 @@ public enum MenuKeys {
 
     /// Сторона клавиши по коду: глифа «правый ⌘» в системе нет, а разница
     /// существенная — на левом Command хоткей не сработает.
-    private static let sidedModifierNames: [CGKeyCode: String] = [
-        59: "левый ⌃", 62: "правый ⌃",
-        58: "левый ⌥", 61: "правый ⌥",
-        56: "левый ⇧", 60: "правый ⇧",
-        55: "левый ⌘", 54: "правый ⌘",
-        63: "fn",
-    ]
+    /// Слова «левый» и «правый» переводятся, глифы - нет: ⌘ и ⌥ одинаковы во
+    /// всех языках, а сторона на левом Command решает, сработает хоткей или нет.
+    private static var sidedModifierNames: [CGKeyCode: String] {
+        let left = L("key.left", "левый")
+        let right = L("key.right", "правый")
+        return [
+            59: "\(left) ⌃", 62: "\(right) ⌃",
+            58: "\(left) ⌥", 61: "\(right) ⌥",
+            56: "\(left) ⇧", 60: "\(right) ⇧",
+            55: "\(left) ⌘", 54: "\(right) ⌘",
+            63: "fn",
+        ]
+    }
 
     /// Клавиши без буквы — глифами macOS, иначе в русском меню всплывёт «Space».
     private static let namedKeyGlyphs: [String: String] = [

@@ -1,0 +1,127 @@
+{
+ "schema_version": 1,
+ "kind": "pantheon-generation",
+ "selection_mode": "managed-frontier",
+ "runtime": "codex",
+ "tool": "image_gen",
+ "route_id": "codex:image_gen:managed-frontier",
+ "model": {
+  "id": "provider-managed",
+  "revision": "provider-managed",
+  "tier": "frontier"
+ },
+ "quality": "highest",
+ "generation_id": "pantheon-stage-series-iris-2026-09-07",
+ "generated_at": "2026-09-06T21:22:17Z",
+ "prompt": {
+  "path": ".github/pantheon/workflow-01-key-prompt.txt",
+  "sha256": "5590fa1a041af5c34f6f0fd1fe187d06504a62429adfb325675452588251bd63"
+ },
+ "references": [
+  {
+   "role": "style-anchor",
+   "sha256": "ce524f9d22cb0092cb17aa280832e1b2ab2a77a0e01602065ec502232a3bb2d2"
+  },
+  {
+   "role": "column-reference",
+   "sha256": "9d32edd56ac55c4dd6d0425a28a2ac35035e9ab09073fc8ce0c1414b2edfb1bd"
+  },
+  {
+   "role": "character-sheet",
+   "sha256": "5ff407694adc22f497af22819bde47b61204f55629a3aded4d4caca1edd2f7af"
+  },
+  {
+   "role": "prop-sheet",
+   "sha256": "ad9275c7948b65915d8757b8eea6633e1ddcc81420f18689ff7c08ae0b668152"
+  }
+ ],
+ "outputs": [
+  {
+   "role": "stage-01-key",
+   "path": "docs/assets/pantheon/workflow/01-key.png",
+   "sha256": "3fbbe7ed08d6648403944f42d95fcbb649dab67f758becfcad161570721fee1c",
+   "prompt_path": ".github/pantheon/workflow-01-key-prompt.txt",
+   "prompt_sha256": "5590fa1a041af5c34f6f0fd1fe187d06504a62429adfb325675452588251bd63"
+  },
+  {
+   "role": "stage-02-voice",
+   "path": "docs/assets/pantheon/workflow/02-voice.png",
+   "sha256": "b682dcd0b9ac73af0a865739abc757780e05071134087696e068bdff0ec0be5e",
+   "prompt_path": ".github/pantheon/workflow-02-voice-prompt.txt",
+   "prompt_sha256": "e7b973e8c315e1a38d2959280dace5cefa153092500ae4d0491a44e4efb50d0e"
+  },
+  {
+   "role": "stage-03-decode",
+   "path": "docs/assets/pantheon/workflow/03-decode.png",
+   "sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd",
+   "prompt_path": ".github/pantheon/workflow-03-decode-prompt.txt",
+   "prompt_sha256": "83f32bceae3425e70010111291f8b47c80a1368d4bfd7e9fae7c60f97399e037"
+  },
+  {
+   "role": "stage-04-insert",
+   "path": "docs/assets/pantheon/workflow/04-insert.png",
+   "sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc",
+   "prompt_path": ".github/pantheon/workflow-04-insert-prompt.txt",
+   "prompt_sha256": "c716dbcc2daadfd3efe5bfdbca6bb790946bfd500e828c0046f876738a690716"
+  }
+ ],
+ "capability_snapshot": {
+  "checked_at": "2026-09-06T21:22:17Z",
+  "routes": [
+   {
+    "id": "codex:image_gen:managed-frontier",
+    "rank": 1,
+    "available": true,
+    "tier": "frontier",
+    "quality": "highest",
+    "model": {
+     "id": "provider-managed",
+     "revision": "provider-managed",
+     "tier": "frontier"
+    }
+   }
+  ]
+ },
+ "candidates": [
+  {
+   "id": "codex-managed-stage-series",
+   "route_id": "codex:image_gen:managed-frontier",
+   "generation_id": "pantheon-stage-series-iris-2026-09-07",
+   "prompt_sha256": "5590fa1a041af5c34f6f0fd1fe187d06504a62429adfb325675452588251bd63",
+   "reference_sha256": [
+    "ce524f9d22cb0092cb17aa280832e1b2ab2a77a0e01602065ec502232a3bb2d2",
+    "9d32edd56ac55c4dd6d0425a28a2ac35035e9ab09073fc8ce0c1414b2edfb1bd",
+    "5ff407694adc22f497af22819bde47b61204f55629a3aded4d4caca1edd2f7af",
+    "ad9275c7948b65915d8757b8eea6633e1ddcc81420f18689ff7c08ae0b668152"
+   ],
+   "outputs": [
+    {
+     "role": "stage-01-key",
+     "source_sha256": "3fbbe7ed08d6648403944f42d95fcbb649dab67f758becfcad161570721fee1c",
+     "published_sha256": "3fbbe7ed08d6648403944f42d95fcbb649dab67f758becfcad161570721fee1c"
+    },
+    {
+     "role": "stage-02-voice",
+     "source_sha256": "b682dcd0b9ac73af0a865739abc757780e05071134087696e068bdff0ec0be5e",
+     "published_sha256": "b682dcd0b9ac73af0a865739abc757780e05071134087696e068bdff0ec0be5e"
+    },
+    {
+     "role": "stage-03-decode",
+     "source_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd",
+     "published_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd"
+    },
+    {
+     "role": "stage-04-insert",
+     "source_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc",
+     "published_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc"
+    }
+   ],
+   "model": {
+    "id": "provider-managed",
+    "revision": "provider-managed",
+    "tier": "frontier"
+   }
+  }
+ ],
+ "winner_id": "codex-managed-stage-series"
+}

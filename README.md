@@ -39,15 +39,17 @@ Speak out loud and the text appears. Your Mac does the decoding, and nothing tra
 
 This is a Mac app that types for you while you talk.
 
-Here is how it goes. You press one key, speak in your normal voice, press it again. The text lands where the cursor was: an email, a chat, a search box. Nothing to switch to, no window to open.
+Here is how it goes. You press one key, speak in your normal voice, press it again. The text lands where the cursor was: in an email, in a chat, in a search field. Nothing to switch to, no separate window.
 
-What sets it apart from similar apps is where the speech gets decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your own Mac does the work, and the audio never leaves the machine.
+What sets it apart from similar apps is where the speech is decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your Mac does the work, and the audio never leaves the machine.
 
-![The main window: what you said, and the settings](docs/assets/screens/page-history.png)
+**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow — a bridge between the sky and the ground. She does not invent the message, she carries it whole. The app does exactly that: it takes what you said and moves it into text, adding nothing of its own.
 
-It does more than that. It repairs a phrase typed in the wrong keyboard layout. Fix a word after it lands and the app offers to remember the correction. It takes the stumbles and repeats out of speech. It splits a recording of a meeting or a court hearing by voice and puts a finished transcript next to the audio.
+![The menu bar: status, modes, dictation, meetings, history](docs/assets/shots/menu-en.png)
 
-![Meetings: drop a recording, the transcript lands beside it](docs/assets/screens/page-meetings.png)
+It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. It strips hesitations and repetitions. It splits a meeting or a court hearing recording by voice and puts the minutes next to the audio.
+
+![Meetings: drop the recording, the minutes land next to it](docs/assets/screens/page-meetings.png)
 
 ## Why It Helps
 
@@ -67,11 +69,17 @@ So here your Mac does the decoding, and the app reaches the network only when yo
 
 Press the key, say your sentence, press again. The text lands where the cursor was blinking.
 
-If it could not be pasted, nothing is lost: the small pill at the bottom of the screen opens into a panel and you take the text from there.
+A glass drop sits at the bottom of the screen the whole time. While you are silent it stays small. Start talking and a wave runs inside it: that is the answer to «can it hear me».
 
-The language switches on the pill itself, with a right click. People change it a second before they speak, and walking to Settings for that makes no sense.
+![The plate while recording: a wave inside the glass](docs/assets/shots/plate-listening-light.png)
 
-![Dictation settings: where speech gets cleaned](docs/assets/screens/page-dictation.png)
+Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches right there, a second before you speak — no need to walk to the settings for it.
+
+![The plate under the pointer: a row of six buttons](docs/assets/shots/plate-hover-light.png)
+
+If pasting did not work, nothing is lost: the same plate opens into a panel and you take the text from there.
+
+![Dictation settings: where the speech gets cleaned](docs/assets/screens/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 
@@ -90,11 +98,15 @@ The language switches on the pill itself, with a right click. People change it a
 
 By default it is the right Command key. You press it, and nothing else on the Mac has to change: no window to open, no field to focus first. If that key is already taken on your machine, you swap it during the walkthrough, not in a settings maze.
 
+<p align="center"><img src="docs/assets/pantheon/workflow/01-key.png" alt="Iriz stage 1: press your key, drawn as a wide Pantheon marble scene" width="100%"></p>
+
 **You get:** a key that answers in the editor, the mail client and the terminal alike.
 
 ### Step 2: Say it out loud
 
 A small plate appears near the cursor and its wave follows your voice, so you can see you are being heard rather than guess. The sound lives in memory only as long as it takes to decode it, and is never written to disk.
+
+<p align="center"><img src="docs/assets/pantheon/workflow/02-voice.png" alt="Iriz stage 2: say it out loud, drawn as a wide Pantheon marble scene" width="100%"></p>
 
 **You get:** a recording that exists for seconds and leaves nothing behind.
 
@@ -102,11 +114,15 @@ A small plate appears near the cursor and its wave follows your voice, so you ca
 
 Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Nothing is sent anywhere, and while dictation runs the recognition library keeps its downloader shut.
 
+<p align="center"><img src="docs/assets/pantheon/workflow/03-decode.png" alt="Iriz stage 3: the Mac decodes it, drawn as a wide Pantheon marble scene" width="100%"></p>
+
 **You get:** a transcript that was never anywhere but your machine.
 
 ### Step 4: The text lands in the field
 
 It goes into the field you were already in: an email, a chat, a terminal. If the field refuses it, the plate opens into a panel holding the whole text, and one click puts it on the clipboard. Nothing is lost while you reach for it.
+
+<p align="center"><img src="docs/assets/pantheon/workflow/04-insert.png" alt="Iriz stage 4: the text lands in the field, drawn as a wide Pantheon marble scene" width="100%"></p>
 
 **You get:** text in the field, or text you can still take from the panel.
 
@@ -171,7 +187,7 @@ Status: working. The author dictates with it every day.
 - No notarization yet: a downloaded build opens through a right-click the first time.
 - The universal binary carries an Intel slice, but the author owns no Intel Mac and never verified it there.
 
-Deeper: [the step-by-step walkthrough](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), dependency licenses in [THIRD-PARTY](THIRD-PARTY).
+Deeper: [the step-by-step walkthrough with a frame of every surface](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), [security](SECURITY.md).
 
 ## Star And Contribute
 
@@ -197,6 +213,8 @@ This is one of the public [Olympuz projects](https://github.com/zarubinvibe/athe
 | project | Zeuz | Factory that turns an idea into a governed multi-agent workflow with gates, observability, and replay. | [Repository](https://github.com/zarubinvibe/zeuz) · [ZIP](https://github.com/zarubinvibe/zeuz/archive/refs/heads/main.zip) |
 | project | Lynceuz | Collects public web evidence at zero cost and stops with an honest reason when the safe routes end. | [Repository](https://github.com/zarubinvibe/lynceuz) · [ZIP](https://github.com/zarubinvibe/lynceuz/archive/refs/heads/main.zip) |
 | project | Iriz | macOS menu-bar dictation that decodes speech on your own Mac, fixes wrong keyboard layouts, and turns dictation into a ready task for an agent. | [Repository](https://github.com/zarubinvibe/iriz) · [ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip) |
+| project | Mantoz | Puts an idea in front of five hundred people who do not exist, then shows how each group answered. | [Repository](https://github.com/zarubinvibe/mantoz) · [ZIP](https://github.com/zarubinvibe/mantoz/archive/refs/heads/main.zip) |
+| project | Koiz | A single lesson base for every project. Each failure is taken down to its cause, and the cause stays open until a hook, a gate or a test closes it. | [Repository](https://github.com/zarubinvibe/koiz) · [ZIP](https://github.com/zarubinvibe/koiz/archive/refs/heads/main.zip) |
 <!-- pantheon-family:end -->
 
 ## License

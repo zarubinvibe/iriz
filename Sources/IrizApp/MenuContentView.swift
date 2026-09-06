@@ -64,14 +64,14 @@ struct MenuContentView: View {
             hero
             separator
 
-            caption("Режим")
+            caption(L("menu.mode", "Режим"))
             modePicker
             if let conversion = keys.conversion {
-                legendRow("Исправить слово вручную", key: conversion)
+                legendRow(L("menu.fixWord", "Исправить слово вручную"), key: conversion)
             }
             separator
 
-            caption("Раскладка")
+            caption(L("menu.layout", "Раскладка"))
             layoutPicker
             separator
 
@@ -81,18 +81,18 @@ struct MenuContentView: View {
             // Знакомство открывается ЗАНОВО. У соседей по классу к нему нет
             // пути назад, и это живая жалоба их пользователей: человек хочет
             // перечитать, что там было написано про разрешения, и не может.
-            actionRow("Знакомство…", key: "", target: .welcome) {
+            actionRow(L("menu.welcome", "Знакомство…"), key: "", target: .welcome) {
                 chrome.close()
                 appDelegate.showWelcome()
             }
 
-            actionRow("Настройки…", key: "⌘,", target: .settings) {
+            actionRow(L("menu.settings", "Настройки…"), key: "⌘,", target: .settings) {
                 chrome.close()
                 appDelegate.openSettings()
             }
             .keyboardShortcut(",", modifiers: .command)
 
-            actionRow("Выйти", key: "⌘Q", target: .quit) {
+            actionRow(L("menu.quit", "Выйти"), key: "⌘Q", target: .quit) {
                 appDelegate.quitApp()
             }
             .keyboardShortcut("q", modifiers: .command)
@@ -123,9 +123,14 @@ struct MenuContentView: View {
                     + Text(state.heroDetail).font(.system(size: 17)).foregroundStyle(IRIZ_SUBTLE)
             }
 
-            Text(state.statsLine)
-                .font(.system(size: 11))
-                .foregroundStyle(IRIZ_SUBTLE)
+            // Счётчики дня - только когда за день что-то было. «Сегодня: 0
+            // исправлений · 0 отмен» занимает строку и не говорит ничего:
+            // владелец 06.09.2026 назвал такие обозначения бесполезными.
+            if state.todayAutoswitches > 0 || state.todayUndos > 0 {
+                Text(state.statsLine)
+                    .font(.system(size: 11))
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
         }
         .padding(.horizontal, 6)
         .padding(.bottom, 3)
@@ -135,50 +140,44 @@ struct MenuContentView: View {
     }
 
     private var modePicker: some View {
-        Picker("Режим", selection: Binding(
-            get: { state.mode },
-            set: { appDelegate.setMode($0) }
-        )) {
-            ForEach(AppMode.allCases) { mode in
-                Text(mode.title).tag(mode)
-            }
-        }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .controlSize(.small)
-        .focused($focus, equals: .mode)
-        .accessibilityLabel("Режим работы")
-        .padding(.horizontal, 6)
+        IrizSegments(items: AppMode.allCases.map { ($0, $0.title) },
+                     selection: state.mode,
+                     group: "menu-mode") { appDelegate.setMode($0) }
+            .focused($focus, equals: .mode)
+            .accessibilityLabel(L("menu.modeGroup", "Режим работы"))
+            .padding(.horizontal, 6)
     }
 
     /// Сегменты помещаются, пока раскладок мало и имена коротки; иначе
     /// сегментированный переключатель режет имена, и «Русская — ПК» становится
     /// «Русск…». Тогда честнее выпадающий список.
     private var layoutPicker: some View {
-        let picker = Picker("Раскладка", selection: Binding(
-            get: { state.currentLayoutID },
-            set: { appDelegate.selectLayout(id: $0) }
-        )) {
-            ForEach(state.layouts) { entry in
-                Text(entry.name).tag(entry.id)
-            }
-        }
-        .labelsHidden()
-        .controlSize(.small)
-        .focused($focus, equals: .layout)
-        .accessibilityLabel("Раскладка клавиатуры")
-        .padding(.horizontal, 6)
-
         let fitsSegments = state.layouts.count <= 3
             && state.layouts.reduce(0) { $0 + $1.name.count } <= 26
-
         return Group {
             if fitsSegments {
-                picker.pickerStyle(.segmented)
+                IrizSegments(items: state.layouts.map { ($0.id, $0.name) },
+                             selection: state.currentLayoutID,
+                             group: "menu-layout") { appDelegate.selectLayout(id: $0) }
             } else {
-                picker.pickerStyle(.menu)
+                // Раскладок много или имена длинные - сегменты режут слова
+                // («Русская — ПК» становится «Русск…»), и честнее список.
+                Picker(L("menu.layout", "Раскладка"), selection: Binding(
+                    get: { state.currentLayoutID },
+                    set: { appDelegate.selectLayout(id: $0) }
+                )) {
+                    ForEach(state.layouts) { entry in
+                        Text(entry.name).tag(entry.id)
+                    }
+                }
+                .labelsHidden()
+                .controlSize(.small)
+                .pickerStyle(.menu)
             }
         }
+        .focused($focus, equals: .layout)
+        .accessibilityLabel(L("menu.layoutGroup", "Раскладка клавиатуры"))
+        .padding(.horizontal, 6)
     }
 
     /// Вторая функция приложения. Справа либо клавиша (сработает), либо причина,
@@ -187,11 +186,11 @@ struct MenuContentView: View {
     private var dictationBlock: some View {
         switch state.dictationHint {
         case .key:
-            legendRow("Диктовка", key: keys.dictation, prominent: true)
+            legendRow(L("menu.dictation", "Диктовка"), key: keys.dictation, prominent: true)
         case .note(let note):
-            legendRow("Диктовка", key: note, prominent: true)
+            legendRow(L("menu.dictation", "Диктовка"), key: note, prominent: true)
         case .fault(let reason):
-            actionRow("Диктовка", key: reason, target: .dictation) {
+            actionRow(L("menu.dictation", "Диктовка"), key: reason, target: .dictation) {
                 chrome.close()
                 appDelegate.recheckPermissions()
             }
@@ -202,7 +201,7 @@ struct MenuContentView: View {
         // Поэтому — подпунктом, тише, и с прямо названным адресатом.
         if let prompt = keys.prompt {
             HStack(spacing: 8) {
-                Text("Речь → промпт")
+                Text(L("menu.prompt", "Речь → промпт"))
                 Spacer(minLength: 8)
                 Text(prompt).foregroundStyle(IRIZ_SUBTLE)
             }
@@ -233,14 +232,14 @@ struct MenuContentView: View {
         // Запись встречи - строкой в меню, а не только цветом плашки. Режим
         // существовал и был недостижим: цвет показывал состояние, в которое
         // нечем было войти.
-        actionRow(appDelegate.isRecordingMeeting ? "Остановить запись встречи"
-                                                 : "Записать встречу",
+        actionRow(appDelegate.isRecordingMeeting ? L("menu.meetingStop", "Остановить запись встречи")
+                                                 : L("menu.meetingStart", "Записать встречу"),
                   key: nil, target: .meeting) {
             chrome.close()
             appDelegate.toggleMeetingRecording()
         }
 
-        actionRow("История надиктовок", key: keys.history, target: .history) {
+        actionRow(L("menu.history", "История надиктовок"), key: keys.history, target: .history) {
             chrome.close()
             appDelegate.showDictationHistory()
         }

@@ -96,3 +96,55 @@
 你刚从头到尾走了一遍，所以你正是最有资格改进它的人。路径很短：先 fork 仓库，建一个分支，提交 commit，push 上去，然后开一个 Pull Request。请不要直接往 `main` 推：这个仓库的改动都走 Pull Request。
 
 哪一步坏了，或者写得不对？到 [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) 开一个 issue，写清楚你做了什么、屏幕上出现了什么。这份文件里写错的一步，和代码里的缺陷一样，也是缺陷。
+
+## 界面长什么样
+
+这里的每一个界面都由工具从运行中的应用截取：`iriz --capture-docs`。不是效果图——就是你 Mac 上会打开的那个窗口。
+
+### 浮窗
+
+<p align="center"><img src="assets/shots/plate-resting-light.png" alt="屏幕下方一颗小小的玻璃水滴，里面有一条细细的绿线" width="45%"></p>
+
+你不说话时它就是这样。水滴浮在任何窗口之上，什么也不做。
+
+<p align="center"><img src="assets/shots/plate-listening-light.png" alt="录音中的浮窗：绿色声波在玻璃内部流动" width="70%"></p>
+
+你说话时是这样。玻璃里的声波就是“它有没有听见我”的答案。
+
+<p align="center"><img src="assets/shots/plate-hover-light.png" alt="浮窗展开成一排六个圆形按钮：麦克风、提示词、翻译、RU、历史、设置" width="100%"></p>
+
+把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。浮窗可以拖动，会吸附到屏幕边缘十二个位置之一。
+
+<p align="center"><img src="assets/shots/plate-open-text-light.png" alt="展开的面板：文字在实心卡片上，有“拷贝”按钮、关闭叉号和下方一排按钮" width="100%"></p>
+
+点一下会展开带文字的面板。有三种关法：叉号、Escape，以及点在按钮以外的地方。
+
+### 菜单栏
+
+<p align="center"><img src="assets/shots/menu-zh.png" alt="iriz 菜单：状态、布局模式、键盘布局、口述、提示词、会议、历史、开始使用、设置" width="60%"></p>
+
+其余功能都从这里打开。第一行告诉你应用此刻在做什么。
+
+### 设置
+
+<p align="center"><img src="assets/shots/settings-zh.png" alt="iriz 设置窗口：左侧边栏是各个页面，右侧是按键页面" width="100%"></p>
+
+十三个页面：按键、语言、转写文件、会议、键盘布局、口述、浮窗、替换词典、片段、提示词模式、迁移、磁盘占用。
+
+### 口述记录
+
+<p align="center"><img src="assets/shots/history-zh.png" alt="历史窗口：搜索框、带日期和长度的口述列表、下方的按键提示" width="100%"></p>
+
+显示最近一百条，保留最近五百条。搜索会查遍所有保留的内容。
+
+### 没能粘贴上的文字
+
+<p align="center"><img src="assets/shots/rescue-zh.png" alt="救援窗口：卡片上的转写文字，“再粘贴一次”和“拷贝”按钮" width="100%"></p>
+
+如果粘贴没能到达输入框，文字不会丢：它在这里等着。
+
+### 开始使用
+
+<p align="center"><img src="assets/shots/firstrun-zh.png" alt="引导的第一屏：带声波的浮窗，标题“你说，我来打字”" width="80%"></p>
+
+首次启动共十一屏。之后随时可以从菜单里重新打开。

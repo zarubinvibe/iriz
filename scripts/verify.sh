@@ -42,6 +42,14 @@ echo "=== ворота постоянства плашки ==="
 bash scripts/hud_always_on_gate.sh || FAIL=1
 
 echo
+echo "=== уборка ==="
+# Убирает, а не докладывает: тесты заводят домены настроек, а cfprefsd
+# дописывает их plist уже ПОСЛЕ выхода процесса, и победить это из теста нельзя.
+# Значит убирает машина, и делает это на каждом прогоне. К 06.09.2026 в
+# ~/Library/Preferences накопилось 29 684 файла на 120 МБ.
+bash scripts/tidy_gate.sh --clean || FAIL=1
+
+echo
 echo "=== ворота стекла (рецепт) ==="
 bash scripts/glass_gate.sh --static || FAIL=1
 
