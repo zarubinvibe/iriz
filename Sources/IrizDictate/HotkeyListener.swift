@@ -37,6 +37,8 @@ final class HotkeyListener {
     var onPromptRelease: ((TimeInterval) -> Void)?
     var onReleaseAlternate: ((TimeInterval) -> Void)?
     var onCancel: (() -> Void)?
+    /// Escape без идущей записи: свернуть раскрытую плашку.
+    var onDismissOverlay: (() -> Void)?
     var onShowHistory: (() -> Void)?
     /// Toggle mode: a press arrived while the app is busy (transcription
     /// in flight). The toggle did NOT flip. Play feedback so the user
@@ -222,6 +224,7 @@ final class HotkeyListener {
             case .releasePrompt: onPromptRelease?(detectedAt)
             case .releaseAlternate: onReleaseAlternate?(detectedAt)
             case .cancel: onCancel?()
+            case .dismissOverlay: onDismissOverlay?()
             case .showHistory: onShowHistory?()
             case .rejectedBusyPress: onRejectedBusyPress?()
             }

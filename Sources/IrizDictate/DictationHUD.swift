@@ -28,6 +28,18 @@ enum PromptFailureKind: CaseIterable, Equatable {
 /// Состояние плашки. Ровно то, о чём есть что сказать; всё остальное — её
 /// отсутствие (см. `DictationHUDPresentation.hidden`).
 enum DictationHUDStage: Equatable {
+    /// Покой. Плашка на экране, но работы нет: она ждёт нажатия.
+    ///
+    /// Решение владельца 06.09.2026: «Она должна быть всегда». Прежде покоя не
+    /// существовало как состояния - его местом была пустота, `.hidden`, а
+    /// `.hidden` для презентера значит снос окна. Пока покой не назван стадией,
+    /// «всегда» недостижимо в принципе: автомат обязан иметь имя для «ничего не
+    /// происходит», иначе он умеет только показывать событие и исчезать.
+    ///
+    /// Отменяет прежнее решение того же владельца (HUD_SPEC §8, строка про
+    /// постоянно висящую плашку). Спека правится тем же коммитом: документ,
+    /// спорящий с кодом, разворачивает следующий круг назад.
+    case resting
     /// Идёт запись — живой уровень голоса, ради него всё и делается.
     ///
     /// Режим лежит В САМОЙ стадии, а не читается по ходу дела: пока плашка на
@@ -595,6 +607,14 @@ struct DictationHUDVisual: Equatable {
 /// только на распознавании, когда менять что-то уже поздно.
 func dictationHUDVisual(for stage: DictationHUDStage) -> DictationHUDVisual {
     switch stage {
+    case .resting:
+        // Та же лента, что и на записи, только нейтральная и неподвижная:
+        // покой обязан быть УЗНАВАЕМО той же плашкой, иначе владелец увидит
+        // подмену кадра там, где обещано перетекание. Подложки нет - в покое
+        // плашка висит над чужим окном весь день, и чем меньше она закрывает,
+        // тем дешевле её постоянство.
+        return .init(form: .waveform, accent: .neutral,
+                     mark: .none, flow: .symmetric, halo: .none)
     case .listening(.dictation):
         return .init(form: .waveform, accent: .red,
                      mark: .none, flow: .symmetric, halo: .even)
@@ -648,7 +668,7 @@ func dictationHUDIsListening(_ stage: DictationHUDStage) -> Bool {
 /// (`listening`, `recognizing`) живёт ровно пока идёт работа.
 func dictationHUDStageIsTerminal(_ stage: DictationHUDStage) -> Bool {
     switch stage {
-    case .listening, .recognizing, .buildingPrompt:
+    case .resting, .listening, .recognizing, .buildingPrompt:
         return false
     case .inserted, .notDelivered, .nothingRecognized, .recognitionTimedOut,
          .recognitionFailed, .promptFailed, .promptNotDelivered,
@@ -677,11 +697,55 @@ func dictationHUDPresentation(pipelineState state: DictationController.State,
     case .generatingPrompt:
         return .visible(.buildingPrompt)
     case .ready, .warmingUp, .unavailable:
-        // `unavailable` держится вечно (нет разрешения, модель не загрузилась) —
-        // такое сообщение живёт в строке меню, а не плашкой поверх работы.
-        guard let current, dictationHUDStageIsTerminal(current) else { return .hidden }
+        // Работы нет - значит покой, а не пустота. Прежде здесь стоял `.hidden`,
+        // то есть снос окна, и «плашка всегда на экране» было недостижимо в
+        // принципе. Решение владельца 06.09.2026.
+        //
+        // `unavailable` (нет разрешения, модель не загрузилась) тоже покой:
+        // плашка в этом состоянии не врёт про готовность - она молчит ровно
+        // так же, как молчит в готовности, а причину называет строка меню и
+        // подсказка при наведении.
+        guard let current, dictationHUDStageIsTerminal(current) else { return .visible(.resting) }
         return .visible(current)
     }
+}
+
+/// Приговор автомата построчно: для ворот «плашка всегда на экране».
+///
+/// Здесь, а не в CLI: стадии и приговор внутренние для модуля, а вынести их
+/// наружу ради ворот значит расширить публичный контракт под нужды проверки.
+/// Ворота читают ГОТОВЫЙ приговор той же функции, по которой живёт продукт, -
+/// греп по исходнику ослеп бы на первом переименовании.
+public func dictationHUDPresenceReport() -> [String] {
+    let states: [(String, DictationController.State)] = [
+        ("ready", .ready),
+        ("warmingUp", .warmingUp),
+        ("unavailable", .unavailable("нет разрешения")),
+        ("recording", .recording),
+        ("transcribing", .transcribing),
+        ("generatingPrompt", .generatingPrompt),
+    ]
+    let stages: [(String, DictationHUDStage?)] = [
+        ("none", nil),
+        ("resting", .resting),
+        ("listening", .listening(.dictation)),
+        ("recognizing", .recognizing),
+        ("inserted", .inserted),
+        ("notDelivered", .notDelivered(.insertionFailed)),
+        ("refused", .refused(.secureInputActive)),
+    ]
+    var lines: [String] = []
+    for (stateName, state) in states {
+        for (stageName, stage) in stages {
+            let verdict = dictationHUDPresentation(pipelineState: state,
+                                                   purpose: .dictation,
+                                                   current: stage)
+            lines.append("\(stateName) \(stageName) \(verdict == .hidden ? "hidden" : "visible")")
+        }
+    }
+    let delay = dictationHUDDismissDelay(for: .resting)
+    lines.append("resting lifetime \(delay.map { "\($0)" } ?? "never")")
+    return lines
 }
 
 /// Вердикт доставки → плашка. `waiting` — окно подтверждения истекло, а цель
@@ -760,7 +824,9 @@ let DICTATION_HUD_RECOGNITION_FAILED_SECONDS: TimeInterval = DICTATION_HUD_NOT_D
 /// владелец обязан успеть прочитать целиком.
 func dictationHUDDismissDelay(for stage: DictationHUDStage) -> TimeInterval? {
     switch stage {
-    case .listening, .recognizing, .buildingPrompt:
+    // Покой не уходит НИКОГДА - в этом всё его назначение. `nil` тут значит не
+    // «пока идёт работа», а «пока живо приложение».
+    case .resting, .listening, .recognizing, .buildingPrompt:
         return nil
     case .inserted:
         return DICTATION_HUD_INSERTED_SECONDS
@@ -845,7 +911,9 @@ func dictationHUDPhaseSpeed(stage: DictationHUDStage, level: Float) -> CGFloat {
             + CGFloat(dictationHUDPerceptualLevel(level)) * DICTATION_HUD_LISTENING_PHASE_LEVEL
     case .recognizing, .buildingPrompt:
         return DICTATION_HUD_PROCESSING_PHASE_SPEED
-    case .inserted, .notDelivered, .nothingRecognized, .recognitionTimedOut,
+    // Ноль у покоя - не косметика, а цена постоянства: любое дыхание ленты
+    // в покое держало бы display link на 120 Гц круглосуточно.
+    case .resting, .inserted, .notDelivered, .nothingRecognized, .recognitionTimedOut,
          .recognitionFailed, .promptFailed, .promptNotDelivered,
          .promptSavedAfterFocusChange, .refused:
         return 0
@@ -899,10 +967,33 @@ struct DictationHUDContent: Equatable {
     /// Едет тем же каналом, что и остальное содержимое плашки, а не отдельной
     /// дорожкой: два пути к одному экрану рано или поздно разъезжаются.
     var transcript: String?
+
+    /// Плашка РАСКРЫТА владельцем: он щёлкнул по ней и ждёт панель с текстом
+    /// и кнопками. Отдельно от `transcript`: текст, который не доехал,
+    /// раскрывает плашку сам, без спроса, и эти два повода нельзя путать -
+    /// закрыв раскрытую панель, владелец не должен терять недоехавший текст.
+    var expanded: Bool = false
+
+    /// Кнопки раскрытой формы. Пустой список - формы нет.
+    var actions: [DictationHUDAction] = []
+
+    /// В панели стоит не текст, а подсказка «текст появится здесь». Копировать
+    /// её нельзя, и кнопку копирования показывать не за чем.
+    var transcriptIsPlaceholder: Bool = false
 }
+
+/// Что стоит в раскрытой панели, пока текста ещё нет.
+///
+/// Пустая панель обещает текст, которого нет, - это правило дома, и оно
+/// остаётся в силе. Раскрытая по щелчку плашка исключение не делает: она
+/// говорит прямо, чего ждёт.
+let DICTATION_HUD_OPEN_PLACEHOLDER = "нажмите клавишу диктовки - текст появится здесь"
+
 
 func dictationHUDTitle(for stage: DictationHUDStage) -> String {
     switch stage {
+    case .resting:
+        return "жду"
     case .listening(.dictation):
         return "слушаю"
     case .listening(.prompt):
@@ -946,7 +1037,7 @@ func dictationHUDTitle(for stage: DictationHUDStage) -> String {
 /// Вторая строка. Появляется только когда есть что добавить по делу.
 func dictationHUDDetail(for stage: DictationHUDStage, historyHint: String) -> String? {
     switch stage {
-    case .listening, .recognizing, .buildingPrompt, .inserted, .recognitionTimedOut:
+    case .resting, .listening, .recognizing, .buildingPrompt, .inserted, .recognitionTimedOut:
         return nil
     case .notDelivered:
         // Сырьё к этому моменту уже на диске (иначе задача ушла бы в catch и до
@@ -1034,7 +1125,9 @@ func dictationHUDContent(stage: DictationHUDStage,
                          level: Float,
                          reduceMotion: Bool,
                          historyHint: String,
-                         transcript: String? = nil) -> DictationHUDContent {
+                         transcript: String? = nil,
+                         expanded: Bool = false,
+                         isRecording: Bool = false) -> DictationHUDContent {
     let title = dictationHUDTitle(for: stage)
     let detail = dictationHUDDetail(for: stage, historyHint: historyHint)
     return DictationHUDContent(
@@ -1046,7 +1139,17 @@ func dictationHUDContent(stage: DictationHUDStage,
         animatesLevel: dictationHUDAnimatesLevel(stage: stage, reduceMotion: reduceMotion),
         animatesWaiting: dictationHUDAnimatesWaiting(stage: stage, reduceMotion: reduceMotion),
         accessibilityLabel: dictationHUDAccessibilityLabel(title: title, detail: detail),
-        transcript: dictationHUDShowsTranscript(stage: stage) ? transcript : nil
+        // Панель поднимают два независимых повода: недоехавший текст (сам, по
+        // стадии) и раскрытие владельцем (щелчком). Второй показывает то же
+        // поле, а когда показывать нечего - говорит об этом прямо.
+        transcript: dictationHUDShowsTranscript(stage: stage)
+            ? transcript
+            : (expanded ? (transcript?.isEmpty == false ? transcript : DICTATION_HUD_OPEN_PLACEHOLDER) : nil),
+        expanded: expanded,
+        actions: expanded ? dictationHUDActions(isRecording: isRecording) : [],
+        transcriptIsPlaceholder: expanded
+            && !dictationHUDShowsTranscript(stage: stage)
+            && transcript?.isEmpty != false
     )
 }
 
@@ -1141,6 +1244,13 @@ func dictationHUDHintLines(stage: DictationHUDStage,
                            showsDragHint: Bool) -> [String] {
     var lines: [String]
     switch stage {
+    case .resting:
+        // В покое подсказки СЛОВАМИ нет вовсе: под мышью плашка раскрывается
+        // полоской кнопок, и текст рядом с ней был бы вторым объяснением того
+        // же самого. Решение владельца 06.09.2026: «при наведении… он должен
+        // раскрыться немножко для того, чтобы можно было сменить язык, выбрать
+        // режим».
+        lines = []
     case .listening:
         let finish: String
         switch triggerMode {

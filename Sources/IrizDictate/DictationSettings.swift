@@ -51,6 +51,7 @@ public final class DictationSettings: @unchecked Sendable {
     private static let keyPromptUserGuidance = "prompt_user_guidance_v1"
     private static let keySpeechCleanupMode = "speech_cleanup_mode_v1"
     private static let keyDictationHUDSize = "dictation_hud_size_v1"
+    private static let keyDictationHUDAnchor = "dictation_hud_anchor_v1"
     private static let keyDictationLanguage = "dictation_language"
     private static let keyRemoveFinalPeriod = "remove_final_period_v1"
     private static let keyEnterDelayMilliseconds = "enter_delay_milliseconds_v1"
@@ -716,6 +717,22 @@ public final class DictationSettings: @unchecked Sendable {
             return value
         }
         set { defaults.set(newValue.rawValue, forKey: Self.keyDictationHUDSize) }
+    }
+
+    /// Место притяжения плашки. Двенадцать мест у краёв экрана вместо
+    /// произвольной точки: решение владельца 06.09.2026, «сделай
+    /// примагничивание». Хранится ИМЕНЕМ места, а не координатами: экран
+    /// меняется (второй монитор, другое разрешение), а «середина низа»
+    /// остаётся серединой низа.
+    public var dictationHUDAnchor: DictationHUDAnchor {
+        get {
+            guard let raw = defaults.string(forKey: Self.keyDictationHUDAnchor),
+                  let value = DictationHUDAnchor(rawValue: raw) else {
+                return DICTATION_HUD_DEFAULT_ANCHOR
+            }
+            return value
+        }
+        set { defaults.set(newValue.rawValue, forKey: Self.keyDictationHUDAnchor) }
     }
 
     /// Свои инструкции и примеры промпт-режима. Хранятся ОДНИМ ключом: их

@@ -13,6 +13,9 @@ enum HotkeyTransitionAction: Equatable, Sendable {
     case releasePrompt
     case releaseAlternate
     case cancel
+    /// Escape без идущей записи: свернуть раскрытую плашку. Событие при этом
+    /// НЕ подавляется - Escape принадлежит приложению под плашкой.
+    case dismissOverlay
     case showHistory
     /// Toggle mode: the press was suppressed because the app is busy
     /// (transcription in flight). Does NOT flip toggle state. Lets the
@@ -466,7 +469,15 @@ struct HotkeyTransitionState {
             if event.isAutoRepeat, suppressEscapeKeyUp {
                 return .suppressOnly
             }
-            guard isRecording else { return .pass }
+            // Записи нет - но плашка может стоять раскрытой, и выйти из неё
+            // Escape'ом обязано быть можно, как из любого окна macOS. Событие
+            // при этом идёт дальше своим ходом: подавить Escape в чужом
+            // приложении ради своей плашки нельзя.
+            guard isRecording else {
+                return event.isAutoRepeat
+                    ? .pass
+                    : HotkeyTransitionResult(suppress: false, actions: [.dismissOverlay])
+            }
             suppressEscapeKeyUp = true
             resetToggleState()
             return event.isAutoRepeat

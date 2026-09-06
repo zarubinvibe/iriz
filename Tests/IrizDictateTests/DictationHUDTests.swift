@@ -33,13 +33,47 @@ struct DictationHUDPresentationTests {
         #expect(dictationHUDAnimatesWaiting(stage: .buildingPrompt, reduceMotion: false))
     }
 
-    /// Показывать нечего — плашки нет. Иначе она висела бы на экране всё время
-    /// работы приложения.
-    @Test func покояИПрогреваПлашкаНеТребует() {
-        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: nil) == .hidden)
-        #expect(dictationHUDPresentation(pipelineState: .warmingUp, purpose: .dictation, current: nil) == .hidden)
+    /// Работы нет - плашка стоит в покое. Решение владельца 06.09.2026:
+    /// «Она должна быть всегда». Прежде эта же проба требовала обратного -
+    /// `.hidden`, то есть снос окна; правило перевёрнуто целиком, а не снято.
+    @Test func безРаботыПлашкаСтоитВПокое() {
+        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: nil)
+                == .visible(.resting))
+        #expect(dictationHUDPresentation(pipelineState: .warmingUp, purpose: .dictation, current: nil)
+                == .visible(.resting))
         #expect(dictationHUDPresentation(pipelineState: .unavailable("нет разрешения"), purpose: .dictation, current: nil)
-                == .hidden)
+                == .visible(.resting))
+    }
+
+    /// Ни одно состояние конвейера не имеет права дать пустоту: пустота для
+    /// презентера значит снос окна, и «всегда» кончилось бы на первом же таком
+    /// исходе. Проба перебирает ВСЕ состояния во ВСЕХ режимах.
+    @Test func ниОдноСостояниеНеГаситПлашку() {
+        let states: [DictationController.State] = [
+            .ready, .warmingUp, .unavailable("нет разрешения"),
+            .recording, .transcribing, .generatingPrompt,
+        ]
+        let stages: [DictationHUDStage?] = [
+            nil, .resting, .listening(.dictation), .recognizing, .buildingPrompt,
+            .inserted, .notDelivered(.insertionFailed), .refused(.secureInputActive),
+        ]
+        for state in states {
+            for stage in stages {
+                #expect(dictationHUDPresentation(pipelineState: state,
+                                                 purpose: .dictation,
+                                                 current: stage) != .hidden)
+            }
+        }
+    }
+
+    /// Покой не уходит по таймеру: у него нет срока жизни.
+    @Test func уПокояНетСрокаЖизни() {
+        #expect(dictationHUDDismissDelay(for: .resting) == nil)
+        #expect(!dictationHUDStageIsTerminal(.resting))
+        // И не крутит display link: постоянная плашка с дыханием ленты стоила
+        // бы 120 Гц круглосуточно.
+        #expect(dictationHUDPhaseSpeed(stage: .resting, level: 1) == 0)
+        #expect(!dictationHUDPollsLevel(.resting))
     }
 
     /// `.ready` приходит сразу за вердиктом доставки. Если бы он гасил плашку,
@@ -60,10 +94,12 @@ struct DictationHUDPresentationTests {
         }
     }
 
-    /// А рабочая плашка на покое обязана уйти: работы больше нет.
-    @Test func покойГаситРабочуюПлашку() {
-        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: .listening(.dictation)) == .hidden)
-        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: .recognizing) == .hidden)
+    /// Рабочая плашка на покое обязана СМЕНИТЬСЯ покоем, а не исчезнуть.
+    @Test func рабочаяПлашкаСменяетсяПокоем() {
+        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: .listening(.dictation))
+                == .visible(.resting))
+        #expect(dictationHUDPresentation(pipelineState: .ready, purpose: .dictation, current: .recognizing)
+                == .visible(.resting))
     }
 
     @Test func новаяЗаписьСменяетСтаруюТерминальнуюПлашку() {
@@ -533,7 +569,10 @@ struct DictationHUDTranscriptDismissTests {
         #expect(handler != nil, "презентер не сказал поверхности, кого звать после копирования")
 
         handler?()
-        #expect(surface.dismissCount == 1, "после копирования панель осталась на экране")
+        // Панель закрылась, но плашка НЕ снесена: текст забрали - значит работы
+        // больше нет, а «нет работы» с 06.09.2026 значит покой, а не пустота.
+        #expect(surface.dismissCount == 0, "плашку снесли вместо возврата в покой")
+        #expect(surface.presented.last?.stage == .resting, "после копирования плашка не вернулась в покой")
 
         // И текст забыт: иначе следующая же перерисовка подняла бы панель заново.
         presenter.nothingRecognized(savedToHistory: false)
@@ -570,20 +609,30 @@ struct DictationHUDPresenterTests {
         presenter.prewarm()
         #expect(factory.created == 1)
         #expect(factory.surface.prewarmCount == 1)
+        // Прогрев теперь И ПОКАЗЫВАЕТ: плашка обязана стоять на экране с
+        // запуска приложения, а не с первого нажатия.
+        #expect(factory.surface.presented.count == 1)
+        #expect(factory.surface.presented.last?.stage == .resting)
 
         presenter.pipelineStateChanged(.recording)
         #expect(factory.created == 1)
-        #expect(factory.surface.presented.count == 1)
+        #expect(factory.surface.presented.count == 2)
     }
 
-    /// Прогрев — не показ. Ни плашки, ни стадии, ни опроса уровня: пока
-    /// владелец не заговорил, показывать нечего.
-    @Test func прогревНичегоНеПоказывает() {
+    /// Прогрев ставит плашку в покой. Прежде эта проба требовала обратного -
+    /// «прогрев ничего не показывает», - и была машинной записью прежнего
+    /// решения владельца. Новое решение (06.09.2026) отменяет прежнее целиком:
+    /// плашка на экране с запуска.
+    ///
+    /// Что осталось прежним и обязано остаться: опрос уровня в покое НЕ идёт.
+    /// Постоянная плашка не имеет права стоить постоянного расхода.
+    @Test func прогревСтавитПлашкуВПокой() {
         let (presenter, surface) = makePresenter()
         presenter.prewarm()
-        #expect(surface.presented.isEmpty)
+        #expect(surface.presented.count == 1)
+        #expect(surface.presented.last?.stage == .resting)
         #expect(surface.dismissCount == 0)
-        #expect(presenter.stage == nil)
+        #expect(presenter.stage == .resting)
         #expect(!presenter.isPollingLevel)
     }
 
@@ -612,24 +661,40 @@ struct DictationHUDPresenterTests {
         presenter.pipelineStateChanged(.recording)
         presenter.pipelineStateChanged(.ready)
         #expect(!presenter.isPollingLevel)
-        #expect(presenter.stage == nil)
-        #expect(surface.dismissCount == 1)
+        #expect(presenter.stage == .resting)
+        #expect(surface.dismissCount == 0, "плашку снесли вместо возврата в покой")
     }
 
-    /// Плашка и окно спасения говорят про один и тот же провал. Оставить их
-    /// вдвоём — сказать одно и то же дважды, причём плашка висит поверх окна и
-    /// гаснет посреди чтения. Гейт: явное гашение снимает плашку с экрана и
-    /// останавливает опрос уровня, а не просто забывает про неё.
-    @Test func явноеГашениеСнимаетПлашкуПередОкномСпасения() {
+    /// Плашка и окно спасения говорят про один и тот же провал. Оставить
+    /// РАЗВЁРНУТУЮ плашку поверх окна - сказать одно и то же дважды. Гейт:
+    /// явный уход сворачивает плашку в покой и останавливает опрос уровня.
+    ///
+    /// Именно сворачивает, а не сносит: покоящаяся пилюля вчетверо уже рабочей
+    /// и окну спасения не мешает, а снос нарушил бы «плашка всегда на экране».
+    @Test func явныйУходСворачиваетПлашкуВПокойПередОкномСпасения() {
         let (presenter, surface) = makePresenter()
         presenter.pipelineStateChanged(.recording)
-        #expect(presenter.stage != nil)
+        #expect(presenter.stage == .listening(.dictation))
         #expect(presenter.isPollingLevel)
 
         presenter.dismiss()
 
-        #expect(presenter.stage == nil)
+        #expect(presenter.stage == .resting)
         #expect(!presenter.isPollingLevel)
+        #expect(surface.dismissCount == 0)
+        #expect(surface.presented.last?.stage == .resting)
+    }
+
+    /// Единственный случай, когда плашки на экране не остаётся: закрытие
+    /// приложения. Отдельным входом - чтобы снос окна нельзя было позвать
+    /// случайно из середины конвейера.
+    @Test func сноситОкноТолькоЗакрытиеПриложения() {
+        let (presenter, surface) = makePresenter()
+        presenter.prewarm()
+        #expect(surface.dismissCount == 0)
+
+        presenter.shutDown()
+        #expect(presenter.stage == nil)
         #expect(surface.dismissCount == 1)
     }
 
@@ -640,19 +705,22 @@ struct DictationHUDPresenterTests {
         #expect(!presenter.isPollingLevel)
     }
 
-    /// Отменённая записью диктовка (Escape) — плашки нет, и опрос стоит.
-    @Test func плашкиБезРаботыНеБывает() {
+    /// Отменённая диктовка (Escape) - плашка возвращается в покой, а не
+    /// исчезает. Опрос уровня при этом стоит.
+    @Test func безРаботыПлашкаВПокоеИНеОпрашиваетУровень() {
         let (presenter, surface) = makePresenter()
         presenter.pipelineStateChanged(.warmingUp)
         presenter.pipelineStateChanged(.ready)
-        #expect(presenter.stage == nil)
-        #expect(surface.presented.isEmpty)
+        #expect(presenter.stage == .resting)
+        #expect(surface.presented.last?.stage == .resting)
         #expect(!presenter.isPollingLevel)
     }
 
-    /// Панель заводится только когда есть что показать: до первой надиктовки
-    /// живого окна в памяти нет.
-    @Test func поверхностьНеСоздаётсяПокаНечегоПоказывать() {
+    /// Поверхность заводится ОДИН раз и живёт до конца процесса. Прежде она
+    /// создавалась лениво, к первой надиктовке; теперь плашка на экране с
+    /// запуска, значит и окно нужно с запуска. Проба стережёт единственность:
+    /// второе окно разъехалось бы с первым по позиции и по монитору.
+    @Test func поверхностьЗаводитсяОдинРазИНеПлодится() {
         var built = 0
         let presenter = DictationHUDPresenter(level: { 0 },
                                              pipelineState: { .ready },
@@ -664,8 +732,8 @@ struct DictationHUDPresenterTests {
                                              })
         presenter.pipelineStateChanged(.ready)
         presenter.pipelineStateChanged(.warmingUp)
-        #expect(built == 0)
         presenter.pipelineStateChanged(.recording)
+        presenter.pipelineStateChanged(.ready)
         #expect(built == 1)
     }
 
@@ -736,8 +804,8 @@ struct DictationHUDPresenterTests {
         state = .ready
         presenter.deliveryFinished(.delivered)
         presenter.dismissIfStillShowing(.inserted)
-        #expect(presenter.stage == nil)
-        #expect(surface.dismissCount == 1)
+        #expect(presenter.stage == .resting, "истёкшая плашка не вернулась в покой")
+        #expect(surface.dismissCount == 0)
     }
 
     /// Упавшее распознавание обязано быть ВИДНО: `defer` в конвейере тут же

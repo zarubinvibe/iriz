@@ -19,6 +19,10 @@ import Foundation
 /// Что показывает плашка. Не то же самое, что стадия конвейера: несколько
 /// стадий дают одну форму, и это правильно - форма про ВИД, а не про этап.
 public enum DictationHUDGlassForm: String, CaseIterable, Sendable {
+    /// Покой: та же пилюля, но короче. Окно в покое меньше рабочего, и это не
+    /// косметика - постоянная плашка перехватывает щелчки всей своей рамкой,
+    /// а значит её площадь и есть цена постоянства.
+    case resting
     /// Идёт запись: широкое тело, внутри лента. Спутника нет.
     case listening
     /// Думает: та же плашка, синяя волна. Спутника НЕТ.
@@ -93,6 +97,15 @@ public func dictationHUDGlassShape(form: DictationHUDGlassForm,
     let radius = height / 2
 
     switch form {
+    case .resting:
+        // Геометрия та же, что у записи: разницу несёт РАЗМЕР ОКНА, а не форма
+        // внутри него. Так покой и запись остаются одной пилюлей, которая
+        // растёт и сжимается, - перетекание, а не подмена кадра.
+        return DictationHUDGlassShape(
+            body: CGRect(x: inset, y: y, width: full, height: height),
+            bodyRadius: radius
+        )
+
     case .listening:
         return DictationHUDGlassShape(
             body: CGRect(x: inset, y: y, width: full, height: height),
@@ -142,6 +155,8 @@ public func dictationHUDGlassShape(form: DictationHUDGlassForm,
 /// то, что он различать не обязан. Различает их знак внутри.
 func dictationHUDGlassForm(for stage: DictationHUDStage) -> DictationHUDGlassForm {
     switch stage {
+    case .resting:
+        return .resting
     case .listening:
         return .listening
     case .recognizing, .buildingPrompt:

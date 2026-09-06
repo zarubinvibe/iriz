@@ -136,6 +136,14 @@ final class DictationHistoryPresenter {
         )
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
+        // Светофор системы прочь. Владелец 06.09.2026: «там старая версия,
+        // нужно осовременить, как мы это сделали с меню». Три кнопки macOS
+        // поверх стеклянной панели - самая заметная деталь, по которой окно
+        // читается чужим: ни у плашки, ни у меню, ни у настроек их нет.
+        // Закрывается окно тем же, чем и раньше: Escape и уход фокуса.
+        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+            panel.standardWindowButton(button)?.isHidden = true
+        }
         panel.isMovableByWindowBackground = true
         panel.hidesOnDeactivate = false
         panel.level = .floating
@@ -673,9 +681,14 @@ struct DictationHistoryView: View {
                 .font(.system(size: 13, weight: .semibold))
             Spacer(minLength: 8)
             Text("\(model.entries.count)")
-                .font(.system(size: 12))
+                .font(.system(size: 11, weight: .medium))
                 .foregroundStyle(IRIZ_SUBTLE)
                 .monospacedDigit()
+                .padding(.horizontal, 7)
+                .padding(.vertical, 2)
+                .background(
+                    Capsule(style: .continuous).fill(Color.primary.opacity(0.08))
+                )
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)
@@ -690,7 +703,7 @@ struct DictationHistoryView: View {
                 .foregroundStyle(IRIZ_SUBTLE)
             TextField("Поиск по надиктовкам", text: $model.query)
                 .textFieldStyle(.plain)
-                .font(.system(size: 14))
+                .font(.system(size: 13))
                 .focused($searchFocused)
             if !model.query.isEmpty {
                 Button {
@@ -702,8 +715,13 @@ struct DictationHistoryView: View {
                 .help("Очистить поиск")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        // Поле поиска на своей плите канона - той же, что в окне настроек.
+        // Голое поле на стекле не читалось полем вовсе.
+        .background(IrizSearchFieldPlate())
+        .padding(.horizontal, 12)
+        .padding(.bottom, 10)
     }
 
     private var emptyState: some View {
@@ -798,9 +816,7 @@ struct DictationHistoryView: View {
                     .lineLimit(1)
                     .fixedSize()
                 Spacer(minLength: 12)
-                Button("Очистить всё") { model.onClearAll?() }
-                    .disabled(model.entries.isEmpty)
-                    .help("Переместить все надиктовки в Корзину")
+                clearAllButton
             }
             // Цена решения «по истечении окна удержания буфер чистится, а не
             // возвращается к прежнему»: через две минуты буфер владельца пуст.
@@ -815,13 +831,38 @@ struct DictationHistoryView: View {
         .padding(.vertical, 8)
     }
 
+    /// Кнопка «Очистить всё» стеклом канона, а не системным безелем: системная
+    /// кнопка на стеклянной панели читается деталью macOS, попавшей внутрь
+    /// продукта.
+    @ViewBuilder
+    private var clearAllButton: some View {
+        let label = Text("Очистить всё").font(.system(size: 12, weight: .medium))
+        if #available(macOS 26.0, *) {
+            Button(action: { model.onClearAll?() }) { label }
+                .buttonStyle(.glass)
+                .disabled(model.entries.isEmpty)
+                .help("Переместить все надиктовки в Корзину")
+        } else {
+            Button(action: { model.onClearAll?() }) { label }
+                .disabled(model.entries.isEmpty)
+                .help("Переместить все надиктовки в Корзину")
+        }
+    }
+
     private func hint(_ key: String, _ what: String) -> some View {
         HStack(spacing: 4) {
             Text(key)
                 .font(.system(size: 10, weight: .semibold, design: .rounded))
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(RoundedRectangle(cornerRadius: 4).fill(.quaternary))
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color.primary.opacity(0.09))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
+                )
             Text(what).font(.system(size: 11)).foregroundStyle(IRIZ_SUBTLE)
         }
     }

@@ -142,6 +142,33 @@ LOCKED = {
     "мягкость_мин": 0.12,
 }
 
+# ПЛАШКА. Правило владельца 06.09.2026, дословно: «всё стекло, которое просто
+# без текста или без каких-то выделений снизу, должно быть максимально
+# прозрачным, как это уже сделано в настройках… в том числе это стекло у самой
+# плашки».
+#
+# Эталон класса «прозрачное» - фон окна настроек: `glassEffect(.clear)`,
+# снято 0.678 при пороге 0.55, то есть порог держится на 0.81 от снятого.
+# Плашка мерится тем же прибором и судится тем же классом; своё число у неё
+# потому, что стекло у неё МАЛЕНЬКОЕ, и доля кромки в кадре больше, чем у окна.
+# Замер 06.09.2026 прибором `iriz --probe-plate`, светлый вид:
+#
+#            было (.regular)   стало (.clear)   эталон окна
+#   покой         0.244            0.722           0.678
+#   запись        0.112            0.605             --
+#   мягкость      0.20 / 0.15      0.57 / 0.37       0.25
+#
+# Порог берётся от МЕНЬШЕГО из снятых (запись, 0.605) той же долей, что у окна:
+# 0.55 / 0.678 = 0.81, значит 0.605 * 0.81 = 0.49, округлено вниз до 0.48.
+# Прежнее матовое стекло (0.244 и 0.112) этот порог не проходит - ворота
+# краснеют на возврате, а не соглашаются с ним молча.
+PLATE_LOCKED = {
+    "пропускание_мин": 0.48,
+    "мягкость_мин": 0.12,
+}
+# Доля центра плашки, по которой судят: кромка стекла и ореол в замер не идут.
+PLATE_CORE = 0.62
+
 
 def verdict(measurements: dict, ceiling: dict | None = None) -> tuple[bool, list[str]]:
     """Приговор по подложке окна. Остальные области - для разбора."""
@@ -216,6 +243,81 @@ def gate(measurements: dict) -> tuple[bool, list[str]]:
                 f"при пороге {LOCKED['мягкость_мин']:.2f}."
             )
     return (not problems), problems
+
+
+def measure_plate(black: np.ndarray, white: np.ndarray, stripes: np.ndarray) -> dict:
+    """Пропускание и мягкость по СЕРЕДИНЕ плашки.
+
+    Только середина: у плашки скруглённая капсула во всё окно, и по углам кадра
+    стекла нет вовсе - там подложка видна напрямую и пропускание там единица.
+    Считать её значило бы мерить не стекло, а поле вокруг него.
+    """
+    if not (black.shape == white.shape == stripes.shape):
+        raise ValueError(f"кадры разного размера: {black.shape}, {white.shape}, {stripes.shape}")
+    h, w = black.shape
+    dy = int((1 - PLATE_CORE) / 2 * h)
+    dx = int((1 - PLATE_CORE) / 2 * w)
+    ys, xs = slice(dy, h - dy), slice(dx, w - dx)
+    d_trans = (white - black)[ys, xs]
+    d_stripe = (stripes - black)[ys, xs]
+    columns = d_stripe.mean(axis=0)
+    span = float(columns.max() - columns.min())
+    if span < 1.0:
+        softness = 0.0
+    else:
+        low = columns.min() + 0.25 * span
+        high = columns.min() + 0.75 * span
+        softness = float(((columns > low) & (columns < high)).mean())
+    return {
+        "пропускание": round(float(d_trans.mean()) / 255.0, 4),
+        "размах_полос": round(span, 2),
+        "мягкость": round(softness, 4),
+    }
+
+
+def plate_gate(measurements: dict) -> tuple[bool, list[str]]:
+    """Стекло плашки обязано быть в классе «прозрачное»."""
+    problems = []
+    for form, v in measurements.items():
+        if v["пропускание"] < PLATE_LOCKED["пропускание_мин"]:
+            problems.append(
+                f"стекло плашки «{form}» закрылось: пропускание {v['пропускание']:.3f} "
+                f"при пороге {PLATE_LOCKED['пропускание_мин']:.2f}. "
+                "Прозрачное стекло подменили плотным."
+            )
+        if v["мягкость"] < PLATE_LOCKED["мягкость_мин"]:
+            problems.append(
+                f"преломление у плашки «{form}» пропало: мягкость {v['мягкость']:.3f} "
+                f"при пороге {PLATE_LOCKED['мягкость_мин']:.2f}. Это дыра, а не стекло."
+            )
+    return (not problems), problems
+
+
+def run_plate(shots: Path) -> int:
+    forms = ("resting", "listening")
+    measurements = {}
+    for form in forms:
+        files = {k: shots / f"plate-glass-{form}-{k}.png" for k in ("black", "white", "stripes")}
+        missing = [str(p) for p in files.values() if not p.exists()]
+        if missing:
+            print(f"нет кадров: {', '.join(missing)}", file=sys.stderr)
+            print("сними их: iriz --probe-plate <папка>", file=sys.stderr)
+            return 2
+        measurements[form] = measure_plate(*(luminance(files[k])
+                                             for k in ("black", "white", "stripes")))
+    ok, problems = plate_gate(measurements)
+    print("=== стекло плашки ===")
+    print(f"{'форма':<12} {'пропускание':>12} {'мягкость':>10} {'размах':>8}")
+    for name, v in measurements.items():
+        print(f"{name:<12} {v['пропускание']:>12.3f} {v['мягкость']:>10.3f} "
+              f"{v['размах_полос']:>8.1f}")
+    print()
+    if ok:
+        print("ВЕРДИКТ: стекло плашки прозрачное.")
+    else:
+        for p in problems:
+            print(f"ВЕРДИКТ: НЕТ. {p}")
+    return 0 if ok else 1
 
 
 def run(shots: Path, appearance: str, locked: bool = False) -> int:
@@ -325,6 +427,25 @@ def selftest() -> int:
         if ok != expected:
             failures.append(f"ворота {name}: ждали {expected}, получили {ok} ({problems})")
 
+    # Ворота плашки: честный вход зелёный, плотное стекло и дыра - красные.
+    clear = {"resting": {"пропускание": PLATE_LOCKED["пропускание_мин"] + 0.05,
+                         "мягкость": 0.30, "размах_полос": 40.0},
+             "listening": {"пропускание": PLATE_LOCKED["пропускание_мин"] + 0.05,
+                           "мягкость": 0.30, "размах_полос": 40.0}}
+    plate_cases = {"прозрачная плашка": (clear, True)}
+    dense = json.loads(json.dumps(clear))
+    dense["listening"]["пропускание"] = max(0.0, PLATE_LOCKED["пропускание_мин"] - 0.05)
+    plate_cases["плашка закрылась"] = (dense, False)
+    hole = json.loads(json.dumps(clear))
+    hole["resting"]["мягкость"] = 0.01
+    plate_cases["преломление пропало"] = (hole, False)
+    for name, (data, expected) in plate_cases.items():
+        ok, problems = plate_gate(data)
+        mark = "OK" if ok == expected else "ПРОВАЛ"
+        print(f"{mark:>7}  плашка: {name} -> {'принято' if ok else 'отказ'}")
+        if ok != expected:
+            failures.append(f"плашка {name}: ждали {expected}, получили {ok} ({problems})")
+
     if failures:
         for f in failures:
             print(f"  {f}", file=sys.stderr)
@@ -341,10 +462,15 @@ def main() -> int:
     ap.add_argument("--locked", action="store_true",
                     help="судить по закреплённому виду, а не по потолку системы")
     ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--plate", type=Path, default=None,
+                    help="судить стекло ПЛАШКИ по кадрам из этой папки")
     args = ap.parse_args()
 
     if args.selftest:
         return selftest()
+
+    if args.plate is not None:
+        return run_plate(args.plate)
 
     if args.json:
         files = {k: args.shots / f"probe-{args.appearance}-{k}.png"

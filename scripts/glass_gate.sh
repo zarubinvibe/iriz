@@ -82,6 +82,13 @@ PYGATE
         rc=1
     fi
 
+    # Стекло ПЛАШКИ - прозрачное, как фон окна. Решение владельца 06.09.2026:
+    # «всё стекло, которое просто без текста, должно быть максимально
+    # прозрачным… в том числе это стекло у самой плашки». Проверяется здесь же,
+    # рецептом: подмену `.clear` на `.regular` видно в исходнике до сборки.
+    grep -q 'body.style = .clear' Sources/IrizDictate/DictationHUDGlassStack.swift \
+        || { echo "R06: стекло плашки больше не прозрачное"; rc=1; }
+
     # Матовый материал допустим ТОЛЬКО как откат для систем до macOS 26.
     if grep -q 'NSVisualEffectView' "$file" && ! grep -q 'macOS 26.0' "$file"; then
         echo "R04: матовый материал без отката по версии - это не Liquid Glass"
@@ -120,6 +127,17 @@ if [ "${1:-}" = "--selftest" ]; then
         echo "     OK  рецепт: плита без заливки отвергнута"
     fi
 
+    # Подделка: стекло плашки вернули матовым.
+    PLATE=Sources/IrizDictate/DictationHUDGlassStack.swift
+    mkdir -p "$TMP/Sources/IrizDictate"
+    sed 's/body.style = .clear/body.style = .regular/' "$PLATE" \
+        > "$TMP/Sources/IrizDictate/DictationHUDGlassStack.swift"
+    if (cd "$TMP" && grep -q 'body.style = .clear' Sources/IrizDictate/DictationHUDGlassStack.swift); then
+        echo "ПРОВАЛ: матовая плашка не поймана"; ok=1
+    else
+        echo "     OK  рецепт: матовая плашка отвергнута"
+    fi
+
     python3 scripts/glass_probe.py --selftest || ok=1
     [ $ok -eq 0 ] && echo "SELFTEST OK"
     exit $ok
@@ -150,4 +168,14 @@ if ! "$APP" --glass-probe "$SHOTS" >/dev/null 2>&1; then
     exit $FAIL
 fi
 python3 scripts/glass_probe.py --shots "$SHOTS" --appearance light --locked || FAIL=1
+
+echo
+echo "=== замер стекла плашки ==="
+PLATE_SHOTS=$(mktemp -d)
+if ! "$APP" --probe-plate "$PLATE_SHOTS" >/dev/null 2>&1; then
+    say_fail "проба плашки не сняла кадры"
+else
+    python3 scripts/glass_probe.py --plate "$PLATE_SHOTS" || FAIL=1
+fi
+rm -rf "$PLATE_SHOTS"
 exit $FAIL

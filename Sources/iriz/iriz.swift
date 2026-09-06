@@ -15,7 +15,7 @@ struct Iriz: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "iriz",
         abstract: "Convert text between EN/RU keyboard layouts (stdin → stdout).",
-        subcommands: [Convert.self, Fix.self, HUDSize.self, InstallModel.self, Prompt.self, VerifyModel.self, Transcribe.self, Verify.self]
+        subcommands: [Convert.self, Fix.self, HUDPresence.self, HUDSize.self, InstallModel.self, Prompt.self, VerifyModel.self, Transcribe.self, Verify.self]
     )
 }
 
@@ -56,6 +56,23 @@ struct HUDSize: AsyncParsableCommand {
             let pixels = dictationHUDVerdictPixelSize(choice)
             writeStdout("\(choice.rawValue) \(Int(pixels.width)) \(Int(pixels.height))\n")
         }
+    }
+}
+
+/// Приговор автомата плашки: видна она или нет при таком состоянии конвейера.
+///
+/// Для ворот «плашка всегда на экране». Ровно тем же приёмом, что `hud-size`:
+/// источник правды - та самая функция, по которой живёт приложение, а не
+/// греп по исходнику. Греп ослеп бы на первом же переименовании, а тут ворота
+/// читают приговор.
+struct HUDPresence: AsyncParsableCommand {
+    static let configuration = CommandConfiguration(
+        commandName: "hud-presence",
+        abstract: "Видна ли плашка при каждом состоянии конвейера, по строке на пару."
+    )
+
+    mutating func run() async throws {
+        for line in dictationHUDPresenceReport() { writeStdout(line + "\n") }
     }
 }
 

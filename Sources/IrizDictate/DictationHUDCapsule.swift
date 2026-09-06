@@ -55,6 +55,12 @@ final class DictationHUDCapsuleView: NSView {
     private var previousAccent: DictationHUDAccent?
 
     override var isFlipped: Bool { true }
+
+    /// Мышь этому виду не нужна: он рисует, а тащат и щёлкают плашку целиком.
+    /// Молчание тут обязательно - контейнер раздаёт щелчок ЛЮБОМУ подвиду,
+    /// который его принял, и вид-картинка съел бы перетаскивание.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     override var acceptsFirstResponder: Bool { false }
 
     override func draw(_ dirtyRect: NSRect) {

@@ -36,6 +36,12 @@ echo "=== ворота перевода ==="
 bash scripts/translation_gate.sh || FAIL=1
 
 echo
+echo "=== ворота постоянства плашки ==="
+# Требует собранного бинаря: приговор берётся у самого приложения. Тесты выше
+# его уже собрали, поэтому ворота стоят после них.
+bash scripts/hud_always_on_gate.sh || FAIL=1
+
+echo
 echo "=== ворота стекла (рецепт) ==="
 bash scripts/glass_gate.sh --static || FAIL=1
 

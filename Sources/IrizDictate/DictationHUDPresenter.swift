@@ -18,12 +18,17 @@ protocol DictationHUDSurface: AnyObject {
     func prewarm()
     /// Кого звать, когда владелец забрал не доехавший текст.
     func setTranscriptCopiedHandler(_ handler: @escaping () -> Void)
+    /// Кого звать, когда владелец щёлкнул по плашке или нажал «свернуть».
+    /// Решение «раскрыта или нет» принимает презентер, окно только сообщает
+    /// о щелчке: иначе у одного состояния стало бы два хозяина.
+    func setOpenToggledHandler(_ handler: @escaping () -> Void)
 }
 
 extension DictationHUDSurface {
     func updateHintLines(_ lines: [String]) {}
     func prewarm() {}
     func setTranscriptCopiedHandler(_ handler: @escaping () -> Void) {}
+    func setOpenToggledHandler(_ handler: @escaping () -> Void) {}
 }
 
 /// Режим run loop для ОБОИХ таймеров плашки.
@@ -227,6 +232,9 @@ final class DictationHUDPresenter {
     /// и прогрев не имеет права выглядеть показом.
     func prewarm() {
         presentingSurface().prewarm()
+        // И сразу показать покой: плашка обязана быть на экране с запуска, а не
+        // с первого нажатия. Прогрев поднимает окно, покой его показывает.
+        rest()
     }
 
     /// Снять плашку немедленно, не дожидаясь её таймера.
@@ -237,6 +245,13 @@ final class DictationHUDPresenter {
     /// гаснет посреди чтения. Гасим ДО показа окна: окно зовёт NSApp.activate,
     /// и порядок «сначала убрать, потом поднять» не даёт мигнуть.
     func dismiss() {
+        rest()
+    }
+
+    /// Приложение закрывается - вот единственный случай, когда плашки на экране
+    /// не остаётся. Отдельным входом, а не веткой внутри `rest()`: «плашка
+    /// всегда на экране» держится тем, что снос окна зовётся ровно отсюда.
+    func shutDown() {
         hide()
     }
 
@@ -249,7 +264,11 @@ final class DictationHUDPresenter {
     private func apply(_ presentation: DictationHUDPresentation, isFreshEvent: Bool = true) {
         switch presentation {
         case .hidden:
-            hide()
+            // `.hidden` больше не значит «снести окно»: работы нет - плашка
+            // уходит в покой. Случая, когда автомат возвращает `.hidden`, в
+            // живом пути не осталось, но исход обязан быть определён: следующая
+            // правка не должна получить исчезающую плашку молча.
+            rest()
         case .visible(let newStage):
             let changed = newStage != stage
             if changed, dictationHUDIsListening(newStage) { resetLevelState() }
@@ -260,6 +279,21 @@ final class DictationHUDPresenter {
             if changed || isFreshEvent { scheduleDismiss(for: newStage) }
             render()
         }
+    }
+
+    /// Уйти в покой. Плашка остаётся на экране, работы больше нет.
+    ///
+    /// Текст, который не доехал, здесь ЗАБЫВАЕТСЯ намеренно: покой не
+    /// показывает панель (`dictationHUDShowsTranscript`), и держать текст,
+    /// который негде показать, значит копить обещание, что он ещё вернётся.
+    private func rest() {
+        undelivered = nil
+        livePreview = nil
+        stage = .resting
+        pump.setRunning(false)
+        resetLevelState()
+        cancelDismiss()
+        render()
     }
 
     private func hide() {
@@ -275,11 +309,55 @@ final class DictationHUDPresenter {
     /// тянется, нельзя.
     private var undelivered: String?
 
+    /// Плашка раскрыта владельцем. ОДИН источник правды на весь продукт, и он
+    /// в слое решений, а не в окне: два независимых «я раскрыт» - в презентере
+    /// и в AppKit - разъехались бы на первом же случае, когда панель поднял
+    /// недоехавший текст, а свернуть её попробовали кнопкой.
+    private(set) var isOpen = false
+
+    /// Живой текст, пока владелец говорит. Наполняется превью распознавания;
+    /// на исход не влияет никак - окончательный текст собирает конвейер.
+    private var livePreview: String?
+
+    /// Показать живой текст. Пустая строка стирает его.
+    func showLivePreview(_ text: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let next = trimmed.isEmpty ? nil : trimmed
+        guard next != livePreview else { return }
+        livePreview = next
+        // Перерисовываем только если плашка раскрыта: в закрытой форме текста
+        // не видно, и гонять кадры ради невидимого - расход без смысла.
+        guard isOpen, stage != nil else { return }
+        render()
+    }
+
+    /// Раскрыть или свернуть. Зовётся щелчком по плашке и кнопкой «свернуть».
+    func toggleOpen() {
+        isOpen.toggle()
+        // Стадии нет только до прогрева; после него покой стоит всегда.
+        if stage == nil { stage = .resting }
+        render()
+    }
+
+    /// Свернуть, чем бы ни попросили. Не переключатель: Escape и крестик
+    /// обязаны ЗАКРЫВАТЬ, а не открывать закрытую плашку заново.
+    func collapse() {
+        guard isOpen else { return }
+        isOpen = false
+        if stage == nil { stage = .resting }
+        render()
+    }
+
     /// Текст забрали - плашке больше нечего держать. Гасим и забываем текст:
     /// иначе следующая же перерисовка подняла бы панель заново.
     private func transcriptTaken() {
-        undelivered = nil
-        hide()
+        // И раскрытие снимается. Без этой строки из плашки было НЕ ВЫЙТИ:
+        // щелчок по панели уходил в копирование, копирование звало покой, а
+        // покой перерисовывал плашку с прежним `isOpen` - и панель вставала
+        // обратно. Слова владельца 06.09.2026: «когда через всплывающую плашку
+        // открывается на диктовке, их нельзя закрыть».
+        isOpen = false
+        rest()
     }
 
     private func render() {
@@ -291,7 +369,9 @@ final class DictationHUDPresenter {
                                           level: level,
                                           reduceMotion: reduceMotion,
                                           historyHint: historyLabel,
-                                          transcript: undelivered)
+                                          transcript: undelivered ?? livePreview,
+                                          expanded: isOpen,
+                                          isRecording: dictationHUDIsListening(stage))
         let surface = presentingSurface()
         surface.updateHintLines(dictationHUDHintLines(
             stage: stage,
@@ -334,6 +414,7 @@ final class DictationHUDPresenter {
         if let surface { return surface }
         let created = makeSurface()
         created.setTranscriptCopiedHandler { [weak self] in self?.transcriptTaken() }
+        created.setOpenToggledHandler { [weak self] in self?.toggleOpen() }
         surface = created
         return created
     }

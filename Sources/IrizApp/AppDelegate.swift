@@ -110,7 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// известной подложки и снимается захватом области.
     private func captureHUDLiveIfRequested() -> Bool {
         let arguments = Array(CommandLine.arguments.dropFirst())
-        guard arguments.first == "--capture-hud-live" else { return false }
+        guard arguments.first == "--capture-hud-live" else { return capturePlateIfRequested() }
         guard arguments.count <= 2 else {
             writeHUDExportError("usage: IrizApp --capture-hud-live [frames-directory]")
             Darwin.exit(EXIT_FAILURE)
@@ -134,6 +134,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 Darwin.exit(EXIT_SUCCESS)
             } catch {
                 self.writeHUDExportError("HUD live capture failed: \(error.localizedDescription)")
+                Darwin.exit(EXIT_FAILURE)
+            }
+        }
+        return true
+    }
+
+    /// Живой снимок НАСТОЯЩЕЙ плашки во всех формах: покой, раскрытие, запись.
+    ///
+    /// Отдельно от `--capture-hud-live`: тот собирает стекло и волну руками и
+    /// не видит ни кнопок, ни панели, ни размера окна в покое.
+    private func capturePlateIfRequested() -> Bool {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard arguments.first == "--capture-plate" else { return probePlateGlassIfRequested() }
+        let output: URL
+        if arguments.count >= 2 {
+            output = URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
+        } else {
+            output = URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+                .appendingPathComponent(".build", isDirectory: true)
+                .appendingPathComponent("plate", isDirectory: true)
+        }
+        guard #available(macOS 26.0, *) else {
+            writeHUDExportError("Стекло требует macOS 26 - живой кадр снимать нечем.")
+            Darwin.exit(EXIT_FAILURE)
+        }
+        DispatchQueue.main.async {
+            do {
+                let frames = try captureDictationHUDPlateScenes(to: output)
+                print("PLATE frames=\(frames.count) directory=\(output.path)")
+                Darwin.exit(EXIT_SUCCESS)
+            } catch {
+                self.writeHUDExportError("Съёмка плашки не удалась: \(error.localizedDescription)")
+                Darwin.exit(EXIT_FAILURE)
+            }
+        }
+        return true
+    }
+
+    /// `--probe-plate <папка>` - замер стекла ПЛАШКИ над тремя подложками.
+    /// Кадры не для разглядывания: их читает scripts/glass_probe.py --plate.
+    private func probePlateGlassIfRequested() -> Bool {
+        let arguments = Array(CommandLine.arguments.dropFirst())
+        guard arguments.first == "--probe-plate" else { return false }
+        let output = arguments.count >= 2
+            ? URL(fileURLWithPath: arguments[1], isDirectory: true).standardizedFileURL
+            : URL(fileURLWithPath: FileManager.default.currentDirectoryPath, isDirectory: true)
+                .appendingPathComponent(".build", isDirectory: true)
+                .appendingPathComponent("plate-glass", isDirectory: true)
+        guard #available(macOS 26.0, *) else {
+            writeHUDExportError("Стекло требует macOS 26 - мерить нечего.")
+            Darwin.exit(EXIT_FAILURE)
+        }
+        DispatchQueue.main.async {
+            do {
+                let frames = try probeDictationHUDPlateGlass(to: output)
+                print("PLATE_GLASS files=\(frames.count) directory=\(output.path)")
+                Darwin.exit(EXIT_SUCCESS)
+            } catch {
+                self.writeHUDExportError("Замер стекла плашки не удался: \(error.localizedDescription)")
                 Darwin.exit(EXIT_FAILURE)
             }
         }

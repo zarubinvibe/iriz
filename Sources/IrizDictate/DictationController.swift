@@ -187,6 +187,9 @@ public final class DictationController {
         transcriptionGeneration &+= 1
         isBusy = false
         audio.onConfigurationChange = nil
+        // Плашка живёт на экране постоянно и уходит ровно здесь: приложение
+        // закрывается. Единственный вызов сноса окна во всём продукте.
+        hud?.shutDown()
         hotkeys.stop()
         audio.stopEngine()
         state = modelReady ? .ready : .warmingUp
@@ -240,6 +243,10 @@ public final class DictationController {
             self?.handleRelease(shortcut: .alternate, hotkeyDetectedAt: detectedAt)
         }
         hotkeys.onCancel = { [weak self] in self?.handleCancel() }
+        // Третий выход из раскрытой плашки, рядом с крестиком и щелчком мимо
+        // кнопок. Клавишу видит тот же перехват, что и горячую: своего окна с
+        // фокусом у плашки нет, и локальный монитор до неё не доедет.
+        hotkeys.onDismissOverlay = { [weak self] in self?.hud?.collapse() }
         hotkeys.onShowHistory = { [weak self] in
             self?.history.toggle()
         }
@@ -437,7 +444,13 @@ public final class DictationController {
                         )
                     },
                     openSettings: { self?.onOpenSettings?() },
-                    openHistory: { self?.showHistory() }
+                    openHistory: { self?.showHistory() },
+                    // Кнопка записи на плашке идёт тем же путём, что и кнопка
+                    // в меню строки меню: один вход, одна проверка занятости.
+                    toggleRecording: { self?.toggleDictationFromUI() },
+                    isRecording: { self?.isRecording ?? false },
+                    startPrompt: { self?.startPromptFromUI() },
+                    startTranslation: { self?.startTranslationFromUI() }
                 )
                 return surface
             }
@@ -512,6 +525,17 @@ public final class DictationController {
 
     public func toggleDictationFromUI() {
         handlePress(purpose: .dictation)
+    }
+
+    /// Начать запись для промпта прямо из интерфейса. Тот же вход, что и у
+    /// клавиши: одна проверка занятости, один отказ, один путь.
+    public func startPromptFromUI() {
+        handlePress(purpose: .prompt)
+    }
+
+    /// То же для перевода.
+    public func startTranslationFromUI() {
+        handlePress(purpose: .translation)
     }
 
     private func handlePress(purpose: DictationRecordingPurpose) {

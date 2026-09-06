@@ -214,7 +214,11 @@ struct HotkeyAutomatonTests {
         var state = HotkeyTransitionState()
         let idle = state.transition(for: keyEvent(.keyDown, ESCAPE_KEYCODE),
                                     hotkey: rightCmd, triggerMode: .toggle, isRecording: false)
-        #expect(idle == .pass)
+        // Отмены без записи нет и быть не может. Но плашка может стоять
+        // раскрытой, и Escape её сворачивает - НЕ отбирая клавишу у приложения
+        // под ней (06.09.2026, третий выход из раскрытой формы).
+        #expect(idle.actions == [.dismissOverlay])
+        #expect(!idle.suppress)
 
         let cancel = state.transition(for: keyEvent(.keyDown, ESCAPE_KEYCODE),
                                       hotkey: rightCmd, triggerMode: .toggle, isRecording: true)

@@ -26,19 +26,37 @@ public struct DictationHUDControls: Sendable {
     public var setSize: @MainActor (DictationHUDSizeChoice) -> Void
     public var openSettings: @MainActor () -> Void
     public var openHistory: @MainActor () -> Void
+    /// Начать или закончить запись прямо с плашки. Кнопка, ради которой её и
+    /// открывают: до неё запись начиналась только клавишей.
+    public var toggleRecording: @MainActor () -> Void
+    /// Идёт ли запись сейчас. Нужен кнопке: она обязана называться «закончить»
+    /// ровно тогда, когда закончить и правда можно.
+    public var isRecording: @MainActor () -> Bool
+    /// Начать запись для промпта прямо с плашки.
+    public var startPrompt: @MainActor () -> Void
+    /// Начать запись для перевода прямо с плашки.
+    public var startTranslation: @MainActor () -> Void
 
     public init(currentLanguage: @escaping @MainActor () -> DictationLanguage,
                 setLanguage: @escaping @MainActor (DictationLanguage) -> Void,
                 currentSize: @escaping @MainActor () -> DictationHUDSizeChoice = { .medium },
                 setSize: @escaping @MainActor (DictationHUDSizeChoice) -> Void = { _ in },
                 openSettings: @escaping @MainActor () -> Void,
-                openHistory: @escaping @MainActor () -> Void) {
+                openHistory: @escaping @MainActor () -> Void,
+                toggleRecording: @escaping @MainActor () -> Void = {},
+                isRecording: @escaping @MainActor () -> Bool = { false },
+                startPrompt: @escaping @MainActor () -> Void = {},
+                startTranslation: @escaping @MainActor () -> Void = {}) {
         self.currentLanguage = currentLanguage
         self.setLanguage = setLanguage
         self.currentSize = currentSize
         self.setSize = setSize
         self.openSettings = openSettings
         self.openHistory = openHistory
+        self.toggleRecording = toggleRecording
+        self.isRecording = isRecording
+        self.startPrompt = startPrompt
+        self.startTranslation = startTranslation
     }
 }
 

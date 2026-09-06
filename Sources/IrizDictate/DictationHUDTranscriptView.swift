@@ -17,12 +17,35 @@
 // и есть показать текст.
 import AppKit
 
+/// Сколько строк займёт текст на самом деле.
+///
+/// Тем же шрифтом и в той же ширине, что и панель. Чистая оценка по числу
+/// знаков (`dictationHUDTranscriptLineCount`) остаётся для проб без окна, но
+/// решение о высоте панели принимается ЗАМЕРОМ: на кириллице оценка врёт вниз,
+/// и хвост фразы уезжает за край.
+func dictationHUDMeasuredTranscriptLines(text: String, width: CGFloat) -> Int {
+    let usable = max(40, width
+                     - DICTATION_HUD_TRANSCRIPT_PADDING * 2
+                     - DICTATION_HUD_TRANSCRIPT_CARD_INSET * 2)
+    let font = NSFont.systemFont(ofSize: DICTATION_HUD_TRANSCRIPT_FONT_SIZE)
+    let box = (text as NSString).boundingRect(
+        with: CGSize(width: usable, height: .greatestFiniteMagnitude),
+        options: [.usesLineFragmentOrigin, .usesFontLeading],
+        attributes: [.font: font]
+    )
+    let line = max(1, font.ascender - font.descender + font.leading)
+    return max(1, Int(ceil(box.height / line)))
+}
+
 final class DictationHUDTranscriptView: NSView {
     /// Текст, который не доехал.
     var text: String = "" {
         didSet {
             guard text != oldValue else { return }
             textView.string = text
+            // Живой текст растёт вниз, и смотреть надо в его хвост: закрепиться
+            // на начале значит показывать то, что владелец сказал минуту назад.
+            textView.scrollToEndOfDocument(nil)
             needsDisplay = true
         }
     }
@@ -36,6 +59,7 @@ final class DictationHUDTranscriptView: NSView {
             card.alphaValue = visible
             copyButton.alphaValue = visible
             closeButton.alphaValue = visible
+            for button in actionButtons { button.alphaValue = visible }
             // Подложка не только проявляется, но и подрастает: так раскрытие
             // читается одним движением, а не появлением второго предмета.
             let scale = 0.94 + 0.06 * visible
@@ -57,6 +81,27 @@ final class DictationHUDTranscriptView: NSView {
             closeButton.remaining = lifeRemaining
         }
     }
+
+    /// Кнопки раскрытой формы. Живут в подвале слева, где у панели пусто:
+    /// справа стоит «Скопировать», и спорить с ней за место нельзя.
+    var actions: [DictationHUDAction] = [] {
+        didSet {
+            guard actions != oldValue else { return }
+            rebuildActionButtons()
+        }
+    }
+    var onAction: ((DictationHUDActionID) -> Void)?
+
+    /// Показывать ли кнопку «Скопировать». В раскрытой по щелчку плашке текста
+    /// может не быть вовсе.
+    var showsCopy: Bool = true {
+        didSet {
+            guard showsCopy != oldValue else { return }
+            copyButton.isHidden = !showsCopy
+        }
+    }
+
+    private var actionButtons: [DictationHUDActionButton] = []
 
     private let card = NSView()
     private let closeButton = DictationHUDCloseRing()
@@ -100,7 +145,12 @@ final class DictationHUDTranscriptView: NSView {
         // секунд, и это долго, когда текст уже не нужен. Путь наверх тот же,
         // что у копирования: дело панели кончилось, и разница только в том,
         // попал текст в буфер или нет.
-        closeButton.onPress = { [weak self] in self?.onCopied?() }
+        closeButton.onPress = { [weak self] in
+            guard let self else { return }
+            // Панель поднял недоехавший текст - крестик значит «дело сделано».
+            // Панель раскрыл владелец - крестик значит «сверни обратно».
+            if actions.isEmpty { onCopied?() } else { onAction?(.collapse) }
+        }
         addSubview(closeButton)
 
         applyColors()
@@ -125,6 +175,18 @@ final class DictationHUDTranscriptView: NSView {
         }
     }
 
+    private func rebuildActionButtons() {
+        for button in actionButtons { button.removeFromSuperview() }
+        actionButtons = actions.map { action in
+            let button = DictationHUDActionButton(action: action)
+            button.onPress = { [weak self] id in self?.onAction?(id) }
+            button.alphaValue = copyButton.alphaValue
+            addSubview(button)
+            return button
+        }
+        needsLayout = true
+    }
+
     override func layout() {
         super.layout()
         let padding = DICTATION_HUD_TRANSCRIPT_PADDING
@@ -146,10 +208,34 @@ final class DictationHUDTranscriptView: NSView {
         textView.textContainer?.containerSize = CGSize(width: scroll.contentSize.width,
                                                        height: .greatestFiniteMagnitude)
         let buttonWidth = max(104, copyButton.fittingWidth)
-        copyButton.frame = CGRect(x: bounds.width - padding - buttonWidth,
-                                  y: bounds.height - padding - footer,
+        // «Скопировать» уехала в шапку, к крестику. В подвале она наезжала на
+        // ряд кнопок: кнопок стало семь, и правый край ряда пришёл ей прямо
+        // под низ. Поймано владельцем на живой плашке 06.09.2026.
+        copyButton.frame = CGRect(x: max(padding, bounds.width - padding - ring - 8 - buttonWidth),
+                                  y: padding - 2,
                                   width: buttonWidth,
-                                  height: footer)
+                                  height: max(footer, ring))
+        // Кнопки - в подвале слева, ряд с ровным шагом. Размер берётся от
+        // высоты подвала: подвал меняется вместе с размером плашки, и
+        // отдельная константа тут разъехалась бы с ним.
+        if !actionButtons.isEmpty {
+            let count = CGFloat(actionButtons.count)
+            let room = max(0, bounds.width - padding * 2)
+            // Шаг ужимается под ширину панели, а не наоборот: панель считается
+            // от текста, и ряд обязан поместиться в неё, а не раздвинуть её.
+            let side = min(min(footer, DICTATION_HUD_TRANSCRIPT_FOOTER_HEIGHT),
+                           max(14, (room - (count - 1) * 6) / count))
+            let step = side + 6
+            let total = count * side + (count - 1) * 6
+            var x = padding + max(0, (room - total) / 2)
+            for button in actionButtons {
+                button.frame = CGRect(x: x,
+                                      y: bounds.height - padding - footer + (footer - side) / 2,
+                                      width: side, height: side)
+                x += step
+            }
+        }
+
         // Слой подложки растёт от середины: иначе рост при раскрытии уводил бы
         // её в угол.
         card.layer?.anchorPoint = CGPoint(x: 0.5, y: 0.5)
@@ -189,7 +275,17 @@ final class DictationHUDTranscriptView: NSView {
         // Клик по панели забирает текст. Выделение мышью при этом остаётся:
         // NSTextView получает событие первым, а сюда доходит только клик мимо
         // текста - по полю панели.
-        if copyAll() { showCopied() }
+        //
+        // Но не тогда, когда панель раскрыта владельцем: там текста может не
+        // быть вовсе, а щелчок мимо кнопок обязан сворачивать плашку обратно,
+        // а не молча ничего не делать.
+        // Копировать нечего - и копировать нельзя: в раскрытой по щелчку плашке
+        // стоит ЗАГЛУШКА, и она уезжала владельцу в буфер обмена вместо текста.
+        // Тот же признак, что прячет кнопку «Скопировать», решает и здесь -
+        // иначе кнопки нет, а копирование есть.
+        if showsCopy, copyAll() { showCopied(); return }
+        guard !actions.isEmpty else { return }
+        onAction?(.collapse)
     }
 }
 

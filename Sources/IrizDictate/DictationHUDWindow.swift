@@ -52,6 +52,38 @@ private protocol DictationHUDContainerDelegate: AnyObject {
     func hudRightMouseDown(with event: NSEvent, in view: NSView)
 }
 
+/// Кадр окна плашки, возвращённый на экран целиком.
+///
+/// Раскрытие идёт ОТ ЦЕНТРА (решение владельца: «должна раскрываться в обе
+/// стороны»), и у кромки экрана половина роста уходит наружу. Поймано кадром
+/// прибора 06.09.2026: плашка стоит в месте «низ-центр», раскрытая панель
+/// вылезала под нижний край видимой области, и её низ владельцу не показывался
+/// вовсе.
+///
+/// Клампится ОКНО, а не середина плашки. Сдвинь середину - и каждое раскрытие
+/// у края уносило бы плашку вверх, то есть чинить съезд одним местом значило бы
+/// завести его в другом.
+@MainActor
+func dictationHUDOnScreenFrame(_ frame: CGRect, visible: CGRect?) -> CGRect {
+    guard let visible, visible.width > 0, visible.height > 0 else { return frame }
+    return dictationHUDClampedFrame(frame, in: visible)
+}
+
+/// Кому достаётся щелчок внутри плашки: первому подвиду СВЕРХУ, который его
+/// принял. `nil` - не принял никто, и событие остаётся самой плашке.
+///
+/// Отдельной функцией, потому что правило обязано проверяться пробой без окна
+/// и без мыши. Прежде перебор шёл по ТИПУ подвида, полоска кнопок в него не
+/// попадала, и каждая кнопка вместо своего дела раскрывала панель.
+@MainActor
+func dictationHUDHitTarget(subviews: [NSView], at point: NSPoint) -> NSView? {
+    // Сверху вниз: последний подвид нарисован поверх, и щёлкают именно его.
+    for view in subviews.reversed() where !view.isHidden {
+        if let hit = view.hitTest(point) { return hit }
+    }
+    return nil
+}
+
 @MainActor
 private final class DictationHUDContainerView: NSView {
     weak var delegate: DictationHUDContainerDelegate?
@@ -62,18 +94,25 @@ private final class DictationHUDContainerView: NSView {
 
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 
-    /// Плашка целиком принимает мышь сама: по ней тащат, на неё наводят.
-    /// Исключение - панель расшифровки: в ней есть кнопка и выделяемый текст,
-    /// и забрать у них клик значит сделать их мёртвыми. Ровно это и вышло:
-    /// кнопка «Скопировать» рисовалась и не работала.
+    /// Щелчок сперва предлагается ПОДВИДАМ, и контейнер берёт его себе, только
+    /// если не принял никто.
+    ///
+    /// Правило, а не список исключений. Список тут и стоял: раздавалось только
+    /// панели расшифровки, а полоска кнопок - такой же подвид рядом - в перебор
+    /// не попадала. Щелчок по любой кнопке проваливался в контейнер и уходил в
+    /// `hudMouseUp`, то есть в раскрытие плашки. Владелец увидел это как «каждая
+    /// кнопка, неважно язык это или prompt или настройки, всё равно открывает
+    /// просто плашку, где вставляется текст» (06.09.2026).
+    ///
+    /// Цена правила: вид, которому мышь не нужна, ОБЯЗАН возвращать `nil` из
+    /// своего `hitTest` - иначе он молча съест перетаскивание плашки. Так и
+    /// сделано у стекла, ленты, капсулы и подсказки.
     override func hitTest(_ point: NSPoint) -> NSView? {
         guard bounds.contains(point) else { return nil }
         // `hitTest` получает точку в системе НАДвида, а раздаёт детям в своей.
         // Направление перевода тут решает, дойдёт ли клик до кнопки вообще.
-        for view in subviews where view is DictationHUDTranscriptView {
-            if let hit = view.hitTest(convert(point, from: superview)) { return hit }
-        }
-        return self
+        return dictationHUDHitTarget(subviews: subviews,
+                                      at: convert(point, from: superview)) ?? self
     }
 
     override func updateTrackingAreas() {
@@ -168,6 +207,29 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     /// мгновенная замена маленького кружка большим прямоугольником читается
     /// поломкой, и владелец увидел ровно это.
     private var transcriptCopiedHandler: (() -> Void)?
+    /// Насколько плашка СЖАТА В ПОКОЙ: 1 - покой, 0 - рабочий размер.
+    ///
+    /// Начальное значение 1, а не 0: первое, что видит владелец при запуске, -
+    /// покоящаяся плашка, и вырасти она обязана из него, а не появиться сразу
+    /// рабочей и потом сжаться.
+    private var restProgress: CGFloat = 1
+    private var restTarget: CGFloat = 1
+    /// Стоит ли плашка в покое. Отдельным полем, потому что цель сжатия зависит
+    /// ещё и от мыши, а стадия приходит только со сменой содержимого.
+    private var restingStage = true
+
+    private var strip: DictationHUDStripView?
+    /// Затемнение с местами притяжения. Живёт только на время протяжки.
+    private var dropZones: NSWindow?
+    /// Куда встанет плашка, если отпустить сейчас.
+    private var pendingAnchor: DictationHUDAnchor?
+    /// Подпись кнопки, на которую сейчас навели. Едет тем же видом, что и
+    /// подсказка при наведении: заводить второй вид ради одной строки значило
+    /// бы держать два способа сказать одно и то же.
+    private var stripLabel: String?
+
+    private var openToggledHandler: (() -> Void)?
+
     private var transcriptProgress: CGFloat = 0
     private var transcriptTarget: CGFloat = 0
     /// Сколько панель уже висит и сколько ей отмерено. Кольцо отсчета на
@@ -184,7 +246,13 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     private var hintLines: [String] = []
     private var nextHintLines: [String] = []
 
-    private var capsuleScreenFrame = CGRect(origin: .zero, size: DICTATION_HUD_BASE_SIZE)
+    /// Кадр плашки на экране. Хранится геометрией, а не прямоугольником:
+    /// середина обязана пережить округление размера (см. `DictationHUDPlateGeometry`).
+    private var plate = DictationHUDPlateGeometry()
+    private var capsuleScreenFrame: CGRect {
+        get { plate.frame }
+        set { plate.setFrame(newValue) }
+    }
     private var showVisibleFrame: CGRect?
     private var showDisplayID: UInt32?
     private var hintOpensBelow = false
@@ -232,6 +300,35 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     /// одного числа «до первого кадра» мало, заминка видна в разрывах между
     /// кадрами раскрытия. В продукте всегда `nil`, цена — одна проверка на тик.
     var frameObserver: ((_ gap: TimeInterval, _ work: TimeInterval) -> Void)?
+
+    /// Навести мышь на кнопку полоски - для приборов съёмки. Настоящую мышь
+    /// прибор двигать не может, а форму «кнопка под курсором» владелец обязан
+    /// увидеть на кадре: она главная в этом раскрытии.
+    func hoverStripButton(_ index: Int?) {
+        let actions = stripActions()
+        guard let index, index >= 0, index < actions.count else {
+            showStripLabel(nil)
+            return
+        }
+        showStripLabel(actions[index].title)
+        strip?.highlight(index)
+    }
+
+    /// Поднять плашку над всем, что подняли после неё. Нужно приборам съёмки:
+    /// подложка кладётся ПОД плашку, но встаёт на тот же уровень окна и
+    /// накрывает её. Поймано пустым кадром.
+    func raisePanel() { panel?.orderFrontRegardless() }
+
+    /// Кадр поднятой плашки на экране - для приборов съёмки. `nil`, пока окна
+    /// нет: снимать тогда нечего, и врать пустым прямоугольником нельзя.
+    var panelScreenFrame: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
+
+    /// Тема, навязанная прибором. Плашка сама тему не выбирает: она стоит
+    /// поверх чужого окна и берёт системную. Съёмке нужны обе, и задавать их
+    /// приходится извне.
+    var appearanceOverride: NSAppearance? {
+        didSet { panel?.appearance = appearanceOverride }
+    }
 
     init(settings: DictationSettings = .shared,
          reduceMotion: @escaping () -> Bool = { dictationHUDReduceMotionEnabled() }) {
@@ -388,6 +485,10 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         transcriptCopiedHandler = handler
     }
 
+    func setOpenToggledHandler(_ handler: @escaping () -> Void) {
+        openToggledHandler = handler
+    }
+
     func dismiss() {
         cancelHoverWork()
         pendingContentWork?.cancel()
@@ -449,6 +550,8 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         isPointerInside = true
         hoverExitWork?.cancel()
         hoverExitWork = nil
+        applyRestTarget()
+        startMotionIfNeeded()
         scheduleHintOpenIfReady()
     }
 
@@ -470,6 +573,8 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
 
     func hudMouseExited() {
         isPointerInside = false
+        applyRestTarget()
+        startMotionIfNeeded()
         hoverEnterWork?.cancel()
         hoverEnterWork = nil
         hoverExitWork?.cancel()
@@ -540,16 +645,21 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             guard hypot(delta.x, delta.y) >= DICTATION_HUD_DRAG_THRESHOLD else { return }
             dragStarted = true
             cancelHoverWork()
+            showStripLabel(nil)
             startHoverAnimation(to: 0, duration: DICTATION_HUD_HOVER_EXIT_DURATION)
+            showDropZones(near: screenPoint)
         }
 
+        // Размер СВОЙ, а не базовый: в покое плашка уже базовой, и жёсткое
+        // число тут раздувало бы её обратно на первом же перетаскивании.
         let proposed = CGRect(origin: CGPoint(x: dragStartOrigin.x + delta.x,
                                               y: dragStartOrigin.y + delta.y),
-                              size: DICTATION_HUD_BASE_SIZE)
+                              size: capsuleScreenFrame.size)
         let screen = screenFor(point: screenPoint)
         capsuleScreenFrame = dictationHUDSnappedFrame(proposed, in: screen.visibleFrame)
         showVisibleFrame = screen.visibleFrame
         showDisplayID = displayID(for: screen)
+        updateDropZones(near: screenPoint, screen: screen)
         updateHintDirection()
         layoutPanel(display: true)
     }
@@ -559,9 +669,31 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         mouseDownPoint = nil
         dragStartOrigin = nil
         dragStarted = false
-        guard didDrag else { return }
+        // Щелчок без протяжки - раскрыть или свернуть. Прежде он не значил
+        // ничего: HUD_SPEC §8 прямо запрещал действия по щелчку, потому что
+        // владелец их не просил. Просил 06.09.2026, строка спеки отменена.
+        //
+        // Порог протяжки решает спор между жестами: плашку двигают той же
+        // левой кнопкой, и без порога каждое перетаскивание кончалось бы
+        // раскрытием.
+        guard didDrag else {
+            openToggledHandler?()
+            return
+        }
         let screen = screenFor(point: CGPoint(x: capsuleScreenFrame.midX,
                                               y: capsuleScreenFrame.midY))
+        // Плашка встаёт не туда, где отпустили, а в ближайшее из двенадцати
+        // мест. Решение владельца: «постоянно кнопка работает плохо, сделай
+        // примагничивание».
+        let anchor = pendingAnchor
+            ?? dictationHUDNearestAnchor(to: CGPoint(x: capsuleScreenFrame.midX,
+                                                     y: capsuleScreenFrame.midY),
+                                         in: screen.visibleFrame)
+        settings.dictationHUDAnchor = anchor
+        hideDropZones()
+        capsuleScreenFrame = dictationHUDAnchoredFrame(anchor,
+                                                       plate: currentPlateSize(),
+                                                       in: screen.visibleFrame)
         capsuleScreenFrame = dictationHUDClampedFrame(capsuleScreenFrame, in: screen.visibleFrame)
         showVisibleFrame = screen.visibleFrame
         showDisplayID = displayID(for: screen)
@@ -615,6 +747,19 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
                                completion: completion)
     }
 
+    /// Фаза мерцания черты в покое. Своя, а не общая фаза волны: та ведёт ход
+    /// волны и на покое стоит.
+    private var shimmerPhase: CGFloat = 0
+    /// На какой частоте сейчас крутится линк. Мерцанию хватает восьми кадров в
+    /// секунду, движению нужны все сто двадцать; линк, заведённый ради первого,
+    /// тормозил бы второе, поэтому при смене причины он пересоздаётся.
+    private var linkIsSlow = false
+
+    /// Мерцает ли черта прямо сейчас.
+    private var shimmering: Bool {
+        currentContent?.stage == .resting && restProgress > 0.99 && !reduceMotionEnabled()
+    }
+
     private func startMotionIfNeeded() {
         // Переход плашки поднимает линк наравне с волной: на терминальной
         // стадии скорость фазы ноль, и по одному этому условию линк не
@@ -624,13 +769,32 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
                                                   hoverAnimating: hoverAnimation != nil,
                                                   reduceMotion: reduceMotionEnabled())
             || glassTransitionInFlight
-        guard displayLink == nil, needed, let container else { return }
+            // Сжатие в покой - тоже движение, и на стадии покоя скорость фазы
+            // равна нулю: без этого условия линк не завёлся бы, и плашка
+            // прыгнула бы в покой одним кадром.
+            || restProgress != restTarget
+            // И раскрытие панели. Прежде оно ехало только потому, что рядом
+            // всегда шёл переход стекла терминальной стадии; раскрытая по
+            // щелчку плашка стоит в покое, где не движется ничего, - и морф
+            // не трогался с места вовсе. Поймано кадром: кнопки нарисовались
+            // поверх нераскрытой пилюли.
+            || (transcript != nil && transcriptProgress != transcriptTarget)
+        // Мерцание в покое - тоже причина крутить такт, но самая дешёвая.
+        let slow = !needed && shimmering
+        guard needed || slow, let container else { return }
+        // Причина сменилась - частота обязана смениться с ней.
+        if let link = displayLink, linkIsSlow != slow {
+            link.invalidate()
+            displayLink = nil
+        }
+        guard displayLink == nil else { return }
+        linkIsSlow = slow
         lastMotionAt = ProcessInfo.processInfo.systemUptime
         let link = container.displayLink(target: displayLinkProxy,
                                          selector: #selector(DictationHUDDisplayLinkProxy.fired(_:)))
-        link.preferredFrameRateRange = CAFrameRateRange(minimum: 60,
-                                                        maximum: 120,
-                                                        preferred: 120)
+        link.preferredFrameRateRange = slow
+            ? CAFrameRateRange(minimum: 4, maximum: 10, preferred: 8)
+            : CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
         link.add(to: .main, forMode: .common)
         displayLink = link
     }
@@ -661,6 +825,8 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             capsule?.phase = phase
         }
         advanceGlass(dt: dt)
+        advanceShimmer(dt: dt)
+        advanceRest(dt: dt)
         advanceTranscript(dt: dt)
         advanceWorkingWave()
         layoutPanel(display: false)
@@ -676,11 +842,14 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             revealAnimating: revealAnimation != nil,
             hoverAnimating: hoverAnimation != nil,
             reduceMotion: reduceMotionEnabled()
-        ) || glassTransitionInFlight || (transcript != nil && transcriptProgress != transcriptTarget)
+        ) || glassTransitionInFlight || restProgress != restTarget
+            || (transcript != nil && transcriptProgress != transcriptTarget)
             // Кольцо отсчета - тоже движение: без него линк останавливался, и
             // кольцо стояло на месте, пока панель молча доживала свои секунды.
             || (transcript != nil && transcriptLifetime > 0 && transcriptAge < transcriptLifetime)
-        if !panel.isVisible || !hasMotion { stopMotion() }
+        // Мерцание держит такт само: на покое другого движения нет вовсе.
+        if !panel.isVisible || (!hasMotion && !shimmering) { stopMotion() }
+        else if !hasMotion, !linkIsSlow { stopMotion(); startMotionIfNeeded() }
     }
 
     private func advanceAnimations(at now: TimeInterval) {
@@ -764,6 +933,10 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
                                                             size: DICTATION_HUD_BASE_SIZE))
         let hint = DictationHUDHintView(frame: .zero)
         container.addSubview(hint)
+        let strip = DictationHUDStripView(frame: .zero)
+        strip.onAction = { [weak self] id in self?.performAction(id) }
+        strip.onHover = { [weak self] action in self?.showStripLabel(action?.title) }
+        strip.isHidden = true
 
         if #available(macOS 26.0, *) {
             // Стеклянная плашка: тело и спутник в контейнере Liquid Glass,
@@ -780,12 +953,15 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         } else {
             container.addSubview(capsule)
         }
+        // Полоска ПОВЕРХ стекла: она живёт внутри плашки, а не рядом с ней.
+        container.addSubview(strip)
         panel.contentView = container
 
         self.panel = panel
         self.container = container
         self.capsule = capsule
         self.hint = hint
+        self.strip = strip
         return panel
     }
 
@@ -816,12 +992,27 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
             view.lifeRemaining = 1
         }
         view.text = text
+        // Копировать нечего - и кнопки быть не должно: кнопка, которая при
+        // нажатии не делает ничего, хуже отсутствующей.
+        view.showsCopy = !content.transcriptIsPlaceholder
+        // Кнопки собираются ЗДЕСЬ, а не берутся из содержимого: язык живёт в
+        // управлении, модель его не знает, и панель показывала «АВ» даже когда
+        // стоял русский - рядом с полоской, где на той же кнопке стояло «RU».
+        // Две подписи об одном и том же, и одна из них врёт.
+        view.actions = content.actions.isEmpty
+            ? []
+            : dictationHUDActions(isRecording: dictationHUDIsListening(content.stage),
+                                  language: controls?.currentLanguage() ?? .auto)
+        view.onAction = { [weak self] id in self?.performAction(id) }
 
         let plate = dictationHUDCollapsedSize(settings.dictationHUDSize)
         let screenWidth = screenFor(point: CGPoint(x: capsuleScreenFrame.midX,
                                                    y: capsuleScreenFrame.midY)).visibleFrame.width
         let probe = dictationHUDTranscriptSize(lineCount: 1, plateSize: plate, screenWidth: screenWidth)
-        let lines = dictationHUDTranscriptLineCount(text: text, width: probe.width)
+        // Замером, а не оценкой по числу знаков: оценка считает 0,52 ширины
+        // кегля на знак, у кириллицы знак шире, и хвост фразы уезжал за нижний
+        // край панели. Поймано кадром: «...пока» вместо «...пока я говорю».
+        let lines = dictationHUDMeasuredTranscriptLines(text: text, width: probe.width)
         transcriptPlateSize = plate
         transcriptPanelSize = dictationHUDTranscriptSize(lineCount: lines,
                                                          plateSize: plate,
@@ -842,15 +1033,196 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         let eased = 1 - pow(1 - transcriptProgress, 3)
         let from = transcriptPlateSize
         let to = transcriptPanelSize
-        capsuleScreenFrame.size = CGSize(
+        setPlateSize(CGSize(
             width: (from.width + (to.width - from.width) * eased).rounded(),
             height: (from.height + (to.height - from.height) * eased).rounded()
-        )
+        ))
         transcript?.revealProgress = eased
         // Волна уступает место тексту: два содержимых в одном стекле спорят,
         // и читаются оба хуже, чем каждое поодиночке. Уходит она раньше, чем
         // приходит текст, - иначе они наложатся на середине движения.
         waveBars?.alphaValue = max(0, 1 - eased * 2.2)
+    }
+
+    /// Показать или снять подпись кнопки под мышью.
+    ///
+    /// Владелец: «должно быть понимание, что это такое. То есть просто так по
+    /// значкам непонятно». Значок сам себя не объясняет никому, кроме того,
+    /// кто его рисовал.
+    private func showStripLabel(_ title: String?) {
+        guard stripLabel != title else { return }
+        stripLabel = title
+        hint?.lines = title.map { [$0] } ?? []
+        hintLines = title.map { [$0] } ?? []
+        updateHintDirection()
+        startHoverAnimation(to: title == nil ? 0 : 1,
+                            duration: title == nil
+                                ? DICTATION_HUD_HOVER_EXIT_DURATION
+                                : DICTATION_HUD_HOVER_ENTER_DURATION)
+        layoutPanel(display: true)
+    }
+
+    /// Размер плашки сейчас: покой, полоска или работа, с учётом того, стоит
+    /// ли она боком.
+    private func currentPlateSize() -> CGSize {
+        let plate = dictationHUDCollapsedSize(settings.dictationHUDSize)
+        let base = restingStage ? dictationHUDRestingSize(plate) : plate
+        return dictationHUDAnchoredSize(settings.dictationHUDAnchor, plate: base)
+    }
+
+    private func showDropZones(near point: CGPoint) {
+        let screen = screenFor(point: point)
+        let window = dropZones ?? makeDictationHUDDropZoneWindow(screen: screen)
+        dropZones = window
+        if let view = window.contentView as? DictationHUDDropZoneView {
+            let plate = dictationHUDRestingSize(dictationHUDCollapsedSize(settings.dictationHUDSize))
+            view.zones = DictationHUDAnchor.allCases.map {
+                let pad = dictationHUDAnchoredFrame($0, plate: plate, in: screen.visibleFrame)
+                return CGRect(x: pad.minX - screen.frame.minX,
+                              y: pad.minY - screen.frame.minY,
+                              width: pad.width, height: pad.height)
+            }
+        }
+        window.orderFrontRegardless()
+        panel?.orderFrontRegardless()
+        updateDropZones(near: point, screen: screen)
+    }
+
+    private func updateDropZones(near point: CGPoint, screen: NSScreen) {
+        guard let window = dropZones,
+              let view = window.contentView as? DictationHUDDropZoneView else { return }
+        let anchor = dictationHUDNearestAnchor(to: point, in: screen.visibleFrame)
+        pendingAnchor = anchor
+        let plate = dictationHUDRestingSize(dictationHUDCollapsedSize(settings.dictationHUDSize))
+        let pad = dictationHUDAnchoredFrame(anchor, plate: plate, in: screen.visibleFrame)
+        view.highlighted = CGRect(x: pad.minX - screen.frame.minX,
+                                  y: pad.minY - screen.frame.minY,
+                                  width: pad.width, height: pad.height)
+    }
+
+    private func hideDropZones() {
+        dropZones?.orderOut(nil)
+        dropZones = nil
+        pendingAnchor = nil
+    }
+
+    /// Что стоит в полоске сейчас. Пересобирается на каждом показе: язык
+    /// меняют и из настроек, и кнопкой, и полоска обязана показывать то, что
+    /// стоит СЕЙЧАС, а не то, что стояло при её сборке.
+    private func stripActions() -> [DictationHUDAction] {
+        let language = controls?.currentLanguage() ?? .auto
+        let recording = dictationHUDIsListening(currentContent?.stage ?? .resting)
+        return dictationHUDStripActions(isRecording: recording, language: language)
+    }
+
+    /// Размер плашки, раскрытой полоской.
+    private func stripPlateSize() -> CGSize {
+        dictationHUDStripSize(working: dictationHUDCollapsedSize(settings.dictationHUDSize),
+                              buttons: stripActions().count)
+    }
+
+    /// Кнопка нажата. Разводка здесь, а не в виде: вид рисует, окно знает,
+    /// у кого что спросить.
+    private func performAction(_ id: DictationHUDActionID) {
+        switch id {
+        case .record:
+            controls?.toggleRecording()
+        case .language:
+            guard let controls else { return }
+            controls.setLanguage(dictationHUDNextLanguage(after: controls.currentLanguage()))
+        case .history:
+            controls?.openHistory()
+        case .settings:
+            controls?.openSettings()
+        case .modePrompt:
+            controls?.startPrompt()
+        case .modeTranslation:
+            controls?.startTranslation()
+        case .collapse:
+            openToggledHandler?()
+        }
+    }
+
+    /// Куда едет плашка: в покой или в работу.
+    private func applyRestTarget(for stage: DictationHUDStage) {
+        restingStage = stage == .resting
+        applyRestTarget()
+    }
+
+    /// Капля свёрнута, пока на неё не навели мышь. Слова владельца: «чтобы она
+    /// раскрывалась, когда мы наводим на нее мышку».
+    private func applyRestTarget() {
+        let stage = restingStage
+        restTarget = (stage && !isPointerInside) ? 1 : 0
+        if reduceMotionEnabled() { restProgress = restTarget }
+        // Ехать некуда - значит размер надо поставить прямо сейчас. Без этой
+        // строки первый показ (покой едет из покоя в покой) оставил бы окно
+        // рабочего размера: `advanceRest` не тикает, когда цель достигнута.
+        if restProgress == restTarget { applyRestProgress() }
+    }
+
+    /// Поменять размер плашки, НЕ сдвигая её центр.
+    ///
+    /// Слова владельца: «когда плашка раскрывается, она должна раскрываться в
+    /// обе стороны, вверх и вниз еще, а не вправо или влево, как это сделано
+    /// сейчас». Прежде размер менялся при неподвижном левом нижнем углу - то
+    /// есть плашка росла вправо и вверх. Центр как якорь - единственное место,
+    /// где это правило может стоять: и сжатие в покой, и раскрытие панели
+    /// ходят через него.
+    /// Середина берётся у геометрии, а не у кадра: кадр округлён, и вычитать
+    /// из него половину нового размера на каждом морфе значит копить пункт
+    /// вправо и вверх - ровно тот съезд, который поймал владелец.
+    private func setPlateSize(_ size: CGSize) {
+        plate.setSize(size)
+    }
+
+    /// Разложить сжатие в покой по размеру окна.
+    ///
+    /// Пока открыта панель расшифровки, размер ведёт ОНА: два числа на один
+    /// кадр разъезжаются, и правило старшинства обязано стоять здесь, в
+    /// единственном месте, где размер окна вообще меняется.
+    /// Стоит ли плашка боком.
+    private var plateIsVertical: Bool { settings.dictationHUDAnchor.isVertical }
+
+    private func applyRestProgress() {
+        guard transcriptPanelSize == .zero else { return }
+        // В покое плашка раскрывается НЕ до рабочего размера, а до размера
+        // полоски: рабочий размер её кнопок не вмещает, и крайние срезало бы
+        // обрезом окна.
+        let anchor = settings.dictationHUDAnchor
+        let plate = dictationHUDCollapsedSize(settings.dictationHUDSize)
+        let working = dictationHUDAnchoredSize(anchor,
+                                               plate: restingStage ? stripPlateSize() : plate)
+        let rest = dictationHUDAnchoredSize(anchor, plate: dictationHUDRestingSize(plate))
+        // Тот же сильный ease-out, что у морфа расшифровки и у морфа стекла:
+        // это одно движение продукта, и разные кривые читались бы рассинхроном.
+        let eased = 1 - pow(1 - restProgress, 3)
+        setPlateSize(CGSize(
+            width: (working.width + (rest.width - working.width) * eased).rounded(),
+            height: (working.height + (rest.height - working.height) * eased).rounded()
+        ))
+    }
+
+    /// Дышащая черта в покое. Медленно и неглубоко: это тишина, а не пульс.
+    private func advanceShimmer(dt: TimeInterval) {
+        guard let bars = waveBars, bars.restingShimmer, shimmering else { return }
+        shimmerPhase += CGFloat(dt)
+        let breath = 0.62 + 0.38 * (0.5 + 0.5 * sin(shimmerPhase * 1.5))
+        bars.lineIntensity = 0.32 * breath
+        bars.needsDisplay = true
+    }
+
+    /// Довести сжатие до цели. Тот же такт, что у морфа расшифровки.
+    private func advanceRest(dt: TimeInterval) {
+        guard restProgress != restTarget else { return }
+        let step = CGFloat(dt / DICTATION_HUD_REST_MORPH_SECONDS)
+        let delta = restTarget - restProgress
+        if abs(delta) <= step {
+            restProgress = restTarget
+        } else {
+            restProgress += delta > 0 ? step : -step
+        }
+        applyRestProgress()
     }
 
     /// Довести раскрытие до цели. Идёт в общем такте движения, как и морф
@@ -874,7 +1246,10 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         transcript = nil
         transcriptPanelSize = .zero
         waveBars?.alphaValue = 1
-        capsuleScreenFrame.size = dictationHUDCollapsedSize(settings.dictationHUDSize)
+        // Не рабочий размер, а тот, который следует из цели покоя: панель
+        // закрывается ровно тогда, когда работа кончилась, то есть плашка уже
+        // едет в покой.
+        applyRestProgress()
     }
 
     private func applyContent(_ content: DictationHUDContent) {
@@ -891,6 +1266,7 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         capsule?.content = content
         capsule?.level = content.level
         applyTranscript(content)
+        applyRestTarget(for: content.stage)
         applyGlass(content, stageChanged: previousStage != content.stage)
         if content.stage == .recognizing, previousStage != .recognizing {
             processingBeganAt = ProcessInfo.processInfo.systemUptime
@@ -1004,7 +1380,12 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         bars.glyph = dictationHUDWaveGlyph(for: content.stage, purpose: lastPurpose)
         // Покой тише отказа: тишина - это не отказ, и гореть одинаково они
         // не имеют права.
-        bars.lineIntensity = tone == .failure ? 1.0 : 0.55
+        // Покой тише всех: он висит на экране весь день, и гореть ему не за
+        // что. Обрыв - ярче всех: молчать про потерю нельзя.
+        bars.lineIntensity = content.stage == .resting ? 0.32 : (tone == .failure ? 1.0 : 0.55)
+        // Мерцает только капля в покое и только пока на неё не навели: под
+        // мышью плашка раскрывается, и дышащая черта там уже не тишина.
+        bars.restingShimmer = content.stage == .resting && !reduceMotionEnabled()
         // Цель, а не значение: до неё едет пружина в `advanceGlass`.
         waveCollapseTarget = max(dictationHUDWaveCollapse(stage: content.stage),
                                  dictationHUDSilenceCollapse(levels: levelTrail.levels))
@@ -1122,18 +1503,18 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         let screen = restoredScreen()
         showVisibleFrame = screen.visibleFrame
         showDisplayID = displayID(for: screen)
-        if let fraction = settings.dictationHUDPositionFraction {
-            let restored = dictationHUDRestoredFrame(size: DICTATION_HUD_BASE_SIZE,
-                                                     fraction: fraction,
-                                                     in: screen.visibleFrame)
-            capsuleScreenFrame = dictationHUDClampedFrame(restored, in: screen.visibleFrame)
-            let corrected = dictationHUDPositionFraction(frame: capsuleScreenFrame,
-                                                         in: screen.visibleFrame)
-            if corrected != fraction { persistPosition(in: screen) }
-        } else {
-            capsuleScreenFrame = dictationHUDFrame(size: DICTATION_HUD_BASE_SIZE,
-                                                   in: screen.visibleFrame)
-        }
+        // Место, а не координаты. Экран меняется - второй монитор, другое
+        // разрешение, - а «середина низа» остаётся серединой низа. Прежде
+        // хранилась доля от ширины экрана, и на другом мониторе плашка
+        // оказывалась посреди работы.
+        let plate = dictationHUDCollapsedSize(settings.dictationHUDSize)
+        capsuleScreenFrame = dictationHUDAnchoredFrame(settings.dictationHUDAnchor,
+                                                       plate: plate,
+                                                       in: screen.visibleFrame)
+        // И сразу сжать в покой. Перекладка идёт ПОСЛЕ морфа, и без этой
+        // строки первый показ выкидывал каплю и ставил плашку рабочего
+        // размера - поймано кадром прибора съёмки.
+        applyRestProgress()
         updateHintDirection()
     }
 
@@ -1178,16 +1559,23 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         let collapsedSize = capsuleScreenFrame.size
         let expandedWidth = max(collapsedSize.width, hintSize.width)
         let extraHeight = hintLines.isEmpty ? 0 : DICTATION_HUD_HINT_GAP + hintSize.height
-        let width = collapsedSize.width
-            + (expandedWidth - collapsedSize.width) * hover.windowProgress
-        let height = collapsedSize.height + extraHeight * hover.windowProgress
-        let originX = capsuleScreenFrame.midX - width / 2
+        let wanted = CGSize(
+            width: collapsedSize.width
+                + (expandedWidth - collapsedSize.width) * hover.windowProgress,
+            height: collapsedSize.height + extraHeight * hover.windowProgress)
+        let originX = capsuleScreenFrame.midX - wanted.width / 2
         let originY = hintOpensBelow
-            ? capsuleScreenFrame.maxY - height
+            ? capsuleScreenFrame.maxY - wanted.height
             : capsuleScreenFrame.minY
-        let frame = CGRect(x: originX, y: originY, width: width, height: height)
+        let frame = dictationHUDOnScreenFrame(
+            CGRect(origin: CGPoint(x: originX, y: originY), size: wanted),
+            visible: showVisibleFrame)
         panel.setFrame(frame, display: display)
         container.frame = CGRect(origin: .zero, size: frame.size)
+        // Дальше раскладка идёт от кадра ОКНА, а не от желаемого размера:
+        // у края экрана они расходятся, и содержимое поехало бы мимо стекла.
+        let width = frame.width
+        let height = frame.height
 
         let capsuleY = hintOpensBelow ? height - collapsedSize.height : 0
         capsule.frame = CGRect(x: (width - collapsedSize.width) / 2,
@@ -1203,9 +1591,11 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         // текстом торчала мимо стекла - белая подложка сверху, стеклянный
         // огрызок под ней.
         if #available(macOS 26.0, *), let stack = glassStack as? DictationHUDGlassStack {
-            let wanted = transcript == nil
-                ? CGRect(origin: .zero, size: DICTATION_HUD_BASE_SIZE)
-                : capsule.frame
+            // Кадр плашки, а не жёсткий базовый размер. Базовый стоял здесь
+            // пятым экземпляром той же правды и врал бы для КАЖДОГО окна,
+            // размер которого не равен базовому: покой уже, выбранный владельцем
+            // размер шире, панель расшифровки выше.
+            let wanted = capsule.frame
             if stack.frame != wanted {
                 stack.frame = wanted
                 stack.layoutSubtreeIfNeeded()
@@ -1216,6 +1606,44 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
                 glassTo = shape
                 glassProgress = 1
                 stack.apply(shape, animated: false)
+            } else if restProgress != restTarget {
+                // Пока окно СЖИМАЕТСЯ или РАСТЁТ, форму ведёт его размер, а не
+                // интерполяция форм: обе формы тут - пилюля во всё окно, и
+                // считать её от прошлого кадра значит отставать на кадр.
+                let stage = currentContent?.stage ?? .resting
+                let shape = dictationHUDGlassShape(form: dictationHUDGlassForm(for: stage),
+                                                   in: stack.bounds.size)
+                glassFrom = nil
+                glassTo = shape
+                glassProgress = 1
+                stack.apply(shape, animated: false)
+            }
+        }
+
+        // Полоска занимает плашку целиком и проявляется по мере раскрытия.
+        // Видна только в покое: на записи внутри плашки живёт волна, и ряд
+        // кнопок поверх неё спорил бы с ней за то же место.
+        if let strip {
+            // Панель расшифровки несёт СВОЙ ряд кнопок, и полоска под ней -
+            // второй ряд об одном и том же. Мышь при этом достаётся панели
+            // (она выше), поэтому нижний ряд ещё и мёртвый.
+            let open = (restingStage && transcript == nil) ? max(0, 1 - restProgress) : 0
+            strip.frame = capsule.frame
+            strip.isHidden = open <= 0.01
+            // Появляется поздно, к концу раскрытия: на середине морфа плашка
+            // ещё уже ряда, и кнопки читались бы вылезшими даже при верной
+            // раскладке.
+            strip.alphaValue = max(0, (open - 0.62) / 0.38)
+            strip.vertical = plateIsVertical
+            if !strip.isHidden { strip.actions = stripActions() }
+            // Черта уступает место кнопкам. Гасится ЯРКОСТЬЮ РИСОВАНИЯ, а не
+            // прозрачностью вида: содержимое живёт внутри NSGlassEffectView, и
+            // alphaValue там не доезжает - поймано кадром, где зелёная черта
+            // прошла сквозь ряд кнопок.
+            if restingStage, let bars = waveBars {
+                let dim = max(0, 1 - open * 1.6)
+                bars.lineIntensity = 0.32 * dim
+                bars.isHidden = dim <= 0.02
             }
         }
 

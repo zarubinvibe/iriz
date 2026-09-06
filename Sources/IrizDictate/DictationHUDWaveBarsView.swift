@@ -33,6 +33,14 @@ final class DictationHUDWaveBarsView: NSView {
     /// Яркость опорной линии. У покоя она тише, у обрыва - в полную силу:
     /// тишина это не отказ, и гореть одинаково они не имеют права.
     var lineIntensity: CGFloat = 1 { didSet { needsDisplay = true } }
+
+    /// Тихое мерцание черты в покое. Слова владельца 06.09.2026: «тонкой
+    /// полоской, которая может быть мерцает… когда тишина».
+    ///
+    /// Ведётся ЯРКОСТЬЮ РИСОВАНИЯ на редком такте, а не анимацией слоя:
+    /// содержимое живёт внутри NSGlassEffectView, и ни alphaValue, ни
+    /// opacity слоя туда не доезжают. Проверено кадром.
+    var restingShimmer: Bool = false
     /// 0 - звук, 1 - ровная черта. Промежуточные значения ведёт анимация:
     /// волна СОБИРАЕТСЯ в линию, а не подменяется ею.
     var collapse: CGFloat = 0 { didSet { needsDisplay = true } }
@@ -347,6 +355,10 @@ func dictationHUDWaveTone(stage: DictationHUDStage,
         return .failure
     case .buildingPrompt:
         return .prompt
+    case .resting:
+        // В покое режима ещё нет: владелец не нажал клавишу, и красить ленту
+        // в цвет диктовки значило бы обещать запись, которой нет.
+        return .normal
     case .listening, .recognizing, .inserted, .promptSavedAfterFocusChange:
         switch purpose {
         case .prompt: return .prompt
@@ -374,7 +386,7 @@ public func dictationHUDWaveColor(_ tone: DictationHUDWaveTone) -> NSColor {
 /// и потому её видно даже краем глаза.
 func dictationHUDWaveFlashStrength(stage: DictationHUDStage) -> CGFloat {
     switch stage {
-    case .listening, .recognizing, .buildingPrompt:
+    case .resting, .listening, .recognizing, .buildingPrompt:
         return 0
     case .inserted, .promptSavedAfterFocusChange:
         // Успех тише отказа: подтверждение не обязано кричать, а отказ обязан.
@@ -392,5 +404,9 @@ func dictationHUDWaveFlashStrength(stage: DictationHUDStage) -> CGFloat {
 /// та же волна, у которой отняли и высоту, и просветы: один объект доехал до
 /// другого состояния, а не сменился картинкой.
 func dictationHUDWaveCollapse(stage: DictationHUDStage) -> CGFloat {
-    dictationHUDWaveTone(stage: stage, purpose: .dictation) == .failure ? 1 : 0
+    // Покой - ровная черта, как и обрыв, но по другой причине: там работа
+    // кончилась ничем, здесь она ещё не начиналась. Волна в покое врала бы,
+    // что кто-то говорит.
+    if stage == .resting { return 1 }
+    return dictationHUDWaveTone(stage: stage, purpose: .dictation) == .failure ? 1 : 0
 }
