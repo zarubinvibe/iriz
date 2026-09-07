@@ -13,6 +13,7 @@
 // колбэке, проверить нечем, а зелёный гейт над непроверяемой логикой — гейт,
 // который врёт.
 import Foundation
+import IrizCore
 
 /// Почему окно спасения не поднялось. Причина уходит в лог: молчание без
 /// названной причины неотличимо от забытой ветки.
@@ -95,20 +96,24 @@ struct DictationRescue: Equatable {
 }
 
 /// Заголовок окна спасения.
-let DICTATION_RESCUE_TITLE = "Текст не попал в поле"
+///
+/// Вычисляется, а не хранится: константа берёт язык один раз при загрузке, и
+/// окно оставалось русским после смены языка. Кадр витрины 07.09.2026 показал
+/// это в лоб - кнопки китайские, заголовок русский.
+var DICTATION_RESCUE_TITLE: String { L("rescue.title", "Текст не попал в поле") }
 
 /// Что именно случилось — одной строкой, без жаргона вердиктов.
 func dictationRescueExplanation(for failure: TextInsertionFailure) -> String {
     switch failure {
     case .insertionFailed:
-        return "Не сработали обе попытки: ни через буфер обмена, ни прямым вводом."
+        return L("rescue.bothFailed", "Не сработали обе попытки: ни через буфер обмена, ни прямым вводом.")
     case .targetNeverRequestedText:
-        return "Вставка ушла, но поле её не забрало. Текст цел — он здесь."
+        return L("rescue.notTaken", "Вставка ушла, но поле её не забрало. Текст цел — он здесь.")
     case .deliveryNotObservable:
         // До окна этот класс не доходит (см. dictationRecoveryPresentation), но
         // ветка обязана быть честной: молчаливый провал в switch однажды выдаст
         // владельцу пустую строку вместо объяснения.
-        return "Текст ввели напрямую — подтвердить доставку было нечем."
+        return L("rescue.notObservable", "Текст ввели напрямую — подтвердить доставку было нечем.")
     }
 }
 
@@ -130,11 +135,11 @@ enum DictationRescueRetryOutcome: String, Equatable {
 func dictationRescueRetryNotice(_ outcome: DictationRescueRetryOutcome) -> String {
     switch outcome {
     case .unknownTarget:
-        return "Непонятно, куда вставлять — приложение мы не запоминаем. Скопируйте текст."
+        return L("rescue.unknownTarget", "Непонятно, куда вставлять — приложение мы не запоминаем. Скопируйте текст.")
     case .focusDidNotReturn:
-        return "Фокус не вернулся в поле, вставлять было некуда. Скопируйте текст."
+        return L("rescue.focusLost", "Фокус не вернулся в поле, вставлять было некуда. Скопируйте текст.")
     case .notDelivered:
-        return "Поле снова не приняло вставку. Скопируйте и вставьте руками."
+        return L("rescue.notDelivered", "Поле снова не приняло вставку. Скопируйте и вставьте руками.")
     }
 }
 

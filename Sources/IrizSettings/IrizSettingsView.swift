@@ -1279,7 +1279,7 @@ public struct IrizSettingsView: View {
                         HStack(spacing: 6) {
                             Text(dictationHistoryTimeLabel(entry.label))
                             Text("·")
-                            Text("\(entry.displayText.count) симв.")
+                            Text("\(entry.displayText.count) \(L("history.charsShort", "симв."))")
                         }
                         .font(.footnote)
                         .foregroundStyle(IRIZ_SUBTLE)

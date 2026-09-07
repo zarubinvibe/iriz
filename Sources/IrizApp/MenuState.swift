@@ -14,9 +14,9 @@ enum AppMode: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .fixing: return "Исправляет"
-        case .shadow: return "Только считает"
-        case .paused: return "Пауза"
+        case .fixing: return L("mode.fixing", "Исправляет")
+        case .shadow: return L("mode.shadow", "Только считает")
+        case .paused: return L("mode.paused", "Пауза")
         }
     }
 
@@ -91,6 +91,32 @@ final class MenuState: ObservableObject {
     /// В «Только считает» правок не было вовсе — то же число там значит
     /// «столько ошибок замечено», и называть его исправлениями было бы враньём.
     var statsLine: String {
+        // Ветка по языку, а не таблица строк: у русского три формы числа, у
+        // английского две, у китайского ни одной. Одним ключом это не
+        // выражается, и строка либо врала бы числом, либо оставалась русской.
+        // Кадр витрины 07.09.2026: меню на китайском, а счётчики дня русские.
+        switch irizCurrentLanguage() {
+        case .ru:
+            return statsLineRu
+        case .en:
+            let word = mode == .shadow
+                ? (todayAutoswitches == 1 ? "layout slip" : "layout slips")
+                : (todayAutoswitches == 1 ? "fix" : "fixes")
+            let undos = todayUndos == 1 ? "undo" : "undos"
+            return "Today: \(todayAutoswitches) \(word) · \(todayUndos) \(undos)"
+        case .zh:
+            let word = mode == .shadow ? "次布局错误" : "次修正"
+            return "今天：\(todayAutoswitches) \(word) · \(todayUndos) 次撤销"
+        case .auto:
+            // `irizCurrentLanguage()` разрешает `auto` в настоящий язык и сюда
+            // не приводит. Ветка стоит ради полноты разбора: молчаливый провал
+            // однажды выдал бы пустую строку счётчиков вместо чисел.
+            return statsLineRu
+        }
+    }
+
+    /// Русский вариант строки счётчиков - он же запасной для неразрешённого языка.
+    private var statsLineRu: String {
         let counted = mode == .shadow
             ? "\(todayAutoswitches) \(Self.plural(todayAutoswitches, one: "ошибка раскладки", few: "ошибки раскладки", many: "ошибок раскладки"))"
             : "\(todayAutoswitches) \(Self.plural(todayAutoswitches, one: "исправление", few: "исправления", many: "исправлений"))"

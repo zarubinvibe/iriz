@@ -192,9 +192,33 @@ public func captureDictationHUDPlateScenes(to directory: URL) throws -> [URL] {
                 // примагничивается, затемнение уходит.
                 surface.hudMouseUp(at: CGPoint(x: screen.frame.maxX - 260,
                                                y: screen.frame.minY + 120))
+                // И ВОЗВРАЩАЕМ на место. Сцена переноса идёт первой, а плашка
+                // после неё оставалась у правой кромки - там раскрытые формы
+                // не помещаются на экран, и `intersection` резал их по краю.
+                // Кадр «на записи» приезжал без правой трети, поверх обоев, с
+                // чужой линией через всю плашку. Владелец назвал это сломанной
+                // плашкой 07.09.2026, и был прав: ломал её прибор съёмки.
+                surface.hudMouseDown(at: CGPoint(x: screen.frame.maxX - 260,
+                                                 y: screen.frame.minY + 120))
+                surface.hudMouseDragged(to: CGPoint(x: plate.midX, y: plate.midY))
+                surface.hudMouseUp(at: CGPoint(x: plate.midX, y: plate.midY))
                 backdrop.orderFrontRegardless()
                 RunLoop.current.run(until: Date().addingTimeInterval(0.4))
             } else {
+                // Подложка едет за плашкой: раскрытые формы шире отдыхающей, и
+                // подложка, посчитанная один раз по отдыхающей, кончалась под
+                // серединой раскрытой панели - дальше стекло сэмплировало
+                // рабочий стол.
+                if let live = dictationHUDUspokoivshayasyaForma(surface) {
+                    let pole = live.insetBy(dx: -220, dy: -180)
+                    if !backdrop.frame.contains(pole) {
+                        backdrop.setFrame(pole, display: false)
+                        backdrop.contentView = dictationHUDPlateBackdrop(size: pole.size, dark: dark)
+                        backdrop.orderFrontRegardless()
+                        surface.raisePanel()
+                        RunLoop.current.run(until: Date().addingTimeInterval(0.3))
+                    }
+                }
                 try dictationHUDCapturePlate(surface: surface, screen: screen, to: url)
             }
             written.append(url)
@@ -203,6 +227,35 @@ public func captureDictationHUDPlateScenes(to directory: URL) throws -> [URL] {
         backdrop.orderOut(nil)
     }
     return written
+}
+
+/// Дождаться, пока форма плашки перестанет меняться.
+///
+/// Фиксированная пауза не работает: переход от раскрытой панели к капсуле
+/// «на записи» идёт анимацией, и кадр «на записи» приезжал обрезанным - окно
+/// ещё показывало широкую панель, а `panelScreenFrame` уже отдавал узкую.
+/// Область снимка считалась по узкой, и правая треть плашки оставалась за
+/// кромкой кадра. Ждём три одинаковых замера подряд.
+@MainActor
+private func dictationHUDUspokoivshayasyaForma(_ surface: DictationHUDPanelSurface,
+                                               predel: TimeInterval = 3) -> CGRect? {
+    var proshloe = surface.panelScreenFrame
+    var podryad = 0
+    let srok = Date().addingTimeInterval(predel)
+    while Date() < srok {
+        RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        let seychas = surface.panelScreenFrame
+        if let a = proshloe, let b = seychas,
+           abs(a.origin.x - b.origin.x) < 0.5, abs(a.origin.y - b.origin.y) < 0.5,
+           abs(a.width - b.width) < 0.5, abs(a.height - b.height) < 0.5 {
+            podryad += 1
+            if podryad >= 3 { return b }
+        } else {
+            podryad = 0
+        }
+        proshloe = seychas
+    }
+    return proshloe
 }
 
 /// Подложка для разглядывания: мягкая, но с перепадом - на ровной заливке

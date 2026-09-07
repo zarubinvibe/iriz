@@ -241,6 +241,16 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
     private var transcriptLifetime: TimeInterval = 0
     private var transcriptPlateSize: CGSize = .zero
     private var transcriptPanelSize: CGSize = .zero
+    /// Форма стекла, которая сейчас лежит на плашке.
+    ///
+    /// Нужна затем, что форму переприменяли ТОЛЬКО во время морфа. Панель
+    /// расшифровки закрывалась, окно уже стояло размером капсулы, морф не шёл
+    /// - и стекло оставалось прямоугольником панели. Владелец видел это как
+    /// «плашка обрезанная становится»: прямоугольник шире капсулы, и окно
+    /// резало его по кромке. Замер 07.09.2026: окно 144x57, стекло рисовало
+    /// форму панели 342x177.
+    private var glassFormApplied: DictationHUDGlassForm?
+    private var glassSizeApplied: CGSize = .zero
     private var currentContent: DictationHUDContent?
     private var pendingContent: DictationHUDContent?
     private var pendingHintLines: [String]?
@@ -1632,17 +1642,23 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
                 glassTo = shape
                 glassProgress = 1
                 stack.apply(shape, animated: false)
-            } else if restProgress != restTarget {
+                glassFormApplied = .transcript
+                glassSizeApplied = stack.bounds.size
+            } else if restProgress != restTarget
+                        || glassFormApplied != dictationHUDGlassForm(for: currentContent?.stage ?? .resting)
+                        || glassSizeApplied != stack.bounds.size {
                 // Пока окно СЖИМАЕТСЯ или РАСТЁТ, форму ведёт его размер, а не
                 // интерполяция форм: обе формы тут - пилюля во всё окно, и
                 // считать её от прошлого кадра значит отставать на кадр.
                 let stage = currentContent?.stage ?? .resting
-                let shape = dictationHUDGlassShape(form: dictationHUDGlassForm(for: stage),
-                                                   in: stack.bounds.size)
+                let form = dictationHUDGlassForm(for: stage)
+                let shape = dictationHUDGlassShape(form: form, in: stack.bounds.size)
                 glassFrom = nil
                 glassTo = shape
                 glassProgress = 1
                 stack.apply(shape, animated: false)
+                glassFormApplied = form
+                glassSizeApplied = stack.bounds.size
             }
         }
 

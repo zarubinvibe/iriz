@@ -49,7 +49,7 @@ What sets it apart from similar apps is where the speech is decoded. Usually you
 
 It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. It strips hesitations and repetitions. It splits a meeting or a court hearing recording by voice and puts the minutes next to the audio.
 
-![Meetings: drop the recording, the minutes land next to it](docs/assets/screens/page-meetings.png)
+![Meetings: drop the recording, the minutes land next to it](docs/assets/shots/page-meetings.png)
 
 ## Why It Helps
 
@@ -71,15 +71,15 @@ Press the key, say your sentence, press again. The text lands where the cursor w
 
 A glass drop sits at the bottom of the screen the whole time. While you are silent it stays small. Start talking and a wave runs inside it: that is the answer to «can it hear me».
 
-![The plate while recording: a wave inside the glass](docs/assets/shots/plate-listening-light.png)
+![The plate while recording: a wave inside the glass](docs/assets/shots/plate-listening-dark.png)
 
 Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches right there, a second before you speak — no need to walk to the settings for it.
 
-![The plate under the pointer: a row of six buttons](docs/assets/shots/plate-hover-light.png)
+![The plate under the pointer: a row of six buttons](docs/assets/shots/plate-hover-dark.png)
 
 If pasting did not work, nothing is lost: the same plate opens into a panel and you take the text from there.
 
-![Dictation settings: where the speech gets cleaned](docs/assets/screens/page-dictation.png)
+![Dictation settings: where the speech gets cleaned](docs/assets/shots/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 

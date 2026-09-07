@@ -49,6 +49,21 @@ func captureDocShots(to directory: URL, appDelegate: AppDelegate) throws -> [URL
         settings.close()
         written.append(settingsURL)
 
+        // Страницы настроек, на которые ссылается витрина. Раньше их снимали
+        // руками, и к 07.09.2026 они отстали на все правки владельца: на кадре
+        // словаря замен не было ни кнопки добавления сверху, ни выровненных
+        // столбцов, ни отметки о сохранении. Кадр, который никто не
+        // пересобирает, устаревает первым.
+        if language == .ru {
+            for (page, name) in docSettingsPages() {
+                let window = makeIrizSettingsWindow(preview: true, page: page)
+                let url = directory.appendingPathComponent("page-\(name).png")
+                try captureWindowLive(window, kind: .gradient, dark: false, to: url)
+                window.close()
+                written.append(url)
+            }
+        }
+
         // Остальные поверхности живут внутри панелей и своих окон не имеют.
         // Поднимаем их в окне того же устройства, что у настроек: прозрачном,
         // без заголовка - чтобы стекло сэмплировало подложку, а не серую плиту.
@@ -60,7 +75,53 @@ func captureDocShots(to directory: URL, appDelegate: AppDelegate) throws -> [URL
             written.append(url)
         }
     }
+
+    // Плашка снимается ТЕМ ЖЕ прогоном. Раньше её кадры копировали руками, и
+    // они отстали на день: витрина обновлялась одной командой, а четыре кадра
+    // плашки - нет. Владелец 07.09.2026 показал два из них: на одном плашка
+    // сломана, на другом её вовсе не видно.
+    //
+    // В витрину идут ТЁМНЫЕ формы. На светлой подложке стекло почти не читается
+    // - остаётся контур и кнопки, и на странице знакомства это выглядело как
+    // отсутствие плашки. Тёмная показывает то, чем плашка является.
+    if #available(macOS 26.0, *) {
+        written.append(contentsOf: try captureDocPlateShots(to: directory))
+    }
     return written
+}
+
+/// Кадры плашки для витрины: снимаем весь набор, оставляем нужные четыре.
+@available(macOS 26.0, *)
+@MainActor
+private func captureDocPlateShots(to directory: URL) throws -> [URL] {
+    let temp = URL(fileURLWithPath: NSTemporaryDirectory())
+        .appendingPathComponent("iriz-doc-plate-\(UUID().uuidString)")
+    defer { try? FileManager.default.removeItem(at: temp) }
+    _ = try captureDictationHUDPlateScenes(to: temp)
+
+    var written: [URL] = []
+    for name in ["plate-resting-dark", "plate-hover-dark",
+                 "plate-listening-dark", "plate-open-text-dark"] {
+        let from = temp.appendingPathComponent("\(name).png")
+        let to = directory.appendingPathComponent("\(name).png")
+        guard FileManager.default.fileExists(atPath: from.path) else {
+            throw NSError(domain: "iriz.docshots", code: 13,
+                          userInfo: [NSLocalizedDescriptionKey: "Кадр плашки \(name) не снялся."])
+        }
+        try? FileManager.default.removeItem(at: to)
+        try FileManager.default.copyItem(at: from, to: to)
+        written.append(to)
+    }
+    return written
+}
+
+/// Страницы настроек для витрины. Только по-русски: витрина ссылается на них
+/// из русского, английского и китайского текста одним и тем же файлом, и три
+/// копии одной страницы весили бы втрое без нового знания.
+@MainActor
+private func docSettingsPages() -> [(SettingsPage, String)] {
+    [(.dictation, "dictation"), (.dictionary, "dictionary"), (.files, "files"),
+     (.history, "history"), (.meetings, "meetings")]
 }
 
 /// Поверхности, которые обязаны попасть в витрину на каждом языке.

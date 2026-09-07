@@ -279,3 +279,18 @@
 "appearance.dark" = "Dark";
 "settings.gotovyeSvody" = "Ready-made sets:";
 "settings.svodPodstavlenPravte" = "The set is in. Edit it to taste and press Save.";
+
+"history.charsShort" = "chars";
+"rescue.title" = "The text did not reach the field";
+"rescue.bothFailed" = "Both attempts failed: neither through the clipboard nor by typing it in.";
+"rescue.notTaken" = "The paste went out, but the field never took it. The text is safe: it is right here.";
+"rescue.notObservable" = "The text was typed in directly, so there was nothing to confirm delivery with.";
+"rescue.unknownTarget" = "There is nowhere to paste: we do not remember the application. Copy the text.";
+"rescue.focusLost" = "Focus never came back to the field, so there was nowhere to paste. Copy the text.";
+"rescue.notDelivered" = "The field refused the paste again. Copy it and paste it by hand.";
+
+"mode.fixing" = "Fixing";
+"mode.shadow" = "Counting only";
+"mode.paused" = "Paused";
+
+"history.windowTitle" = "dictations";

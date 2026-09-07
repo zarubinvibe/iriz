@@ -103,19 +103,19 @@
 
 ### 浮窗
 
-<p align="center"><img src="assets/shots/plate-resting-light.png" alt="屏幕下方一颗小小的玻璃水滴，里面有一条细细的绿线" width="45%"></p>
+<p align="center"><img src="assets/shots/plate-resting-dark.png" alt="屏幕底部一枚小小的玻璃水滴，里面有一条细细的绿线，边缘泛着柔和的光晕" width="45%"></p>
 
 你不说话时它就是这样。水滴浮在任何窗口之上，什么也不做。
 
-<p align="center"><img src="assets/shots/plate-listening-light.png" alt="录音中的浮窗：绿色声波在玻璃内部流动" width="70%"></p>
+<p align="center"><img src="assets/shots/plate-listening-dark.png" alt="录音中的浮窗：一枚宽宽的胶囊，绿色的声波在玻璃里流动" width="70%"></p>
 
 你说话时是这样。玻璃里的声波就是“它有没有听见我”的答案。
 
-<p align="center"><img src="assets/shots/plate-hover-light.png" alt="浮窗展开成一排六个圆形按钮：麦克风、提示词、翻译、RU、历史、设置" width="100%"></p>
+<p align="center"><img src="assets/shots/plate-hover-dark.png" alt="浮窗展开成一排六个圆形按钮：麦克风、提示词、翻译、RU、历史、设置" width="100%"></p>
 
 把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。浮窗可以拖动，会吸附到屏幕边缘十二个位置之一。
 
-<p align="center"><img src="assets/shots/plate-open-text-light.png" alt="展开的面板：文字在实心卡片上，有“拷贝”按钮、关闭叉号和下方一排按钮" width="100%"></p>
+<p align="center"><img src="assets/shots/plate-open-text-dark.png" alt="展开的浮窗面板：文字放在实心卡片上，下方是复制按钮、关闭叉号和一排按钮" width="100%"></p>
 
 点一下会展开带文字的面板。有三种关法：叉号、Escape，以及点在按钮以外的地方。
 

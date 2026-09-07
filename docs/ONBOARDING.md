@@ -93,19 +93,19 @@ Every surface here was captured from the live app by an instrument: `iriz --capt
 
 ### The plate
 
-<p align="center"><img src="assets/shots/plate-resting-light.png" alt="A small glass drop at the bottom of the screen with a thin green line inside" width="45%"></p>
+<p align="center"><img src="assets/shots/plate-resting-dark.png" alt="A small glass drop at the bottom of the screen with a thin green line inside and a soft glow around its edge" width="45%"></p>
 
 This is how it looks while you are silent. The drop floats above any window and does nothing.
 
-<p align="center"><img src="assets/shots/plate-listening-light.png" alt="The plate while recording: a green sound wave runs inside the glass" width="70%"></p>
+<p align="center"><img src="assets/shots/plate-listening-dark.png" alt="The plate while recording: a wide capsule with a green sound wave running inside the glass" width="70%"></p>
 
 And this is how it looks while you talk. The wave inside the glass is the answer to «can it hear me».
 
-<p align="center"><img src="assets/shots/plate-hover-light.png" alt="The plate opened into a row of six round buttons: microphone, prompt, translate, RU, history, settings" width="100%"></p>
+<p align="center"><img src="assets/shots/plate-hover-dark.png" alt="The plate opened into a row of six round buttons: microphone, prompt, translate, RU, history, settings" width="100%"></p>
 
 Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. You can drag the plate; it snaps to one of twelve spots along the edges of the screen.
 
-<p align="center"><img src="assets/shots/plate-open-text-light.png" alt="The expanded panel: text on a solid card, a Copy button, a close cross and a row of buttons below" width="100%"></p>
+<p align="center"><img src="assets/shots/plate-open-text-dark.png" alt="The expanded panel: text on a solid card, a Copy button, a close cross and a row of buttons below" width="100%"></p>
 
 A click opens the panel with the text. There are three ways out: the cross, Escape, and a click past the buttons.
 

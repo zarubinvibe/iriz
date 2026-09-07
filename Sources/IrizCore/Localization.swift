@@ -31,6 +31,16 @@ public enum IrizLanguage: String, CaseIterable, Sendable {
         }
     }
 
+    /// Локаль для дат и чисел. Отдельно от папки перевода: папка отвечает за
+    /// таблицу строк, локаль - за то, как названы месяцы и разделены разряды.
+    public var localeIdentifier: String {
+        switch self {
+        case .auto, .ru: return "ru_RU"
+        case .en: return "en_US"
+        case .zh: return "zh_Hans_CN"
+        }
+    }
+
     /// Имя языка НА НЕМ САМОМ. Человек, открывший список на незнакомом языке,
     /// должен узнать свой: «English» ищут глазами, а не переводом.
     public var ownName: String {

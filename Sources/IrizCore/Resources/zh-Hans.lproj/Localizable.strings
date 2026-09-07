@@ -280,3 +280,18 @@
 "appearance.dark" = "深色";
 "settings.gotovyeSvody" = "现成的规则集：";
 "settings.svodPodstavlenPravte" = "规则集已填入。按你的需要改，然后点“存储”。";
+
+"history.charsShort" = "字符";
+"rescue.title" = "文字没有进入输入框";
+"rescue.bothFailed" = "两种方式都没成功：剪贴板不行，直接输入也不行。";
+"rescue.notTaken" = "粘贴已经发出，可输入框没有接住。文字还在，就在这里。";
+"rescue.notObservable" = "文字是直接输入的，没有办法确认它到了没有。";
+"rescue.unknownTarget" = "不知道该粘到哪里：我们不记录是哪个程序。请把文字拷走。";
+"rescue.focusLost" = "焦点没有回到输入框，粘贴无处可去。请把文字拷走。";
+"rescue.notDelivered" = "输入框又一次没有接受粘贴。请拷走，然后手动粘贴。";
+
+"mode.fixing" = "自动修正";
+"mode.shadow" = "只统计";
+"mode.paused" = "暂停";
+
+"history.windowTitle" = "口述记录";

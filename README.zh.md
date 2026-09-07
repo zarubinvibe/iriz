@@ -49,7 +49,7 @@
 
 它还会别的。它能修好用错键盘布局打出来的句子。粘贴之后你改了一个词，它会问要不要记住这个替换。它会去掉话里的停顿和重复。它能把会议或庭审录音按说话人分开，并在音频旁边放上写好的纪要。
 
-![会议：把录音拖进来，纪要会放在旁边](docs/assets/screens/page-meetings.png)
+![会议：把录音拖进来，纪要会放在旁边](docs/assets/shots/page-meetings.png)
 
 ## 它解决什么问题
 
@@ -71,15 +71,15 @@
 
 这段时间里，屏幕下方一直有一颗玻璃水滴。你不说话时它很小。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。
 
-![录音中的浮窗：玻璃里的声波](docs/assets/shots/plate-listening-light.png)
+![录音中的浮窗：玻璃里的声波](docs/assets/shots/plate-listening-dark.png)
 
 把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换，不用专门去设置里找。
 
-![鼠标下的浮窗：一排六个按钮](docs/assets/shots/plate-hover-light.png)
+![鼠标下的浮窗：一排六个按钮](docs/assets/shots/plate-hover-dark.png)
 
 如果没能粘贴上，什么也不会丢：同一个浮窗会展开成面板，文字从那里拿走。
 
-![口述设置：在哪里清理口语](docs/assets/screens/page-dictation.png)
+![口述设置：在哪里清理口语](docs/assets/shots/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 

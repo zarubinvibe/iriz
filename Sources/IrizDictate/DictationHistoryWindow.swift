@@ -727,7 +727,7 @@ struct DictationHistoryView: View {
                 Button(L("history.copy", "Скопировать")) { model.onCopyRescue?() }
                     .accessibilityLabel(L("history.copyHint", "Скопировать этот текст"))
                 Spacer()
-                Text("\(rescue.text.count) симв.")
+                Text("\(rescue.text.count) \(L("history.charsShort", "симв."))")
                     .font(.system(size: 11))
                     .foregroundStyle(IRIZ_SUBTLE)
             }
@@ -760,7 +760,7 @@ struct DictationHistoryView: View {
                 .fill(Color(nsColor: DICTATION_HUD_WAVE_GREEN))
                 .frame(width: 7, height: 7)
                 .accessibilityHidden(true)
-            Text("\(IRIZ_NAME) · надиктовки")
+            Text("\(IRIZ_NAME) · \(L("history.windowTitle", "надиктовки"))")
                 .font(.system(size: 13, weight: .semibold))
             Spacer(minLength: 8)
             Text("\(model.entries.count)")
@@ -867,10 +867,14 @@ struct DictationHistoryView: View {
             HStack(spacing: 6) {
                 Text(dictationHistoryTimeLabel(entry.label))
                 Text("·")
-                Text("\(entry.displayText.count) симв.")
+                Text("\(entry.displayText.count) \(L("history.charsShort", "симв."))")
             }
             .font(.system(size: 11))
-            .foregroundStyle(isSelected ? AnyShapeStyle(.white.opacity(0.75)) : AnyShapeStyle(.secondary))
+            // Тот же довод, что строкой выше у заголовка: подсветка теперь
+            // тонированное стекло, а не сплошной акцент. Белый остался здесь
+            // от прежней заливки и на светлой теме читался как пропавшая
+            // строка - дата выделенной надиктовки была белым по светло-серому.
+            .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 10)

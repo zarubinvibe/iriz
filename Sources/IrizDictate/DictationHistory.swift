@@ -148,13 +148,22 @@ public func dictationHistoryPreview(_ text: String,
 /// имя как есть: соврать про время записи нельзя, а найти её по имени
 /// каталога владелец сможет.
 public func dictationHistoryTimeLabel(_ label: String,
-                               locale: Locale = Locale(identifier: "ru_RU"),
+                               locale: Locale? = nil,
                                timeZone: TimeZone = .current) -> String {
     guard let date = dictationHistoryDate(label) else { return label }
     let out = DateFormatter()
-    out.locale = locale
+    // Язык интерфейса, а не прибитый ru_RU. Даты оставались русскими в
+    // китайском окне: «3 сентября, 10:20» посреди 字符 и 拷贝. Подставленная
+    // локаль остаётся доводом для тестов - они проверяют формат, а не язык.
+    let lokal = locale ?? Locale(identifier: irizCurrentLanguage().localeIdentifier)
+    out.locale = lokal
     out.timeZone = timeZone
-    out.dateFormat = "d MMMM, HH:mm"
+    // Шаблон, а не жёсткий порядок. «d MMMM, HH:mm» - русский порядок слов, и
+    // по-китайски выходило «3 九月, 10:20» вместо «9月3日 10:20». Шаблон просит
+    // у системы те же части даты в порядке, принятом у языка.
+    out.dateFormat = DateFormatter.dateFormat(fromTemplate: "dMMMM HH:mm",
+                                              options: 0,
+                                              locale: lokal) ?? "d MMMM, HH:mm"
     return out.string(from: date)
 }
 
