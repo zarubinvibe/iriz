@@ -166,6 +166,6 @@ private struct KeyCap: View {
             }
             .offset(y: active ? 1 : 0)
             .animation(irizAnimation(.irizQuick), value: active)
-            .accessibilityLabel("Клавиша диктовки: \(label)")
+            .accessibilityLabel(Lf("firstrun.dictationKey.a11y", "Клавиша диктовки: %@", label))
     }
 }

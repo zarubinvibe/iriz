@@ -42,3 +42,20 @@ struct LocalizationTests {
         #expect(IrizLanguage.zh.ownName == "简体中文")
     }
 }
+
+@Suite("Подстановка в переводе")
+struct LocalizationFormatTests {
+    @Test("оригинал получает доводы, когда перевода нет")
+    func originalTakesArguments() {
+        setIrizLanguageChoice(.ru)
+        #expect(Lf("нет.такого.ключа", "Пример %d", 2) == "Пример 2")
+        #expect(Lf("нет.такого.ключа", "Найден: %@", "/usr/bin/codex") == "Найден: /usr/bin/codex")
+    }
+
+    @Test("порядок доводов задаётся переводом, а не кодом")
+    func translationDecidesOrder() {
+        // Ровно ради этого в образце разрешён номер довода: у языка свой порядок
+        // частей, и код о нём знать не обязан.
+        #expect(String(format: "%2$@ · %1$@", "один", "два") == "два · один")
+    }
+}

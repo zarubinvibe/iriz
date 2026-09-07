@@ -1,5 +1,6 @@
 // Основано на SuperDictate (MIT, © 2026 Richard Courtman), строки 3865–4150.
 import AppKit
+import IrizCore
 import CoreGraphics
 import IrizDictate
 
@@ -55,12 +56,12 @@ public final class HotkeyRecorderController: NSObject, NSWindowDelegate {
         let title = NSTextField(labelWithString: actionTitle)
         title.font = .systemFont(ofSize: NSFont.systemFontSize, weight: .semibold)
         title.alignment = .center
-        title.setAccessibilityLabel("Действие: \(actionTitle)")
+        title.setAccessibilityLabel(Lf("keys.action.a11y", "Действие: %@", actionTitle))
 
         let prompt = NSTextField(labelWithString: "Нажмите нужное сочетание")
         prompt.font = .systemFont(ofSize: 18, weight: .medium)
         prompt.alignment = .center
-        prompt.setAccessibilityLabel("Нажмите нужное сочетание клавиш")
+        prompt.setAccessibilityLabel(L("keys.pressCombination.a11y", "Нажмите нужное сочетание клавиш"))
 
         let hint = NSTextField(labelWithString: "Escape отменяет запись")
         hint.textColor = .secondaryLabelColor
@@ -68,7 +69,7 @@ public final class HotkeyRecorderController: NSObject, NSWindowDelegate {
 
         let cancel = NSButton(title: "Отмена", target: self, action: #selector(cancelRecording))
         cancel.keyEquivalent = "\u{1b}"
-        cancel.setAccessibilityLabel("Отменить запись сочетания")
+        cancel.setAccessibilityLabel(L("keys.cancelRecording.a11y", "Отменить запись сочетания"))
 
         let stack = NSStackView(views: [title, prompt, hint, cancel])
         stack.orientation = .vertical

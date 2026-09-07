@@ -777,7 +777,7 @@ struct DictationHistoryView: View {
         .padding(.top, 12)
         .padding(.bottom, 2)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(IRIZ_NAME), надиктовок \(model.entries.count)")
+        .accessibilityLabel(Lf("history.window.a11y", "%@, надиктовок %d", IRIZ_NAME, model.entries.count))
     }
 
     private var searchRow: some View {

@@ -7,6 +7,7 @@
 import IrizDictate
 import IrizSettings
 import SwiftUI
+import IrizCore
 
 struct FirstRunTranslateTrial: View {
     @ObservedObject var model: FirstRunModel
@@ -71,6 +72,6 @@ private struct KeyCapLabel: View {
                             .strokeBorder(Color.primary.opacity(0.16), lineWidth: 1)
                     }
             }
-            .accessibilityLabel("Клавиша перевода: \(label)")
+            .accessibilityLabel(Lf("firstrun.translateKey.a11y", "Клавиша перевода: %@", label))
     }
 }

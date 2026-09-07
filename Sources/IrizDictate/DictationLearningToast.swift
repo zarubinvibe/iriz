@@ -82,7 +82,7 @@ struct DictationLearningToastView: View {
     var body: some View {
         HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Поправили после вставки")
+                Text(L("learning.toast.title", "Поправили после вставки"))
                     .font(.system(size: 11))
                     .foregroundStyle(IRIZ_SUBTLE)
                 ForEach(pairs, id: \.heard) { pair in
@@ -141,7 +141,7 @@ struct DictationLearningToastClose: View {
             .contentShape(Circle())
         }
         .buttonStyle(IrizPressStyle())
-        .accessibilityLabel("Закрыть")
+        .accessibilityLabel(L("common.close", "Закрыть"))
     }
 }
 

@@ -244,7 +244,7 @@ public struct IrizSettingsView: View {
                !message.contains(L("settings.konflikt", "Конфликт")), !message.contains("macOS") {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-                    .accessibilityLabel("Ошибка настроек: \(message)")
+                    .accessibilityLabel(Lf("settings.error.a11y", "Ошибка настроек: %@", message))
             } else if let statusMessage {
                 Text(statusMessage)
                     .foregroundStyle(IRIZ_SUBTLE)
@@ -404,13 +404,13 @@ public struct IrizSettingsView: View {
             Label(model.agentDestinationTitle,
                   systemImage: model.agentKeepsDataLocal ? "lock.fill" : "arrow.up.right.circle.fill")
                 .foregroundStyle(model.agentKeepsDataLocal ? Color.green : Color.orange)
-                .accessibilityLabel("Куда уходят данные: \(model.agentDestinationTitle)")
+                .accessibilityLabel(Lf("settings.dataDestination.a11y", "Куда уходят данные: %@", model.agentDestinationTitle))
 
             if let note = model.agentAdapter.configurationNote {
                 Label(note, systemImage: "exclamationmark.circle")
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Важно про этого агента: \(note)")
+                    .accessibilityLabel(Lf("settings.agentNote.a11y", "Важно про этого агента: %@", note))
             }
 
             LabeledContent(L("settings.putKCli", "Путь к CLI")) {
@@ -422,10 +422,10 @@ public struct IrizSettingsView: View {
             }
 
             if let path = model.detectedAgentPath {
-                Label("Найден: \(path)", systemImage: "checkmark.circle.fill")
+                Label(Lf("settings.agentFound", "Найден: %@", path), systemImage: "checkmark.circle.fill")
                     .foregroundStyle(IRIZ_SUBTLE)
                     .textSelection(.enabled)
-                    .accessibilityLabel("Агент найден. \(path)")
+                    .accessibilityLabel(Lf("settings.agentFound.a11y", "Агент найден. %@", path))
             } else {
                 Label(L("settings.neNayden", "Не найден"), systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(model.promptModeEnabled ? Color.red : Color.secondary)
@@ -506,8 +506,9 @@ public struct IrizSettingsView: View {
                         .font(.system(.body))
                         .frame(minHeight: 72)
                         .accessibilityLabel(L("settings.svoiInstrukciiDlyaPrompt", "Свои инструкции для промпт-режима"))
-                    Text("До \(PROMPT_GUIDANCE_INSTRUCTIONS_MAX) символов. Это предпочтение по ФОРМЕ, "
-                         + "а не право выдумывать факты: запреты контракта сильнее.")
+                    Text(Lf("prompt.instructionsLimit",
+                             "До %d символов. Это предпочтение по ФОРМЕ, а не право выдумывать факты: запреты контракта сильнее.",
+                             PROMPT_GUIDANCE_INSTRUCTIONS_MAX))
                         .font(.footnote)
                         .foregroundStyle(IRIZ_SUBTLE)
 
@@ -535,7 +536,7 @@ public struct IrizSettingsView: View {
                 ForEach(Array(model.promptGuidanceExamples.indices), id: \.self) { index in
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 8) {
-                            Text("Пример \(index + 1)")
+                            Text(Lf("prompt.example", "Пример %d", index + 1))
                                 .font(.callout)
                                 .foregroundStyle(IRIZ_SUBTLE)
                             Spacer(minLength: 8)
@@ -545,14 +546,14 @@ public struct IrizSettingsView: View {
                                 Image(systemName: "trash")
                             }
                             .buttonStyle(.borderless)
-                            .accessibilityLabel("Удалить пример \(index + 1)")
+                            .accessibilityLabel(Lf("prompt.example.delete.a11y", "Удалить пример %d", index + 1))
                         }
                         TextField(L("settings.kakSkazanoVsluh", "Как сказано вслух"), text: promptExampleSpoken(at: index))
                             .labelsHidden()
-                            .accessibilityLabel("Пример \(index + 1): как сказано вслух")
+                            .accessibilityLabel(Lf("prompt.example.spoken.a11y", "Пример %d: как сказано вслух", index + 1))
                         TextField(L("settings.kakoyPromptNuzhen", "Какой промпт нужен"), text: promptExampleWanted(at: index))
                             .labelsHidden()
-                            .accessibilityLabel("Пример \(index + 1): какой промпт нужен")
+                            .accessibilityLabel(Lf("prompt.example.wanted.a11y", "Пример %d: какой промпт нужен", index + 1))
                     }
                 }
 
@@ -562,7 +563,7 @@ public struct IrizSettingsView: View {
                     }
                     .accessibilityLabel(L("settings.dobavitPrimerDlyaPrompt", "Добавить пример для промпт-режима"))
                 } else {
-                    Text("Примеров хватит: больше \(PROMPT_GUIDANCE_EXAMPLES_MAX) уже не учат форме, а диктуют содержание.")
+                    Text(Lf("prompt.examplesEnough", "Примеров хватит: больше %d уже не учат форме, а диктуют содержание.", PROMPT_GUIDANCE_EXAMPLES_MAX))
                         .font(.footnote)
                         .foregroundStyle(IRIZ_SUBTLE)
                 }
@@ -612,7 +613,7 @@ public struct IrizSettingsView: View {
                     }
                     .labelsHidden()
                     .frame(width: 170)
-                    .accessibilityLabel("Профиль для приложения \(applicationTitle(model.appProfiles[index].bundleID))")
+                    .accessibilityLabel(Lf("prompt.appProfile.a11y", "Профиль для приложения %@", applicationTitle(model.appProfiles[index].bundleID)))
                     Button(role: .destructive) {
                         appProfileMessage = nil
                         model.removeAppProfile(at: index)
@@ -620,7 +621,7 @@ public struct IrizSettingsView: View {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Убрать приложение \(applicationTitle(model.appProfiles[index].bundleID)) из списка")
+                    .accessibilityLabel(Lf("prompt.appProfile.remove.a11y", "Убрать приложение %@ из списка", applicationTitle(model.appProfiles[index].bundleID)))
                 }
             }
 
@@ -637,7 +638,7 @@ public struct IrizSettingsView: View {
             }
 
             settingsNote {
-                Text("Диктуете в редактор кода — промпт собирается для Codex, диктуете в почту — универсальный. \(IRIZ_NAME) смотрит только на то, какое приложение сейчас спереди: ни окно, ни поле, ни текст чужой программы не читаются. Приложение спрашивается один раз, в момент нажатия, и сразу забывается — на диск и в журнал уходит выбранный профиль, а не имя программы. Приложений, которых нет в списке, это не касается: им достаётся профиль по умолчанию.")
+                Text(Lf("prompt.appProfiles.explainer", "Диктуете в редактор кода — промпт собирается для Codex, диктуете в почту — универсальный. %@ смотрит только на то, какое приложение сейчас спереди: ни окно, ни поле, ни текст чужой программы не читаются. Приложение спрашивается один раз, в момент нажатия, и сразу забывается — на диск и в журнал уходит выбранный профиль, а не имя программы. Приложений, которых нет в списке, это не касается: им достаётся профиль по умолчанию.", IRIZ_NAME))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
                     .accessibilityLabel(L("settings.profilVybiraetsyaPoPrilozheniyu", "Профиль выбирается по приложению, которое спереди в момент нажатия. Окно, поле и текст чужой программы не читаются. Приложение спрашивается один раз и сразу забывается: на диск и в журнал уходит профиль, а не имя программы. Приложениям вне списка достаётся профиль по умолчанию"))
@@ -783,7 +784,7 @@ public struct IrizSettingsView: View {
                     // разной длины. Кромка - это и есть то, что глаз читает
                     // как «сделано аккуратно».
                     .frame(width: HOTKEY_BUTTON_WIDTH)
-                    .accessibilityLabel("\(action.title): \(hotkeyLabel(action)). Записать новое сочетание")
+                    .accessibilityLabel(Lf("keys.row.a11y", "%@: %@. Записать новое сочетание", action.title, hotkeyLabel(action)))
                 }
             }
 
@@ -791,7 +792,7 @@ public struct IrizSettingsView: View {
                message.contains(L("settings.konflikt", "Конфликт")) || message.contains("macOS") || message.contains(L("settings.raskladka", "раскладка")) {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
-                    .accessibilityLabel("Ошибка сочетаний: \(message)")
+                    .accessibilityLabel(Lf("keys.error.a11y", "Ошибка сочетаний: %@", message))
             }
 
             // Две сноски подряд были про одно и то же - когда сочетание
@@ -823,7 +824,7 @@ public struct IrizSettingsView: View {
             Text(model.layoutMode.explanation)
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
-                .accessibilityLabel("Что делает режим \(model.layoutMode.title): \(model.layoutMode.explanation)")
+                .accessibilityLabel(Lf("layout.mode.a11y", "Что делает режим %@: %@", model.layoutMode.title, model.layoutMode.explanation))
         } header: {
             sectionHeader(.layout)
         }
@@ -860,7 +861,7 @@ public struct IrizSettingsView: View {
                 Label(warning, systemImage: "exclamationmark.triangle.fill")
                     .font(.footnote)
                     .foregroundStyle(.orange)
-                    .accessibilityLabel("Предупреждение: \(warning)")
+                    .accessibilityLabel(Lf("common.warning.a11y", "Предупреждение: %@", warning))
             }
 
             Picker(L("settings.posleVstavki", "После вставки"), selection: $model.pasteSuffix) {
@@ -872,7 +873,7 @@ public struct IrizSettingsView: View {
 
             Toggle(L("settings.zapuskatPriVhodeV", "Запускать при входе в систему"), isOn: $model.launchAtLogin)
                 .toggleStyle(.switch)
-                .accessibilityLabel("Запускать \(IRIZ_NAME) при входе в систему")
+                .accessibilityLabel(Lf("settings.launchAtLogin.a11y", "Запускать %@ при входе в систему", IRIZ_NAME))
 
             Toggle(L("settings.pokazyvatOknoEsliTekst", "Показывать окно, если текст никуда не вставился"),
                    isOn: $model.rescueWindowEnabled)
@@ -880,10 +881,10 @@ public struct IrizSettingsView: View {
                 .accessibilityLabel(L("settings.pokazyvatOknoSTekstom", "Показывать окно с текстом, когда вставка не удалась"))
 
             settingsNote {
-                Text("Вставка не дошла до поля — \(IRIZ_NAME) поднимает окно с готовым текстом: скопировать или вставить ещё раз, Esc — закрыть. Когда сработал запасной прямой ввод, окна не будет: там текст, скорее всего, уже в поле, и предлагать вставить его второй раз опаснее, чем промолчать.")
+                Text(Lf("settings.rescue.explainer", "Вставка не дошла до поля — %@ поднимает окно с готовым текстом: скопировать или вставить ещё раз, Esc — закрыть. Когда сработал запасной прямой ввод, окна не будет: там текст, скорее всего, уже в поле, и предлагать вставить его второй раз опаснее, чем промолчать.", IRIZ_NAME))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
-                    .accessibilityLabel("Если вставка не дошла до поля, \(IRIZ_NAME) показывает окно с готовым текстом: скопировать или вставить ещё раз, Esc закрывает. При запасном прямом вводе окно не поднимается: текст скорее всего уже в поле")
+                    .accessibilityLabel(Lf("settings.rescue.explainer.a11y", "Если вставка не дошла до поля, %@ показывает окно с готовым текстом: скопировать или вставить ещё раз, Esc закрывает. При запасном прямом вводе окно не поднимается: текст скорее всего уже в поле", IRIZ_NAME))
             }
         } header: {
             sectionHeader(.behavior)
@@ -934,20 +935,20 @@ public struct IrizSettingsView: View {
                 HStack(spacing: 8) {
                     TextField(L("settings.kakRaspoznalos", "Как распозналось"), text: correctionSource(at: index))
                         .labelsHidden()
-                        .accessibilityLabel("Как распозналось, замена \(index + 1)")
+                        .accessibilityLabel(Lf("dictionary.heard.a11y", "Как распозналось, замена %d", index + 1))
                     Image(systemName: "arrow.right")
                         .foregroundStyle(IRIZ_SUBTLE)
                         .accessibilityHidden(true)
                     TextField(L("settings.naChtoMenyat", "На что менять"), text: correctionReplacement(at: index))
                         .labelsHidden()
-                        .accessibilityLabel("На что менять, замена \(index + 1)")
+                        .accessibilityLabel(Lf("dictionary.replacement.a11y", "На что менять, замена %d", index + 1))
                     Button(role: .destructive) {
                         model.removeCorrection(at: index)
                     } label: {
                         Image(systemName: "trash")
                     }
                     .buttonStyle(.borderless)
-                    .accessibilityLabel("Удалить замену \(index + 1)")
+                    .accessibilityLabel(Lf("dictionary.delete.a11y", "Удалить замену %d", index + 1))
                 }
             }
 
@@ -977,18 +978,18 @@ public struct IrizSettingsView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         TextField(L("settings.chtoProiznositsya", "Что произносится"), text: snippetTrigger(at: index))
-                            .accessibilityLabel("Фраза заготовки \(index + 1)")
+                            .accessibilityLabel(Lf("snippets.phrase.a11y", "Фраза заготовки %d", index + 1))
                         Button(role: .destructive) {
                             model.removeSnippet(at: index)
                         } label: {
                             Image(systemName: "trash")
                         }
                         .buttonStyle(.borderless)
-                        .accessibilityLabel("Удалить заготовку \(index + 1)")
+                        .accessibilityLabel(Lf("snippets.delete.a11y", "Удалить заготовку %d", index + 1))
                     }
                     TextEditor(text: snippetBody(at: index))
                         .frame(minHeight: 72)
-                        .accessibilityLabel("Текст заготовки \(index + 1)")
+                        .accessibilityLabel(Lf("snippets.text.a11y", "Текст заготовки %d", index + 1))
                 }
                 .padding(.vertical, 2)
             }

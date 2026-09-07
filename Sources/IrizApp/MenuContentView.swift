@@ -223,7 +223,7 @@ struct MenuContentView: View {
                 .font(.system(size: 11))
                 .foregroundStyle(IRIZ_SUBTLE)
                 .padding(.leading, 18)
-                .accessibilityLabel("Промпт-режим включён, \(promptDestinationTitle)")
+                .accessibilityLabel(Lf("menu.promptMode.a11y", "Промпт-режим включён, %@", promptDestinationTitle))
         }
 
         // Окно истории — кликом, а не только по памяти о клавише. Пока строки

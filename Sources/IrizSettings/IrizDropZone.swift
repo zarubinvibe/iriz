@@ -186,7 +186,7 @@ public struct IrizDropRow: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(IRIZ_SUBTLE)
-            .accessibilityLabel("Убрать \(item.url.lastPathComponent) из очереди")
+            .accessibilityLabel(Lf("files.removeFromQueue.a11y", "Убрать %@ из очереди", item.url.lastPathComponent))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

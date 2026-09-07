@@ -19,7 +19,12 @@ TABLICY = {"en": "Sources/IrizCore/Resources/en.lproj/Localizable.strings",
 # Вызов пишется в одну или несколько строк, оригинал может собираться из кусков
 # через +. Забирать только первый кусок значило бы отдать переводчику половину
 # фразы, поэтому склеиваем все.
-VYZOV = re.compile(r'\bL\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*(?:\+\s*)?)+)\)', re.S)
+# `Lf` собирается наравне с `L`: у неё после образца идут доводы подстановки,
+# и закрывающей скобки сразу за строками нет. Пока сюда смотрел только `L`,
+# тридцать четыре ключа с подстановкой не проверялись НИКАК - ворота молчали,
+# а перевода не было. Закрывающая скобка из образца убрана: цепочка строк
+# кончается там, где кончаются строки, и этого достаточно.
+VYZOV = re.compile(r'\bLf?\(\s*"((?:[^"\\]|\\.)*)"\s*,\s*((?:"(?:[^"\\]|\\.)*"\s*(?:\+\s*)?)+)', re.S)
 KUSOK = re.compile(r'"((?:[^"\\]|\\.)*)"')
 
 
@@ -65,6 +70,8 @@ def selftest():
     static let a = L("k.one", "Привет")
     let b = L("k.two", "Первая часть "
         + "и вторая")
+    let c = Lf("k.three", "Пример %d", index + 1)
+    let d = Lf("k.four", "Убрать %@ из списка", applicationTitle(profile.bundleID))
     '''
     pary = dict(sobrat(obrazec))
     otkazy = []
@@ -72,11 +79,15 @@ def selftest():
         otkazy.append("простая строка не разобралась")
     if pary.get("k.two") != "Первая часть и вторая":
         otkazy.append("склейка через + не собралась: " + repr(pary.get("k.two")))
+    if pary.get("k.three") != "Пример %d":
+        otkazy.append("Lf с числом не разобралась: " + repr(pary.get("k.three")))
+    if pary.get("k.four") != "Убрать %@ из списка":
+        otkazy.append("Lf со скобками в доводе не разобралась: " + repr(pary.get("k.four")))
     for o in otkazy:
         print("ОТКАЗ " + o, file=sys.stderr)
     if otkazy:
         return 1
-    print("collect_strings: разбор сошелся на 2 случаях")
+    print("collect_strings: разбор сошелся на 4 случаях")
     return 0
 
 

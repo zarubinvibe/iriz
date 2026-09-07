@@ -113,6 +113,16 @@ func captureWindowLive(_ window: NSWindow, kind: IrizBackdrop, dark: Bool, to ur
     window.setFrameOrigin(origin)
     let frame = window.frame
     let backdrop = makeBackdropWindow(kind: kind, frame: frame.insetBy(dx: -160, dy: -160), dark: dark)
+    // Чужие окна приложения на время кадра уходят. Область снимка - кромка в
+    // кромку по окну, и всё, что нарисовано поверх этой области, попадает в
+    // кадр. Замер 07.09.2026: во всех трёх кадрах настроек в одной и той же
+    // точке снизу торчал синий бок чужого окна.
+    let spryatannye = NSApp.windows.filter {
+        $0 !== window && $0 !== backdrop && $0.isVisible
+    }
+    for chuzhoe in spryatannye { chuzhoe.orderOut(nil) }
+    defer { for chuzhoe in spryatannye { chuzhoe.orderFrontRegardless() } }
+
     window.orderFrontRegardless()
     // Стекло сэмплирует подложку своим тактом: снимок сразу после показа ловит
     // окно ещё без материала.
