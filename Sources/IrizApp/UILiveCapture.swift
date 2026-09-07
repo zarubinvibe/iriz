@@ -102,6 +102,9 @@ private func captureBareGlass(kind: IrizBackdrop, dark: Bool, to url: URL) throw
 /// витрине нужны меню, история и знакомство, и каждое - в трёх языках. Копия
 /// этой процедуры на каждое окно разъехалась бы с первой же правкой отступа
 /// подложки.
+/// Поле вокруг окна в кадре витрины.
+let DOC_SHOT_POLE: CGFloat = 96
+
 @MainActor
 func captureWindowLive(_ window: NSWindow, kind: IrizBackdrop, dark: Bool, to url: URL) throws {
     guard let screen = NSScreen.main else {
@@ -127,11 +130,25 @@ func captureWindowLive(_ window: NSWindow, kind: IrizBackdrop, dark: Bool, to ur
     // Стекло сэмплирует подложку своим тактом: снимок сразу после показа ловит
     // окно ещё без материала.
     RunLoop.current.run(until: Date().addingTimeInterval(1.2))
-    let top = screen.frame.maxY - frame.origin.y - frame.height
-    let rect = "\(Int(frame.origin.x)),\(Int(top)),\(Int(frame.width)),\(Int(frame.height))"
+    // Поле вокруг окна. Кадр кромка в кромку читается вырезкой из чужого
+    // экрана: у окна нет ни тени, ни воздуха, и продукт на такой картинке
+    // выглядит скриншотом, а не работающей программой. Поле берётся ИЗ
+    // ПОДЛОЖКИ прибора, поэтому в кадр попадает своя тень окна на своём фоне,
+    // а не кусок рабочего стола.
+    let pole = DOC_SHOT_POLE
+    // `visibleFrame`, а не `frame`: строка меню рисуется НАД обычными окнами,
+    // и поле над высоким окном настроек приводило в кадр чужой рабочий стол
+    // вместе с системным меню.
+    let oblast = frame.insetBy(dx: -pole, dy: -pole)
+        .intersection(backdrop.frame)
+        .intersection(screen.visibleFrame)
+    let top = screen.frame.maxY - oblast.origin.y - oblast.height
+    let rect = "\(Int(oblast.origin.x)),\(Int(top)),\(Int(oblast.width)),\(Int(oblast.height))"
     let process = Process()
     process.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
-    process.arguments = ["-x", "-o", "-R", rect, url.path]
+    // Без `-o`: тень окна рисует система, она и есть та самая естественность.
+    // Флаг её ГЛУШИЛ, и окно лежало на фоне плоской наклейкой.
+    process.arguments = ["-x", "-R", rect, url.path]
     try process.run()
     process.waitUntilExit()
     window.orderOut(nil)

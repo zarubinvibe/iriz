@@ -90,6 +90,9 @@ func captureDocShots(to directory: URL, appDelegate: AppDelegate) throws -> [URL
     return written
 }
 
+/// Скругление углов у безрамочных кадров витрины.
+private let DOC_SHOT_UGOL: CGFloat = 12
+
 /// Кадры плашки для витрины: снимаем весь набор, оставляем нужные четыре.
 @available(macOS 26.0, *)
 @MainActor
@@ -187,6 +190,16 @@ private func makeDocWindow(width: CGFloat, height: CGFloat?, view: AnyView) -> N
     window.backgroundColor = .clear
     window.hasShadow = true
     host.frame = CGRect(origin: .zero, size: size)
+    // Углы режем сами. У настроек рамку рисует система - окно `.titled`
+    // сохраняет системное скругление, - а меню, история и знакомство живут в
+    // безрамочном окне, и в кадре у них выходили прямые углы. В продукте таких
+    // углов нет: панель меню macOS скругляет сама. Прямой угол на кадре -
+    // враньё про продукт, поэтому здесь стоит непрерывное скругление того же
+    // порядка, что даёт система панелям.
+    host.wantsLayer = true
+    host.layer?.cornerRadius = DOC_SHOT_UGOL
+    host.layer?.cornerCurve = .continuous
+    host.layer?.masksToBounds = true
     window.contentView = host
     return window
 }
