@@ -86,3 +86,26 @@ struct PromptUserGuidanceTests {
         #expect(normalized.examples[0].wanted.count == PROMPT_GUIDANCE_EXAMPLE_MAX)
     }
 }
+
+@Suite("промпт: готовые своды правил")
+struct PromptGuidancePresetsTests {
+    /// Свод обязан помещаться в поле. Длиннее предела он не подставится, и
+    /// кнопка станет обещанием без исполнения.
+    @Test func сводыПомещаютсяВПоле() {
+        for preset in PromptGuidancePresets.all {
+            #expect(preset.instructions.count <= PROMPT_GUIDANCE_INSTRUCTIONS_MAX,
+                    "\(preset.id): \(preset.instructions.count) символов")
+            #expect(!preset.instructions.isEmpty)
+        }
+    }
+
+    /// У каждого свода назван ИСТОЧНИК. Свод без источника проверить нечем, а
+    /// «по версии Anthropic» без ссылки — просто чужое имя на нашем тексте.
+    @Test func уКаждогоСводаЕстьИсточник() {
+        for preset in PromptGuidancePresets.all {
+            #expect(preset.source.contains("."), "\(preset.id): источник не назван")
+            #expect(!preset.title.isEmpty)
+        }
+        #expect(Set(PromptGuidancePresets.all.map(\.id)).count == PromptGuidancePresets.all.count)
+    }
+}

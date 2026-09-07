@@ -11,19 +11,33 @@ import IrizDictate
 import SwiftUI
 
 /// Живая плашка. Рисуют те же классы, что рисуют настоящую.
-struct HUDPreview: NSViewRepresentable {
-    var size: DictationHUDSizeChoice
-    var palette: DictationHUDWavePalette
-    var purpose: DictationHUDPreviewPurpose = .dictation
-    var animates: Bool
+///
+/// Открыта наружу: её показывает и окно настроек, и знакомство. Второй копии
+/// внешнего вида в проекте не заводится - именно на таких копиях он четыре раза
+/// расходился с оригиналом.
+public struct HUDPreview: NSViewRepresentable {
+    public var size: DictationHUDSizeChoice
+    public var palette: DictationHUDWavePalette
+    public var purpose: DictationHUDPreviewPurpose = .dictation
+    public var animates: Bool
 
-    func makeNSView(context: Context) -> DictationHUDPreviewView {
+    public init(size: DictationHUDSizeChoice,
+                palette: DictationHUDWavePalette,
+                purpose: DictationHUDPreviewPurpose = .dictation,
+                animates: Bool) {
+        self.size = size
+        self.palette = palette
+        self.purpose = purpose
+        self.animates = animates
+    }
+
+    public func makeNSView(context: Context) -> DictationHUDPreviewView {
         let view = DictationHUDPreviewView(frame: .zero)
         apply(to: view)
         return view
     }
 
-    func updateNSView(_ view: DictationHUDPreviewView, context: Context) {
+    public func updateNSView(_ view: DictationHUDPreviewView, context: Context) {
         apply(to: view)
     }
 
@@ -79,9 +93,20 @@ struct HUDPreviewChoice<Value: Equatable>: View {
             .padding(10)
             .contentShape(RoundedRectangle(cornerRadius: IRIZ_SELECTION_RADIUS,
                                            style: .continuous))
-            // Обводка акцентом радиусом 14 была третьим способом подсветки в
-            // продукте. Канон один: тонированное стекло, которое переезжает.
-            .irizSelected(isSelected, in: hudChoice, group: "hud-preview")
+            // Подсветка живёт ПОЗАДИ плашки, а не поверх неё.
+            //
+            // Прежде стекло выделения накрывало содержимое целиком и красило
+            // саму плашку своим тоном: владелец 07.09.2026 сказал прямо — «сама
+            // плашка тоже подкрашивается тем цветом, который выделен… нужно,
+            // чтобы плашка была выше этого элемента». Плашка обязана
+            // показывать СЕБЯ, иначе выбор размера показывает не то, что
+            // владелец получит на экране.
+            //
+            // Канон подсветки не нарушен: то же тонированное стекло с тем же
+            // `glassEffectID`, оно так же переезжает — просто слоем ниже.
+            .background {
+                Color.clear.irizSelected(isSelected, in: hudChoice, group: "hud-preview")
+            }
         }
         .buttonStyle(IrizPressStyle())
         .accessibilityLabel(title)

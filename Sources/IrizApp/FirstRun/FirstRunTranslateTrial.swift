@@ -28,7 +28,16 @@ struct FirstRunTranslateTrial: View {
                 Button(FirstRunCopy.translateEnable) { model.enableTranslation() }
                     .modifier(FirstRunProminentButton())
             } else {
-                KeyCapLabel(label: model.translationHotkeyLabel)
+                // Клавиша перевода тоже кликается и тоже меняется на месте.
+                Button { model.changeTranslationHotkey() } label: {
+                    KeyCapLabel(label: model.translationHotkeyLabel)
+                }
+                .buttonStyle(.plain)
+                .help(FirstRunCopy.changeKeyHint)
+                .accessibilityLabel(FirstRunCopy.changeKeyHint)
+                Text(FirstRunCopy.changeKeyHint)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
                 Text(FirstRunCopy.translatePressKey)
                     .font(.system(size: 12.5))
                     .foregroundStyle(.secondary)

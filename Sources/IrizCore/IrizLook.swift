@@ -22,23 +22,20 @@ public let IRIZ_SUBTLE = Color.primary.opacity(0.78)
 
 /// Тон выбранной капсулы. Смешанный ЦВЕТ, а не accent с прозрачностью:
 /// `opacity` на стекле схлопывает преломление (правило G04 линтера).
-/// Золото Пантеона #C9A87A. Канон семьи живёт здесь, а не в системе.
+/// Тон выбранной строки: СИСТЕМНЫЙ акцент, разбавленный фоном окна.
 ///
-/// Прежде тон подсветки брался у `NSColor.controlAccentColor` - то есть у
-/// НАСТРОЙКИ macOS. У владельца она синяя, и весь продукт подсвечивал выбор
-/// системным синим: боковик настроек, строки, сегменты меню. Отсюда и жалоба
-/// «сделана как будто бы не по канону» - канон в этом месте зависел от чужого
-/// переключателя и менялся вместе с ним.
-public let IRIZ_FAMILY_GOLD = NSColor(srgbRed: 0.788, green: 0.659, blue: 0.478, alpha: 1)
+/// Пробовали золотом семьи — владелец посмотрел живьём и отказал: «пусть будет
+/// системный, потому что, например, в анбординге на кнопке „Дальше“ системный».
+/// Довод сильнее вкуса: системные кнопки в окне никуда не делись, и второй
+/// акцент рядом с ними читается не каноном, а рассинхроном. Один акцент на
+/// поверхность — тот, который уже стоит на системных элементах.
+///
+/// Замер, из-за которого золото и не прижилось: `blended(0.45)` роняет
+/// насыщенность #C9A87A с 39 % до 20 % и даёт #D9C7AD — то, что владелец
+/// назвал «просто кремовый».
+public let IRIZ_SELECTION_TINT = Color(nsColor: NSColor.controlAccentColor.blended(
+    withFraction: 0.45, of: .windowBackgroundColor) ?? .controlAccentColor)
 
-/// Тон выбранной строки: золото семьи, разбавленное фоном окна. Разбавление
-/// оставлено - сквозь тон обязана просвечивать подложка, иначе строка
-/// перестаёт быть частью поверхности и становится наклейкой.
-public let IRIZ_SELECTION_TINT = Color(nsColor: IRIZ_FAMILY_GOLD.blended(
-    withFraction: 0.45, of: .windowBackgroundColor) ?? IRIZ_FAMILY_GOLD)
-
-/// Радиус подсветки строки. Один на продукт: в окне истории он был 8, в меню
-/// строки меню 5, в превью плашки 14.
 public let IRIZ_SELECTION_RADIUS: CGFloat = 9
 
 // MARK: - Движение
@@ -103,7 +100,7 @@ public struct IrizSelection: ViewModifier {
         } else if selected {
             content.background(
                 RoundedRectangle(cornerRadius: IRIZ_SELECTION_RADIUS, style: .continuous)
-                    .fill(IRIZ_SELECTION_TINT)
+                    .fill(Color.accentColor)
                     .matchedGeometryEffect(id: group, in: namespace)
             )
         } else {

@@ -5,6 +5,7 @@
 // исход щелчка: раздача события подвидам, наличие выхода из раскрытой формы и
 // арифметика середины плашки.
 import AppKit
+import IrizPrompt
 import Testing
 
 @testable import IrizDictate
@@ -80,7 +81,9 @@ private final class ExitSurface: DictationHUDSurface {
     /// Кого зовёт панель, когда текст забрали. Тесту это единственный способ
     /// пройти путь щелчка по панели, не имея мыши.
     var textTaken: (() -> Void)?
+    var hints: [[String]] = []
 
+    func updateHintLines(_ lines: [String]) { hints.append(lines) }
     func present(_ content: DictationHUDContent) { presented.append(content) }
     func dismiss() { dismissCount += 1 }
     func setTranscriptCopiedHandler(_ handler: @escaping () -> Void) { textTaken = handler }
@@ -296,5 +299,64 @@ struct DictationHUDOnScreenTests {
     @Test func безЭкранаКадрНеТрогается() {
         let frame = CGRect(x: -100, y: -100, width: 50, height: 50)
         #expect(dictationHUDOnScreenFrame(frame, visible: nil) == frame)
+    }
+}
+
+@Suite("агент: отказ по лимиту отличается от сбоя запуска")
+struct PromptAgentRefusalTests {
+    /// Живой случай 07.09.2026: перевод молчал, потому что Kimi вернул 403 с
+    /// исчерпанным недельным лимитом. Продукт показывал «агент не сработал» и
+    /// предлагал повторить — попытку, которая не могла удаться.
+    @Test func лимитПровайдераЧитаетсяКакОтказАгента() {
+        let real = "error: failed to run prompt: provider.api_error: 403 You've reached "
+            + "your weekly (7-day) usage limit. Your quota will reset when the current "
+            + "7-day window ends."
+        #expect(promptAgentRefused(stderr: real))
+        #expect(promptFailureKind(for: CodexPromptGeneratorError.nonZeroExit(status: 1, stderr: real))
+                == .agentRefused)
+    }
+
+    /// А обычный сбой остаётся сбоем: класс «отказал агент» не имеет права
+    /// съесть всё подряд, иначе он перестанет что-либо значить.
+    @Test func обычныйСбойНеСтановитсяОтказом() {
+        for stderr in ["dyld: library not loaded", "segmentation fault", ""] {
+            #expect(!promptAgentRefused(stderr: stderr), "«\(stderr)» принят за отказ агента")
+        }
+        #expect(promptFailureKind(for: CodexPromptGeneratorError.nonZeroExit(status: 2, stderr: "boom"))
+                == .launchRuntime)
+    }
+
+    /// В лог уходит КЛАСС, а не текст: в stderr агента может лежать надиктовка.
+    @Test func вЛогНеПопадаетНиБайтаЧужогоТекста() {
+        let secret = "403 usage limit; текст клиента: договор с ООО Ромашка"
+        let label = safePromptFailureLogLabel(
+            for: CodexPromptGeneratorError.nonZeroExit(status: 1, stderr: secret))
+        #expect(label.contains("agent refused"))
+        #expect(!label.contains("Ромашка"))
+        #expect(!label.contains("договор"))
+    }
+}
+
+@Suite("обучение: плашка говорит, что запомнила")
+@MainActor
+struct LearningToastTests {
+    /// Владелец согласился запомнить правку — плашка обязана сказать об этом.
+    /// Молчаливое пополнение словаря, который применяется к КАЖДОЙ следующей
+    /// диктовке, однажды выучит опечатку, и человек не поймёт откуда.
+    @Test func плашкаГоворитОЗапомненнойЗамене() throws {
+        let surface = ExitSurface()
+        let presenter = DictationHUDPresenter(level: { 0 },
+                                              pipelineState: { .ready },
+                                              historyHint: { "" },
+                                              reduceMotion: { true },
+                                              surface: { surface })
+        presenter.prewarm()
+        presenter.learned(pairs: 1)
+        let hint = try #require(surface.hints.last)
+        #expect(hint == ["запомнил замену"])
+        #expect(try #require(surface.presented.last).stage == .inserted)
+
+        presenter.learned(pairs: 3)
+        #expect(try #require(surface.hints.last) == ["запомнил замен: 3"])
     }
 }

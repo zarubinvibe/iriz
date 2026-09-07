@@ -96,6 +96,13 @@ struct FirstRunView: View {
     }
 
     private var footer: some View {
+        // Точки — НАКЛАДКОЙ поверх ряда, а не третьим его элементом.
+        //
+        // Между двумя распорками они вставали в середину ОСТАВШЕГОСЯ места, а
+        // слева «Назад» уже кнопки «Дальше» и на первом шаге отсутствует вовсе.
+        // Значит середина ряда каждый раз другая, и точки съезжали влево.
+        // Владелец 07.09.2026: «они должны быть ровно посередине, то есть
+        // оцентрованы. А так получается, что они как-то слева».
         HStack(spacing: 12) {
             if model.canGoBack {
                 Button(FirstRunCopy.back) { model.goBack() }
@@ -103,12 +110,11 @@ struct FirstRunView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            FirstRunProgress(step: step)
-            Spacer()
             Button(model.isLastStep ? FirstRunCopy.done : FirstRunCopy.next) { model.goNext() }
                 .modifier(FirstRunProminentButton())
                 .keyboardShortcut(.defaultAction)
         }
+        .overlay { FirstRunProgress(step: step) }
     }
 }
 

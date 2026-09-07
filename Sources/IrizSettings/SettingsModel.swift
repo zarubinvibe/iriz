@@ -183,6 +183,8 @@ final class SettingsModel: ObservableObject {
     /// Свои инструкции промпт-режима. Обычная диктовка их не видит.
     /// Размер плашки записи.
     /// Через сколько дней уборка стирает надиктовку. 0 - не стирать никогда.
+    /// Показывать ли на плашке напоминания про клавиши.
+    @Published var hudShowsHints: Bool
     @Published var retentionDays: Int
     @Published var hudSize: DictationHUDSizeChoice
     @Published var promptGuidanceInstructions: String
@@ -257,6 +259,7 @@ final class SettingsModel: ObservableObject {
         corrections = dictationSettings.transcriptCorrections
         snippets = dictationSettings.snippets
         retentionDays = dictationSettings.dictationRetentionDays
+        hudShowsHints = dictationSettings.dictationHUDShowsHints
         hudSize = dictationSettings.dictationHUDSize
         let guidance = dictationSettings.promptUserGuidance
         promptGuidanceInstructions = guidance.instructions
@@ -490,6 +493,9 @@ final class SettingsModel: ObservableObject {
     /// Импорт правит ТОЛЬКО состояние окна. На диск он ложится общей кнопкой
     /// «Сохранить» — тем же путём, что и ручная правка, поэтому импорт можно
     /// отменить, закрыв окно, и он не переживает невалидную форму.
+    /// Файл-шаблон: тот же формат, что у выгрузки, но с примерами внутри.
+    func dictionaryTemplateData() -> Data { DictionaryTransfer.template() }
+
     func importDictionaryData(_ data: Data) throws -> String {
         let document = try DictionaryTransfer.decode(data)
         let outcome = try DictionaryTransfer.merge(document,
@@ -530,6 +536,7 @@ final class SettingsModel: ObservableObject {
         dictationSettings.transcriptCorrections = corrections
         dictationSettings.snippets = snippets
         dictationSettings.dictationRetentionDays = retentionDays
+        dictationSettings.dictationHUDShowsHints = hudShowsHints
         dictationSettings.dictationHUDSize = hudSize
         dictationSettings.promptUserGuidance = PromptUserGuidance(
             instructions: promptGuidanceInstructions,
@@ -553,6 +560,7 @@ final class SettingsModel: ObservableObject {
         corrections = dictationSettings.transcriptCorrections
         snippets = dictationSettings.snippets
         retentionDays = dictationSettings.dictationRetentionDays
+        hudShowsHints = dictationSettings.dictationHUDShowsHints
         hudSize = dictationSettings.dictationHUDSize
         let guidance = dictationSettings.promptUserGuidance
         promptGuidanceInstructions = guidance.instructions

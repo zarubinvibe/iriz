@@ -294,3 +294,28 @@ struct DictionaryTransferMergeTests {
         #expect(стало.appliedSnippetCount == 1)
     }
 }
+
+@Suite("словарь: шаблон для заполнения")
+struct DictionaryTemplateTests {
+    /// Шаблон обязан импортироваться обратно БЕЗ правок. Иначе он не шаблон, а
+    /// картинка формата: человек заполнит его и получит отказ на пороге.
+    @Test func шаблонИмпортируетсяОбратно() throws {
+        let data = DictionaryTransfer.template()
+        let document = try DictionaryTransfer.decode(data)
+        #expect(!document.corrections.isEmpty, "в шаблоне нет ни одного примера замены")
+        #expect(!document.snippets.isEmpty, "в шаблоне нет ни одной заготовки")
+    }
+
+    /// И примеры в нём осмысленные, а не «foo» и «bar»: человек читает шаблон
+    /// как объяснение, что сюда писать.
+    @Test func примерыВШаблонеНастоящие() throws {
+        let document = try DictionaryTransfer.decode(DictionaryTransfer.template())
+        for pair in document.corrections {
+            #expect(!pair.source.isEmpty && !pair.replacement.isEmpty)
+            #expect(pair.source != pair.replacement)
+        }
+        for snippet in document.snippets {
+            #expect(!snippet.trigger.isEmpty && !snippet.body.isEmpty)
+        }
+    }
+}

@@ -1,7 +1,7 @@
 /* iriz 界面，简体中文 */
 
 "firstrun.accessibility.body" = "要把整理好的文字放进邮件或聊天窗口，macOS 需要单独的权限，叫「辅助功能」。";
-"firstrun.accessibility.note" = "没有它，我能把你说的话转成文字，却没地方放。在打开的列表里找到 iriz，把开关打开：这一步系统不让我替你做。";
+"firstrun.accessibility.note" = "没有它，我照样把你的话变成文字，但没地方放。在打开的列表里找到 iriz 并打开开关：系统不让我替你做这件事::只能由人亲手来。";
 "firstrun.accessibility.title" = "需要插入文字的权限";
 "firstrun.agent.body" = "另一个按键不会把你说的话送进输入框，而是交给外部智能体：它把零散的话理成一份任务，再把文字送回来。";
 "firstrun.agent.note" = "到这里，「一切都在你的 Mac 上完成」就结束了：智能体是另一个程序，你说的话会送到那里去。所以这个模式默认关着，除非你自己打开。\n\n我找了找你电脑上已经装好的智能体。也可以先不选，以后在设置里再挑。";
@@ -26,7 +26,7 @@
 "firstrun.microphone.title" = "需要麦克风";
 "firstrun.model.action" = "下载模型";
 "firstrun.model.body" = "语音就在你的 Mac 上识别，不联网。这需要一个模型：500 MB，只下一次。";
-"firstrun.model.note" = "安装包里故意没带它。模型更新得比程序发版还勤，与其一直背着去年的，不如现在就拿新的。\n\n它下载的时候你接着往下走：权限现在就能给。";
+"firstrun.model.note" = "它故意不放在磁盘映像里：模型的更新比 iriz 本身勤。分开放::不然随程序一起来的就是过时的那个。\n\n下载的时候继续往下走：权限现在就能给。";
 "firstrun.model.title" = "下载语音识别";
 "firstrun.modelFailedRetry" = "重试";
 "firstrun.modelReady" = "模型已就位";
@@ -56,10 +56,10 @@
 "firstrun.welcome.note" = "所有处理都在你的 Mac 上完成。声音和文字都不会发到任何地方。";
 "firstrun.welcome.title" = "你说，我来打字";
 "firstrun.whenItBreaks.body" = "文字没插进去？它没丢。提示条会展开把它显示出来，可以从那里复制。";
-"firstrun.whenItBreaks.note" = "有词听错了？在词库里改一下，之后我就会写对。\n\n这个窗口、设置和历史记录都从菜单栏的图标里打开。";
+"firstrun.whenItBreaks.note" = "有个词听错了？直接在文字里改掉就行。我会注意到这处修改，并问你要不要记住：你同意了，之后我就照你的写法来。我不会自己往词典里放任何东西。\n\n按键被别的程序占用了？在设置里点它，设你自己的组合。\n\n这个窗口、设置和历史，都从菜单栏的图标打开。";
 "firstrun.whenItBreaks.title" = "要是出了问题";
-"firstrun.whereItLives.body" = "我没有单独的窗口，程序坞里也别找。我的图标在右上角，时钟旁边。";
-"firstrun.whereItLives.note" = "历史记录、词库和设置都从那里打开。\n\n我会跟着 Mac 一起启动。不需要的话，在设置里关掉。";
+"firstrun.whereItLives.body" = "别在程序坞里找我：我的图标在右上角，时钟旁边。点一下，菜单就打开了。";
+"firstrun.whereItLives.note" = "历史、替换词典、设置和会议录制都从那个菜单打开。那里也能看到我此刻在忙什么。\n\n我会随 Mac 一起启动。不需要就在设置里关掉。";
 "firstrun.whereItLives.title" = "我住在菜单栏里";
 "firstrun.windowTitle" = "认识 iriz";
 "history.cancel" = "取消";
@@ -264,4 +264,19 @@
 "key.right" = "右";
 "firstrun.plate.title" = "浮窗一直在屏幕上";
 "firstrun.plate.body" = "屏幕下方有一颗玻璃小水滴。你不说话时它很小，什么也不做。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。";
-"firstrun.plate.note" = "把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。点一下，会打开带文字的面板。\n\n浮窗可以拖动，它会吸附到屏幕边缘十二个位置之一。展开的面板有三种关法——叉号、Escape，以及点在按钮以外的地方。";
+"firstrun.plate.note" = "把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。点一下，会打开带文字的面板。\n\n浮窗可以拖动，它会吸附到屏幕边缘十二个位置之一。展开的面板有三种关法::叉号、Escape，以及点在按钮以外的地方。";
+"settings.napominaniyaNaPlashke" = "浮窗上的提示";
+"settings.napominaniyaNapominayutKlavishu" = "提示会告诉你结束录音的那个键，以及取消用的 Escape。默认关闭：手指正按着的键不需要再说一遍，而这些字会盖住声波——浮窗存在的意义就是那条波。头几天想稳一点，可以打开。";
+"settings.klikniPoSochetaniyuChtoby" = "点右边的快捷键，然后按下新的组合——它就被记下了。点“存储”后快捷键立即生效。要撤销一次切换，再按一次转换快捷键。";
+"firstrun.changeKeyHint" = "这个键被占用了？点它，设你自己的组合";
+"settings.skachatShablon" = "下载模板";
+"settings.skachatShablonSlovarya" = "下载带示例的词典文件模板";
+"settings.shablonSlovarya" = "词典模板";
+"settings.shablonZapisanZapolnite" = "模板已保存。填好之后，用“导入”按钮回到这里。";
+"settings.temaInterfeysa" = "界面主题";
+"settings.temaMenyaetsyaSrazu" = "主题立即生效，不用重启。这不影响浮窗：它浮在别人的窗口之上，跟随系统。浅色桌面上的深色玻璃会变成别人工作中间的一块黑方块。";
+"appearance.auto" = "跟随系统";
+"appearance.light" = "浅色";
+"appearance.dark" = "深色";
+"settings.gotovyeSvody" = "现成的规则集：";
+"settings.svodPodstavlenPravte" = "规则集已填入。按你的需要改，然后点“存储”。";

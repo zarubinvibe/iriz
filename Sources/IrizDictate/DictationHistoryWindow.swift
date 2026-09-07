@@ -194,12 +194,19 @@ final class DictationHistoryPresenter {
         )
         panel.titleVisibility = .hidden
         panel.titlebarAppearsTransparent = true
-        // Светофор системы прочь. Владелец 06.09.2026: «там старая версия,
-        // нужно осовременить, как мы это сделали с меню». Три кнопки macOS
-        // поверх стеклянной панели - самая заметная деталь, по которой окно
-        // читается чужим: ни у плашки, ни у меню, ни у настроек их нет.
-        // Закрывается окно тем же, чем и раньше: Escape и уход фокуса.
-        for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {
+        // Крестик СИСТЕМНЫЙ, свёрнуть и развернуть спрятаны.
+        //
+        // Решение владельца 07.09.2026: «нет нормальной клавиши закрыть, оно
+        // должно быть такое системное, как в macOS, а не как там сейчас».
+        // Отменяет решение 06.09.2026, которым светофор был снят целиком: тогда
+        // мешали три чужие кнопки, а не сама возможность закрыть окно мышью.
+        // Красный кружок macOS человек находит не глядя - своя иконка в шапке
+        // этого не даёт, сколько её ни рисуй.
+        //
+        // Свёрнуть и развернуть остаются спрятанными: у панели истории нет
+        // ни осмысленного свёрнутого состояния, ни второго размера.
+        panel.standardWindowButton(.closeButton)?.isHidden = false
+        for button in [NSWindow.ButtonType.miniaturizeButton, .zoomButton] {
             panel.standardWindowButton(button)?.isHidden = true
         }
         panel.isMovableByWindowBackground = true
@@ -765,25 +772,6 @@ struct DictationHistoryView: View {
                 .background(
                     Capsule(style: .continuous).fill(Color.primary.opacity(0.08))
                 )
-            // Крестик. Светофор macOS с этого окна снят по канону продукта, и
-            // вместе с ним ушёл единственный ВИДИМЫЙ выход: оставались Escape и
-            // уход фокуса, а о них надо знать. Владелец 06.09.2026: «так и не
-            // сделал кнопочку закрыть в истории расшифровок, которая
-            // открывается через саму плашку».
-            Button(action: { model.onCloseWindow?() }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(IRIZ_SUBTLE)
-                    .frame(width: 18, height: 18)
-                    .background(Circle().fill(Color.primary.opacity(0.08)))
-            }
-            .buttonStyle(.plain)
-            // Escape НЕ вешается сюда: он уже разобран монитором клавиш окна, и
-            // там у него есть старшинство - сначала закрыть вопрос «очистить
-            // всё», и только потом окно. Второй обработчик той же клавиши это
-            // старшинство обошёл бы и закрыл окно прямо из-под вопроса.
-            .help(L("history.close", "Закрыть окно"))
-            .accessibilityLabel(L("history.close", "Закрыть окно"))
         }
         .padding(.horizontal, 16)
         .padding(.top, 12)

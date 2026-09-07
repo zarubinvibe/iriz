@@ -1375,13 +1375,21 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         default:
             bars.heights = levelTrail.heights
         }
-        // Свечение по контуру - метка режима, а не украшение: пока работает
-        // золотая диктовка, стекло обведено золотом семьи. У обычной диктовки
-        // контур не горит вовсе, иначе метка перестаёт что-либо значить.
+        // Свечение по контуру горит ВСЕГДА и тем же цветом, что лента внутри.
+        //
+        // Прежде оно было меткой промпт-режима и у обычной диктовки не горело
+        // вовсе. Цена этой чистоты оказалась выше пользы: на светлом рабочем
+        // столе прозрачное стекло почти не видно, и владелец 07.09.2026 сказал
+        // прямо — «маленькая плашка до раскрытия практически не видна на
+        // светлом режиме… пусть у плашки по контуру будет свечение неоновое,
+        // как у визуализации звука, тоже анимированное, живое».
+        //
+        // Режим при этом различать не перестали: он различается ЦВЕТОМ контура,
+        // а не фактом его наличия. Диктовка тёплая, промпт холодный, обрыв
+        // красный - то же правило, что у ленты, и один цвет на оба.
         if let stack = glassStack as? DictationHUDGlassStack {
-            let glowing = tone == .prompt && dictationHUDWaveGlyph(
-                for: content.stage, purpose: lastPurpose) == .wave
-            stack.modeGlow(color, strength: glowing ? DICTATION_HUD_MODE_GLOW_STRENGTH : 0)
+            stack.modeGlow(color, strength: dictationHUDContourGlowStrength(
+                stage: content.stage, tone: tone))
         }
         // Успех показывает знак, а не огрызок волны в кружке.
         bars.glyph = dictationHUDWaveGlyph(for: content.stage, purpose: lastPurpose)
@@ -1574,18 +1582,29 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         let originY = hintOpensBelow
             ? capsuleScreenFrame.maxY - wanted.height
             : capsuleScreenFrame.minY
-        let frame = dictationHUDOnScreenFrame(
-            CGRect(origin: CGPoint(x: originX, y: originY), size: wanted),
-            visible: showVisibleFrame)
+        // ПОЛЕ ПОД СВЕЧЕНИЕ. Окно шире стекла на кайму со всех сторон.
+        //
+        // Свечение по контуру рисуется НАРУЖУ от стекла, а окно до сих пор было
+        // ровно по стеклу - значит рисовать было некуда, и свет срезало кромкой
+        // окна. Владелец видел это как «плашка обрезанная становится» и
+        // «визуализация ломается»: на кадре прибора у записи горел только левый
+        // бок, остальное отрезано. Поле снимает это по построению.
+        //
+        // Середина плашки от поля не двигается: оно добавляется симметрично, и
+        // `capsuleScreenFrame` остаётся тем, чем был, - правдой о месте.
+        let pad = DICTATION_HUD_GLOW_PAD
+        let padded = CGRect(x: originX - pad, y: originY - pad,
+                            width: wanted.width + pad * 2, height: wanted.height + pad * 2)
+        let frame = dictationHUDOnScreenFrame(padded, visible: showVisibleFrame)
         panel.setFrame(frame, display: display)
         container.frame = CGRect(origin: .zero, size: frame.size)
         // Дальше раскладка идёт от кадра ОКНА, а не от желаемого размера:
         // у края экрана они расходятся, и содержимое поехало бы мимо стекла.
-        let width = frame.width
-        let height = frame.height
+        let width = frame.width - pad * 2
+        let height = frame.height - pad * 2
 
-        let capsuleY = hintOpensBelow ? height - collapsedSize.height : 0
-        capsule.frame = CGRect(x: (width - collapsedSize.width) / 2,
+        let capsuleY = (hintOpensBelow ? height - collapsedSize.height : 0) + pad
+        capsule.frame = CGRect(x: (width - collapsedSize.width) / 2 + pad,
                                y: capsuleY,
                                width: collapsedSize.width,
                                height: collapsedSize.height)
@@ -1667,8 +1686,8 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         } else {
             hintX = (width - hintSize.width) / 2
         }
-        hint.frame = CGRect(x: hintX,
-                            y: hintY,
+        hint.frame = CGRect(x: hintX + pad,
+                            y: hintY + pad,
                             width: hintSize.width,
                             height: hintSize.height)
         hint.isHidden = hintLines.isEmpty || hoverProgress <= 0.001

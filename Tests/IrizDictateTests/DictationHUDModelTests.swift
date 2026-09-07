@@ -546,7 +546,30 @@ struct DictationHUDHintModelTests {
                              triggerMode: mode,
                              hotkeyLabel: "правый ⌘",
                              historyLabel: "правый ⌘ + ⇧",
-                             showsDragHint: drag)
+                             showsDragHint: drag,
+                             // Напоминания заводски выключены (решение владельца
+                             // 07.09.2026). Пробы про СОДЕРЖАНИЕ строк включают
+                             // их явно: они судят, что написано, когда написано.
+                             showsReminders: true)
+    }
+
+    /// А выключенные напоминания молчат на любой стадии. Отдельной пробой,
+    /// потому что это и есть заводское поведение: плашка показывает волну, а не
+    /// называет клавишу, которую человек держит под пальцем.
+    @Test func выключенныеНапоминанияМолчатВезде() {
+        let stages: [DictationHUDStage] = [
+            .listening(.dictation), .recognizing, .buildingPrompt, .inserted,
+            .notDelivered(.insertionFailed), .recognitionTimedOut,
+        ]
+        for stage in stages {
+            let quiet = dictationHUDHintLines(stage: stage,
+                                              triggerMode: .toggle,
+                                              hotkeyLabel: "правый ⌘",
+                                              historyLabel: "правый ⌘ + ⇧",
+                                              showsDragHint: true,
+                                              showsReminders: false)
+            #expect(quiet.isEmpty, "плашка заговорила на стадии \(stage) при выключенных напоминаниях")
+        }
     }
 
     @Test func записьОбъясняетToggleИHoldБезЛожногоДействияМышью() {
@@ -591,12 +614,12 @@ struct DictationHUDHintModelTests {
                                            triggerMode: .toggle,
                                            hotkeyLabel: "",
                                            historyLabel: "",
-                                           showsDragHint: false)
+                                           showsDragHint: false, showsReminders: true)
         let failed = dictationHUDHintLines(stage: .notDelivered(.insertionFailed),
                                            triggerMode: .toggle,
                                            hotkeyLabel: "",
                                            historyLabel: "",
-                                           showsDragHint: false)
+                                           showsDragHint: false, showsReminders: true)
         #expect(toggle == ["закончить запись", "Esc — отменить"])
         #expect(failed == ["текст не вставился", "запись в истории"])
     }

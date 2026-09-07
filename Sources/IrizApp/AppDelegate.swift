@@ -35,6 +35,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if captureUILiveIfRequested() { return }
         if probeGlassIfRequested() { return }
         if measureHUDFirstShowIfRequested() { return }
+        // Тема — ПЕРЕД первым окном: применённая после, она даёт вспышку чужого
+        // вида в момент, когда владелец смотрит на экран.
+        applyIrizAppearance()
+
         exportGlyphSheetIfRequested()
         showFirstRunIfRequested()
         showSettingsIfRequested()
@@ -530,6 +534,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let choice else { done(); return }
                 DictationSettings.shared.hotkeyKeycode = choice.keycode
                 DictationSettings.shared.hotkeyModifiers = choice.requiredModifiers
+                self.dictationController.applySettings()
+                done()
+            }
+        }
+        controller.model.recordTranslationHotkey = { [weak self] done in
+            guard let self else { return }
+            self.hotkeyRecorder.present(actionTitle: "Перевод") { choice in
+                guard let choice else { done(); return }
+                DictationSettings.shared.translationHotkeyKeycode = choice.keycode
+                DictationSettings.shared.translationHotkeyModifiers = choice.requiredModifiers
                 self.dictationController.applySettings()
                 done()
             }

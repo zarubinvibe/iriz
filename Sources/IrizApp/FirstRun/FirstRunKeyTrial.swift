@@ -25,12 +25,43 @@ struct FirstRunKeyTrial: View {
     var body: some View {
         VStack(spacing: 12) {
             if canHearKey {
-                KeyCap(label: model.hotkeyLabel, active: model.isRecording)
-                    .frame(height: 58)
+                // Сама клавиша и есть кнопка замены. Строчка «Клавиша занята?
+                // Поменять» снизу была незаметна: владелец 07.09.2026 сказал
+                // прямо — «снизу не очень заметно… необходимо, чтобы вот та
+                // большая плашка, где написано клавиша, была как рекордер,
+                // чтобы можно было нажать на неё и заменить, и об этом
+                // написать». Место, куда человек и так смотрит, работает лучше
+                // подписи под ним.
+                Button { model.changeHotkey() } label: {
+                    KeyCap(label: model.hotkeyLabel, active: model.isRecording)
+                        .frame(height: 58)
+                }
+                .buttonStyle(.plain)
+                .help(FirstRunCopy.changeKeyHint)
+                .accessibilityLabel(FirstRunCopy.changeKeyHint)
 
-                if model.isRecording {
-                    LevelBar(level: model.level)
-                        .frame(width: 180, height: 4)
+                Text(FirstRunCopy.changeKeyHint)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.tertiary)
+
+                // Пока идёт запись и разбор — НАСТОЯЩАЯ плашка, а не полоска
+                // уровня и не крутилка.
+                //
+                // Владелец 07.09.2026: «когда появляется значок, точнее там типа
+                // загрузки, этого не нужно. Нужно, чтобы вместо вот этих двух
+                // элементов появлялась плашка, которая распознаёт текст. То есть
+                // человек с этого момента должен понять, как это будет
+                // выглядеть». Знакомство обязано показывать тот же предмет,
+                // который встретит человека в работе, а не его заменитель.
+                if model.isRecording || model.isTranscribing {
+                    HUDPreview(size: .medium,
+                               palette: DictationSettings.shared.dictationHUDWavePalette,
+                               purpose: .dictation,
+                               animates: true)
+                        .frame(width: dictationHUDCollapsedSize(.medium).width,
+                               height: dictationHUDCollapsedSize(.medium).height)
+                        .transition(.opacity)
+                        .animation(irizAnimation(.irizEaseOut), value: model.isRecording)
                 }
 
                 Text(statusLine)
@@ -63,12 +94,7 @@ struct FirstRunKeyTrial: View {
                 .frame(height: 68)
                 .frame(maxWidth: 440)
 
-            if canHearKey {
-                Button(FirstRunCopy.changeKey) { model.changeHotkey() }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
-            }
+
         }
     }
 
@@ -95,7 +121,7 @@ private struct LevelBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(.primary.opacity(0.12))
                 Capsule()
-                    .fill(Color(nsColor: IRIZ_FAMILY_GOLD))
+                    .fill(Color.accentColor)
                     .frame(width: max(4, geometry.size.width * min(1, max(0, level))))
                     .animation(irizAnimation(.irizQuick), value: level)
             }
@@ -131,10 +157,10 @@ private struct KeyCap: View {
             .padding(.vertical, 10)
             .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(active ? Color(nsColor: IRIZ_FAMILY_GOLD).opacity(0.18) : Color.primary.opacity(0.06))
+                    .fill(active ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.06))
                     .overlay {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .strokeBorder(active ? Color(nsColor: IRIZ_FAMILY_GOLD) : Color.primary.opacity(0.16),
+                            .strokeBorder(active ? Color.accentColor : Color.primary.opacity(0.16),
                                           lineWidth: active ? 2 : 1)
                     }
             }

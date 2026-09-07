@@ -57,6 +57,9 @@ final class FirstRunModel: ObservableObject {
     /// Как поменять клавишу диктовки. Тоже замыкание: запись сочетания живёт
     /// в настройках, и знакомство не обязано знать её устройство.
     var recordHotkey: ((@escaping () -> Void) -> Void)?
+    /// Записать клавишу ПЕРЕВОДА. Отдельным входом, а не флагом у прошлого:
+    /// у них разные настройки и разное имя действия в окне записи.
+    var recordTranslationHotkey: ((@escaping () -> Void) -> Void)?
 
     /// Клавиша диктовки, как её называет само приложение. Читается живьём:
     /// человек может поменять её прямо на этом экране, и подпись обязана
@@ -78,6 +81,16 @@ final class FirstRunModel: ObservableObject {
     func changeHotkey() {
         recordHotkey? { [weak self] in
             Task { @MainActor in self?.refreshHotkeyLabel() }
+        }
+    }
+
+    /// Клавиша перевода меняется там же, где показана. Владелец 07.09.2026:
+    /// «замена клавиш должна быть везде, в том числе „скажи по-русски, получи
+    /// по-английски“… надо кликнуть на неё и сказать, что можно поставить новое
+    /// сочетание».
+    func changeTranslationHotkey() {
+        recordTranslationHotkey? { [weak self] in
+            Task { @MainActor in self?.refreshTranslationHotkeyLabel() }
         }
     }
 

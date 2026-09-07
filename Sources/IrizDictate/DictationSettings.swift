@@ -53,6 +53,7 @@ public final class DictationSettings: @unchecked Sendable {
     private static let keyDictationHUDSize = "dictation_hud_size_v1"
     private static let keyDictationHUDAnchor = "dictation_hud_anchor_v1"
     private static let keyDictationRetentionDays = "dictation_retention_days_v1"
+    private static let keyDictationHUDShowsHints = "dictation_hud_shows_hints_v1"
     private static let keyDictationLanguage = "dictation_language"
     private static let keyRemoveFinalPeriod = "remove_final_period_v1"
     private static let keyEnterDelayMilliseconds = "enter_delay_milliseconds_v1"
@@ -723,6 +724,23 @@ public final class DictationSettings: @unchecked Sendable {
             return max(0, defaults.integer(forKey: Self.keyDictationRetentionDays))
         }
         set { defaults.set(max(0, newValue), forKey: Self.keyDictationRetentionDays) }
+    }
+
+    /// Показывать ли на плашке напоминания про клавиши.
+    ///
+    /// Выключено заводски. Владелец 07.09.2026: «не надо постоянных напоминаний,
+    /// нужно поставить кнопочку, нужны ли напоминания… когда я делаю запись,
+    /// там нет никакой визуализации волной, но при этом написано „правый ⌘
+    /// закончить, Escape отменить“. Задумка была не в этом».
+    ///
+    /// Клавишу, которую человек только что нажал, ему не надо называть. Первые
+    /// разы напоминание помогает - для них и оставлен переключатель.
+    public var dictationHUDShowsHints: Bool {
+        get {
+            guard defaults.object(forKey: Self.keyDictationHUDShowsHints) != nil else { return false }
+            return defaults.bool(forKey: Self.keyDictationHUDShowsHints)
+        }
+        set { defaults.set(newValue, forKey: Self.keyDictationHUDShowsHints) }
     }
 
     public var dictationHUDSize: DictationHUDSizeChoice {

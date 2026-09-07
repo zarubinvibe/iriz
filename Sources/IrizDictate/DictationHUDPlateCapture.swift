@@ -80,6 +80,43 @@ public func captureDictationHUDPlateScenes(to directory: URL) throws -> [URL] {
               content: dictationHUDContent(stage: .listening(.dictation), level: 0.55,
                                            reduceMotion: false, historyHint: ""),
               settle: 0.9),
+        // Запись ПОД МЫШЬЮ и исходы. Этих сочетаний у прибора не было вовсе,
+        // а владелец ловил дефекты именно на них: «не вижу визуализации звука»,
+        // «плашка обрезанная становится», «пропала галочка».
+        .init(name: "listening-hover",
+              content: dictationHUDContent(stage: .listening(.dictation), level: 0.55,
+                                           reduceMotion: false, historyHint: ""),
+              hovered: true,
+              settle: 1.2),
+        .init(name: "recognizing",
+              content: dictationHUDContent(stage: .recognizing, level: 0,
+                                           reduceMotion: false, historyHint: ""),
+              settle: 1.0),
+        .init(name: "inserted",
+              content: dictationHUDContent(stage: .inserted, level: 0,
+                                           reduceMotion: false, historyHint: ""),
+              settle: 1.0),
+        .init(name: "failed",
+              content: dictationHUDContent(stage: .notDelivered(.insertionFailed), level: 0,
+                                           reduceMotion: false, historyHint: ""),
+              settle: 1.0),
+        // Запись ПОД МЫШЬЮ. Владелец 07.09.2026: «когда я делаю запись, там нет
+        // никакой визуализации волной, но при этом написано „правый ⌘ закончить,
+        // Escape отменить“». Сцены с этим сочетанием у прибора не было вовсе, и
+        // спорить было не с чем.
+        .init(name: "listening-hover",
+              content: dictationHUDContent(stage: .listening(.dictation), level: 0.55,
+                                           reduceMotion: false, historyHint: ""),
+              hovered: true,
+              settle: 1.2),
+        .init(name: "recognizing",
+              content: dictationHUDContent(stage: .recognizing, level: 0,
+                                           reduceMotion: false, historyHint: ""),
+              settle: 0.9),
+        .init(name: "inserted",
+              content: dictationHUDContent(stage: .inserted, level: 0,
+                                           reduceMotion: false, historyHint: ""),
+              settle: 0.9),
     ]
 
     // Место плашки владельца прибор ОБЯЗАН вернуть. Сцена переноса тащит её в

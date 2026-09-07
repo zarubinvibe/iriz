@@ -131,6 +131,23 @@ public enum DictionaryTransfer {
         return data
     }
 
+    /// Пустой шаблон с двумя примерами внутри.
+    ///
+    /// Владелец 07.09.2026: «необходимо иметь возможность скачать шаблон,
+    /// который можно заполнить и загрузить». Экспорт пустого словаря давал файл
+    /// с пустыми списками: формат в нём виден, а что писать в поля - нет.
+    /// Примеры отвечают на второй вопрос, и они же проверяют формат: файл
+    /// шаблона обязан импортироваться обратно без правок.
+    public static func template() -> Data {
+        encode(corrections: [
+            TranscriptCorrection(source: "как распозналось", replacement: "как надо"),
+            TranscriptCorrection(source: "ИП Иванов", replacement: "ИП Иванов И. И."),
+        ], snippets: [
+            DictationSnippet(trigger: "шапка иска",
+                             body: "В Верховный Суд Российской Федерации\nот ИП Иванова И. И."),
+        ])
+    }
+
     public static func decode(_ data: Data) throws -> DictionaryTransferDocument {
         guard let object = try? JSONSerialization.jsonObject(with: data) else {
             throw DictionaryTransferError.notJSON

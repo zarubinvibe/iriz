@@ -48,6 +48,9 @@ public final class DictationController {
     /// окна, куда он ушёл; чужое поле спрашивается один раз и не сохраняется.
     let learning = DictationLearningWatcher()
     private let learningToast = DictationLearningToastPresenter()
+    /// Наблюдатель за сменой переднего приложения: второй повод спросить про
+    /// правку. Хранится, чтобы сняться при закрытии.
+    private var learningFocusObserver: NSObjectProtocol?
     /// Плашка «идёт голос»: знак в строке меню — 18×18 pt в углу, владелец его
     /// не видит, когда смотрит в поле ввода. Заводится в `start()`, то есть
     /// только в живом приложении: под `swift test` `start()` не зовут, и панель
@@ -524,11 +527,30 @@ public final class DictationController {
         learning.onPairs = { [weak self] pairs in
             self?.learningToast.show(pairs)
         }
+        // ВТОРОЙ повод спросить: человек ушёл в другое приложение.
+        //
+        // Прежде повод был один - следующее нажатие клавиши, и то в пределах
+        // трёх минут. Владелец 07.09.2026: «я так и не увидел, что замены
+        // автоматически сохраняются, если после вставки я изменил текст». И не
+        // мог увидеть: он правит текст, закрывает окно и уходит работать
+        // дальше, а следующая диктовка случается через час, когда окно уже
+        // истекло. Переключение приложения - это ровно тот момент, когда правка
+        // закончена: спрашивать раньше значит перебивать посреди неё.
+        learningFocusObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didActivateApplicationNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { _ = self?.learning.check() }
+        }
         learningToast.onAccept = { [weak self] pairs in
             guard let self else { return }
             let existing = self.settings.transcriptCorrections
             let added = pairs.map { TranscriptCorrection(source: $0.heard, replacement: $0.fixed) }
-            self.settings.transcriptCorrections = existing + added
+            // Новое встаёт СВЕРХУ - тем же правилом, что и в настройках:
+            // список читают редко, дописывают часто.
+            self.settings.transcriptCorrections = added + existing
+            self.hud?.learned(pairs: added.count)
             log("learning: добавлено пар в словарь \(added.count)")
         }
     }
@@ -1334,8 +1356,12 @@ func promptFailureKind(for error: any Error) -> PromptFailureKind {
     switch error {
     case .invalidExecutable:
         return .executableConfiguration
+    case .nonZeroExit(_, let stderr), .terminated(_, let stderr):
+        // Отказ САМОГО агента отделён от сбоя запуска: чинится он у агента, и
+        // предлагать повтор там значит гонять человека по кругу.
+        return promptAgentRefused(stderr: stderr) ? .agentRefused : .launchRuntime
     case .invalidTimeout, .temporaryDirectoryUnavailable, .privateFilePreparationFailed,
-         .launchFailed, .nonZeroExit, .terminated:
+         .launchFailed:
         return .launchRuntime
     case .timedOut:
         return .timeout
@@ -1343,6 +1369,23 @@ func promptFailureKind(for error: any Error) -> PromptFailureKind {
          .invalidPromptOutcome, .renderingFailed:
         return .invalidResult
     }
+}
+
+/// Отказал ли агент ОТ СЕБЯ - по лимиту, доступу или оплате.
+///
+/// Разбирается ФОРМА ответа, а не его текст: наружу не уходит ни байта stderr,
+/// потому что там может лежать надиктовка. Ищутся только известные признаки
+/// отказа провайдера; всё незнакомое остаётся «не сработал», как было.
+///
+/// Повод измеренный: 07.09.2026 перевод молчал, в логе стояло «non-zero exit 1»,
+/// а в stderr агента - «403 You've reached your weekly usage limit». Владелец
+/// видел «агент не сработал» и повторял попытку, которая не могла удаться.
+func promptAgentRefused(stderr: String) -> Bool {
+    let lowered = stderr.lowercased()
+    let marks = ["usage limit", "quota", "rate limit", "too many requests",
+                 "unauthorized", "forbidden", "payment required", "insufficient",
+                 "subscription", " 401", " 402", " 403", " 429"]
+    return marks.contains { lowered.contains($0) }
 }
 
 func safePromptFailureLogLabel(for error: any Error) -> String {
@@ -1376,7 +1419,11 @@ func safePromptFailureLogLabel(for error: any Error) -> String {
     case .temporaryDirectoryUnavailable: return "temporary directory unavailable"
     case .privateFilePreparationFailed: return "private file preparation failed"
     case .launchFailed: return "launch failed"
-    case .nonZeroExit(let status, _): return "non-zero exit \(status)"
+    case .nonZeroExit(let status, let stderr):
+        // Класс отказа - в лог, текст stderr - никогда.
+        return promptAgentRefused(stderr: stderr)
+            ? "agent refused (limit or access), exit \(status)"
+            : "non-zero exit \(status)"
     case .terminated(let signal, _): return "terminated by signal \(signal)"
     case .timedOut: return "timed out"
     case .missingResult: return "missing result"

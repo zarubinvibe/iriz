@@ -24,6 +24,7 @@ public struct IrizSettingsView: View {
     @State private var appProfileMessage: String?
     @State private var page: SettingsPage
     @State private var languageChoice: IrizLanguage = irizLanguageChoice()
+    @State private var appearanceChoice: IrizAppearanceChoice = irizAppearanceChoice()
     @State private var fileQueue: [IrizDropItem] = []
     @State private var meetingQueue: [IrizDropItem] = []
     @State private var meetingProgress: String?
@@ -509,6 +510,26 @@ public struct IrizSettingsView: View {
                          + "а не право выдумывать факты: запреты контракта сильнее.")
                         .font(.footnote)
                         .foregroundStyle(IRIZ_SUBTLE)
+
+                    // Готовые своды. Не «секретный промпт вендора»: у вендоров
+                    // таких файлов нет. Это правила из их же документации по
+                    // промпт-инжинирингу, сведённые в один абзац. Имя набора
+                    // называет ИСТОЧНИК правил, и рядом стоит ссылка на него.
+                    HStack(spacing: 8) {
+                        Text(L("settings.gotovyeSvody", "Готовые своды:"))
+                            .font(.footnote)
+                            .foregroundStyle(IRIZ_SUBTLE)
+                        ForEach(PromptGuidancePresets.all) { preset in
+                            Button(preset.title) {
+                                model.promptGuidanceInstructions = preset.instructions
+                                statusMessage = L("settings.svodPodstavlenPravte",
+                                                  "Свод подставлен. Правьте под себя и нажмите «Сохранить».")
+                            }
+                            .buttonStyle(.link)
+                            .font(.footnote)
+                            .help(preset.source)
+                        }
+                    }
                 }
 
                 ForEach(Array(model.promptGuidanceExamples.indices), id: \.self) { index in
@@ -729,6 +750,15 @@ public struct IrizSettingsView: View {
             }
             .accessibilityLabel(L("settings.kakVyglyaditVolnaNa", "Как выглядит волна на плашке записи"))
 
+            Toggle(L("settings.napominaniyaNaPlashke", "Напоминания на плашке"),
+                   isOn: $model.hudShowsHints)
+
+            settingsNote {
+                Text(L("settings.napominaniyaNapominayutKlavishu", "Напоминания называют клавишу, которой запись заканчивают, и Escape для отмены. Заводски выключены: клавишу, которую вы держите под пальцем, называть незачем, а слова закрывают собой волну — то, ради чего плашка и нужна. Включите на первые дни, если так спокойнее."))
+                    .font(.footnote)
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
+
             settingsNote {
                 Text(L("settings.perelivyTriTonaVokrug", "Переливы — три тона вокруг цвета режима. Спокойная — те же тона, но разлёт вдвое уже. Монохром — без переливов вовсе. Цвет режима палитра не меняет: обычная диктовка остаётся тёплой, промпт — холодным, иначе по плашке было бы не видно, что именно записывается."))
                     .font(.footnote)
@@ -766,7 +796,7 @@ public struct IrizSettingsView: View {
 
             // Две сноски подряд были про одно и то же - когда сочетание
             // начинает работать. Осталась одна.
-            Text(L("settings.sochetaniePrimenyaetsyaSrazuPosl", "Сочетание применяется сразу после сохранения. Отмена переключения — то же сочетание конвертации ещё раз."))
+            Text(L("settings.klikniPoSochetaniyuChtoby", "Кликни по сочетанию справа и нажми новое — оно запишется. Сочетание работает сразу после «Сохранить». Отмена переключения — то же сочетание конвертации ещё раз."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
                 .accessibilityLabel(L("settings.sochetaniePrimenyaetsyaSrazuPosl2", "Сочетание применяется сразу после сохранения. Отмена переключения - то же сочетание конвертации ещё раз"))
@@ -862,6 +892,15 @@ public struct IrizSettingsView: View {
 
     private var correctionsSection: some View {
         Section {
+            // Кнопка СВЕРХУ. Владелец 07.09.2026: «необходимо добавить
+            // возможность добавить замену сверху, чтобы была кнопка, а не
+            // снизу. Иначе придётся всю портянку вниз мотать». Новая строка
+            // тоже встаёт первой, так что кнопка и результат рядом.
+            Button(L("settings.dobavitZamenu", "Добавить замену"), systemImage: "plus") {
+                model.addCorrection()
+            }
+            .accessibilityLabel(L("settings.dobavitParuVSlovar", "Добавить пару в словарь замен"))
+
             if model.corrections.isEmpty {
                 Text(L("settings.zamenPokaNet", "Замен пока нет."))
                     .foregroundStyle(IRIZ_SUBTLE)
@@ -871,10 +910,19 @@ public struct IrizSettingsView: View {
                 // на четырнадцати заменах это двадцать восемь повторов «Как
                 // распозналось» и «На что менять», из-за которых сами слова
                 // владельца терялись в служебном тексте.
+                // Подписи стоят НАД СВОИМИ полями, а не по краям строки.
+                // Прежде между ними была распорка, и «На что менять» уезжало к
+                // правому краю, далеко от второго поля. Владелец 07.09.2026:
+                // «слово „на что менять“ правее, чем сам текст, и не очень
+                // понятно. Они должны быть соотнесены между столбцами».
+                // Геометрия та же, что у строки: две равные колонки и стрелка
+                // между ними, только невидимая.
                 HStack(spacing: 8) {
                     Text(L("settings.kakRaspoznalos", "Как распозналось"))
-                    Spacer(minLength: 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Image(systemName: "arrow.right").hidden()
                     Text(L("settings.naChtoMenyat", "На что менять"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Spacer().frame(width: CORRECTION_TRASH_WIDTH)
                 }
                 .font(.caption)
@@ -903,10 +951,6 @@ public struct IrizSettingsView: View {
                 }
             }
 
-            Button(L("settings.dobavitZamenu", "Добавить замену"), systemImage: "plus") {
-                model.addCorrection()
-            }
-            .accessibilityLabel(L("settings.dobavitParuVSlovar", "Добавить пару в словарь замен"))
         } header: {
             sectionHeader(.corrections)
         }
@@ -916,6 +960,13 @@ public struct IrizSettingsView: View {
     /// похож: у замены две короткие строки, у заготовки — фраза и блок текста.
     private var snippetsSection: some View {
         Section {
+            // Кнопка сверху по тому же правилу, что и у замен: список читают
+            // редко, дописывают часто, и мотать портянку вниз ради этого нельзя.
+            Button(L("settings.dobavitZagotovku", "Добавить заготовку"), systemImage: "plus") {
+                model.addSnippet()
+            }
+            .accessibilityLabel(L("settings.dobavitZagotovku", "Добавить заготовку"))
+
             if model.snippets.isEmpty {
                 Text(L("settings.zagotovokPokaNet", "Заготовок пока нет."))
                     .foregroundStyle(IRIZ_SUBTLE)
@@ -942,11 +993,6 @@ public struct IrizSettingsView: View {
                 .padding(.vertical, 2)
             }
 
-            Button(L("settings.dobavitZagotovku", "Добавить заготовку"), systemImage: "plus") {
-                model.addSnippet()
-            }
-            .accessibilityLabel(L("settings.dobavitZagotovku", "Добавить заготовку"))
-
             settingsNote {
                 Text(L("settings.proiznesennayaFrazaZamenyaetsyaS", "Произнесённая фраза заменяется сохранённым текстом — так вставляются шапки, реквизиты и стандартные формулировки. Совпадение точное и по границам слова: «иск» внутри «иска» не сработает, регистр значения не имеет. Заготовки и словарь замен подставляются одним проходом, поэтому текст заготовки словарь уже не переписывает. Сырая расшифровка на диске остаётся нетронутой, а промпт-режим заготовок не видит вовсе."))
                     .font(.footnote)
@@ -970,6 +1016,15 @@ public struct IrizSettingsView: View {
                     importDictionary()
                 }
                 .accessibilityLabel(L("settings.importirovatSlovarIZagotovki", "Импортировать словарь и заготовки из файла"))
+
+                // Шаблон. Выгрузка пустого словаря показывает формат, но не
+                // показывает, ЧТО писать в поля. Владелец 07.09.2026: «нужно
+                // иметь возможность скачать шаблон, который можно заполнить и
+                // загрузить». Внутри два примера замены и одна заготовка.
+                Button(L("settings.skachatShablon", "Скачать шаблон"), systemImage: "doc.badge.plus") {
+                    saveDictionaryTemplate()
+                }
+                .accessibilityLabel(L("settings.skachatShablonSlovarya", "Скачать шаблон файла словаря с примерами"))
             }
 
             if let transferMessage {
@@ -988,6 +1043,23 @@ public struct IrizSettingsView: View {
             }
         } header: {
             sectionHeader(.transfer)
+        }
+    }
+
+    private func saveDictionaryTemplate() {
+        let panel = NSSavePanel()
+        panel.title = L("settings.shablonSlovarya", "Шаблон словаря")
+        panel.nameFieldStringValue = "iriz-slovar-shablon.json"
+        panel.allowedContentTypes = [.json]
+        panel.isExtensionHidden = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try model.dictionaryTemplateData().write(to: url, options: .atomic)
+            transferFailed = false
+            transferMessage = L("settings.shablonZapisanZapolnite", "Шаблон записан. Заполните его и вернитесь сюда с кнопкой «Импортировать».")
+        } catch {
+            transferFailed = true
+            transferMessage = "Не удалось записать файл: \(error.localizedDescription)"
         }
     }
 
@@ -1124,6 +1196,23 @@ public struct IrizSettingsView: View {
                  + "macOS может быть на английском, а интерфейс вам нужен русский.\n\n"
                  + "Смена языка вступает в силу после перезапуска приложения: "
                  + "тексты собираются один раз при старте."))
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+
+            // Тема живёт рядом с языком: и то и другое - про то, как окно
+            // выглядит, а не про то, как продукт работает.
+            Picker(L("settings.temaInterfeysa", "Тема интерфейса"), selection: $appearanceChoice) {
+                ForEach(IrizAppearanceChoice.allCases, id: \.self) { choice in
+                    Text(choice.title).tag(choice)
+                }
+            }
+            .pickerStyle(.inline)
+            .onChange(of: appearanceChoice) { _, choice in
+                setIrizAppearanceChoice(choice)
+                applyIrizAppearance()
+            }
+
+            Text(L("settings.temaMenyaetsyaSrazu", "Тема меняется сразу, перезапуск не нужен. Плашки это не касается: она висит поверх чужого окна и берёт вид системы. Тёмное стекло на светлом столе было бы чёрным прямоугольником посреди чужой работы."))
                 .font(.footnote)
                 .foregroundStyle(IRIZ_SUBTLE)
         } header: {

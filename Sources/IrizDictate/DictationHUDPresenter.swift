@@ -106,6 +106,8 @@ final class DictationHUDPresenter {
     private let triggerMode: () -> TriggerMode
     private let activeHotkeyHint: () -> String
     private let showsDragHint: () -> Bool
+    /// Просил ли владелец напоминания про клавиши. Заводски выключены.
+    private let showsReminders: () -> Bool
     private let pump: DictationHUDLevelPump
 
     private var surface: DictationHUDSurface?
@@ -125,6 +127,7 @@ final class DictationHUDPresenter {
          triggerMode: @escaping () -> TriggerMode,
          activeHotkeyHint: @escaping () -> String,
          showsDragHint: @escaping () -> Bool,
+         showsReminders: @escaping () -> Bool = { DictationSettings.shared.dictationHUDShowsHints },
          recordingPurpose: @escaping () -> DictationRecordingPurpose = { .dictation },
          reduceMotion: @escaping () -> Bool = { dictationHUDReduceMotionEnabled() },
          pump: DictationHUDLevelPump = DictationHUDLevelPump(),
@@ -136,6 +139,7 @@ final class DictationHUDPresenter {
         self.triggerMode = triggerMode
         self.activeHotkeyHint = activeHotkeyHint
         self.showsDragHint = showsDragHint
+        self.showsReminders = showsReminders
         self.recordingPurpose = recordingPurpose
         self.reduceMotion = reduceMotion
         self.pump = pump
@@ -159,6 +163,7 @@ final class DictationHUDPresenter {
         self.triggerMode = { .toggle }
         self.activeHotkeyHint = { "" }
         self.showsDragHint = { false }
+        self.showsReminders = { false }
         self.recordingPurpose = recordingPurpose
         self.reduceMotion = reduceMotion
         self.pump = pump
@@ -218,6 +223,30 @@ final class DictationHUDPresenter {
     func promptDeliveryFinished(_ verdict: TextInsertionVerdict, text: String = "") {
         undelivered = text.isEmpty ? nil : text
         apply(.visible(dictationHUDStage(forPromptDeliveryVerdict: verdict)))
+    }
+
+    /// Правка легла в словарь: плашка вспыхивает зелёным и говорит об этом
+    /// одной строкой.
+    ///
+    /// Отдельного состояния для этого НЕ заведено намеренно: словарь пополнился
+    /// - это тот же успех, что и доехавший текст, и показывать его вторым
+    /// способом значит заводить второй язык у одной поверхности. Строка при
+    /// этом идёт мимо переключателя напоминаний: напоминание повторяет
+    /// известное, а это событие, которое случилось прямо сейчас.
+    ///
+    /// Владелец 07.09.2026: «всплывашка, чтобы из плашки появлялся о том, что
+    /// сохранено, чтобы это было красиво и анимировано».
+    func learned(pairs count: Int) {
+        eventLine = count == 1
+            ? "запомнил замену"
+            : "запомнил замен: \(count)"
+        apply(.visible(.inserted))
+        // Строка живёт ровно одну плашку: следующая перерисовка её уже не несёт.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) { [weak self] in
+            guard let self, self.eventLine != nil else { return }
+            self.eventLine = nil
+            self.render()
+        }
     }
 
     func promptSavedAfterFocusChange(text: String = "") {
@@ -318,6 +347,8 @@ final class DictationHUDPresenter {
     /// Живой текст, пока владелец говорит. Наполняется превью распознавания;
     /// на исход не влияет никак - окончательный текст собирает конвейер.
     private var livePreview: String?
+    /// Одноразовая строка события: «запомнил замену» и подобное.
+    private var eventLine: String?
 
     /// Показать живой текст. Пустая строка стирает его.
     func showLivePreview(_ text: String) {
@@ -373,12 +404,20 @@ final class DictationHUDPresenter {
                                           expanded: isOpen,
                                           isRecording: dictationHUDIsListening(stage))
         let surface = presentingSurface()
+        // Событие старше напоминания: оно про то, что случилось сейчас, а не
+        // про клавишу, которую человек и так держит.
+        if let eventLine {
+            surface.updateHintLines([eventLine])
+            surface.present(content)
+            return
+        }
         surface.updateHintLines(dictationHUDHintLines(
             stage: stage,
             triggerMode: triggerMode(),
             hotkeyLabel: activeHotkeyHint(),
             historyLabel: historyLabel,
-            showsDragHint: showsDragHint()
+            showsDragHint: showsDragHint(),
+            showsReminders: showsReminders()
         ))
         surface.present(content)
     }

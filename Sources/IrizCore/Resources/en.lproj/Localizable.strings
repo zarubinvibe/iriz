@@ -1,6 +1,6 @@
 /* iriz interface, English */
 "firstrun.accessibility.body" = "To paste the text into an email or a chat, macOS needs a separate permission. It's called \"Accessibility\".";
-"firstrun.accessibility.note" = "Without it I'll still turn your speech into text, but there'll be nowhere to put it. Find iriz in the list that opens and turn on the switch: the system won't let me do that for you.";
+"firstrun.accessibility.note" = "Without it I'll still turn your speech into text, but there'll be nowhere to put it. Find iriz in the list that opens and turn on the switch: the system does not let me do it for you: only a human, with their own hands.";
 "firstrun.accessibility.title" = "Permission needed to paste text";
 "firstrun.agent.body" = "A separate key sends what you say to an outside agent instead of the text field: it turns rambling speech into a finished task and hands the text back.";
 "firstrun.agent.note" = "This is where \"it all runs on your Mac\" ends: the agent is a separate program, and what you say goes there. So the mode stays off until you turn it on yourself.\n\nI looked for agents already installed on your Mac. You can skip this and come back to it in Settings.";
@@ -25,7 +25,7 @@
 "firstrun.microphone.title" = "Microphone needed";
 "firstrun.model.action" = "Download model";
 "firstrun.model.body" = "I turn speech into text right on your Mac, no internet. For that I need a model: half a gigabyte, downloaded once.";
-"firstrun.model.note" = "It's left out of the app on purpose. The model updates more often than the app ships, so it's better to grab a fresh one now than to carry last year's around.\n\nWhile it downloads, keep going: you can grant the permissions right now.";
+"firstrun.model.note" = "It is deliberately not inside the disk image: the model updates more often than iriz itself. Keep it separate: otherwise an outdated one would ship along with the program.\n\nCarry on while it downloads: you can grant the permissions right now.";
 "firstrun.model.title" = "Let's get the speech model";
 "firstrun.modelFailedRetry" = "Try again";
 "firstrun.modelReady" = "Model is in place";
@@ -55,10 +55,10 @@
 "firstrun.welcome.note" = "It all runs right on your Mac. No audio, no text leaves it.";
 "firstrun.welcome.title" = "You talk, I type";
 "firstrun.whenItBreaks.body" = "Text didn't paste? It isn't lost. The badge expands and shows it, and you can copy it from there.";
-"firstrun.whenItBreaks.note" = "Did I hear a word wrong? Fix it in the dictionary and I'll write it right from then on.\n\nThis window, settings and history open from the menu bar icon.";
+"firstrun.whenItBreaks.note" = "Misheard a word? Just correct it right in the text. I notice the edit and ask whether to remember it: say yes, and from then on I write it your way. I never put anything into the dictionary on my own.\n\nKey taken by another app? Click it in the settings and set your own shortcut.\n\nThis window, the settings and the history all open from the icon in the menu bar.";
 "firstrun.whenItBreaks.title" = "If something goes wrong";
-"firstrun.whereItLives.body" = "I don't have a window of my own, and I'm not in the Dock. My icon is up in the top right, next to the clock.";
-"firstrun.whereItLives.note" = "History, dictionary and settings open from there.\n\nI start up with your Mac. Don't want that? Turn it off in settings.";
+"firstrun.whereItLives.body" = "Do not look for me in the Dock: my icon is at the top right, next to the clock. Click it and the menu opens.";
+"firstrun.whereItLives.note" = "History, replacements, settings and meeting recording all open from that menu. It also shows what I am busy with right now.\n\nI start together with your Mac. Do not want that: turn it off in the settings.";
 "firstrun.whereItLives.title" = "I live in the menu bar";
 "firstrun.windowTitle" = "Meet iriz";
 "history.cancel" = "Cancel";
@@ -263,4 +263,19 @@
 "key.right" = "right";
 "firstrun.plate.title" = "The plate is always on screen";
 "firstrun.plate.body" = "A glass drop sits at the bottom of your screen. While you are silent it stays small and does nothing. Start talking and a wave runs through it: that is the answer to «can it hear me».";
-"firstrun.plate.note" = "Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. Click it and a panel with the text opens.\n\nYou can drag the plate: it snaps to one of twelve spots along the edges of the screen. There are three ways out of the open panel — the cross, Escape, and a click past the buttons.";
+"firstrun.plate.note" = "Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. Click it and a panel with the text opens.\n\nYou can drag the plate: it snaps to one of twelve spots along the edges of the screen. There are three ways out of the open panel: the cross, Escape, and a click past the buttons.";
+"settings.napominaniyaNaPlashke" = "Reminders on the plate";
+"settings.napominaniyaNapominayutKlavishu" = "The reminders name the key that ends the recording, and Escape for cancelling. Off by default: there is no point naming the key you are holding under your finger, and the words cover the wave — the thing the plate exists for. Turn them on for the first few days if that feels calmer.";
+"settings.klikniPoSochetaniyuChtoby" = "Click the shortcut on the right and press a new one — it gets recorded. The shortcut works right after you press Save. To undo a switch, press the conversion shortcut once more.";
+"firstrun.changeKeyHint" = "Key already taken? Click it and set your own shortcut";
+"settings.skachatShablon" = "Download a template";
+"settings.skachatShablonSlovarya" = "Download a dictionary file template with examples";
+"settings.shablonSlovarya" = "Dictionary template";
+"settings.shablonZapisanZapolnite" = "The template is saved. Fill it in and come back here with the Import button.";
+"settings.temaInterfeysa" = "Interface theme";
+"settings.temaMenyaetsyaSrazu" = "The theme changes right away, no restart needed. This does not touch the plate: it floats above someone else's window and follows the system. Dark glass on a light desktop would be a black rectangle in the middle of someone else's work.";
+"appearance.auto" = "Same as the system";
+"appearance.light" = "Light";
+"appearance.dark" = "Dark";
+"settings.gotovyeSvody" = "Ready-made sets:";
+"settings.svodPodstavlenPravte" = "The set is in. Edit it to taste and press Save.";

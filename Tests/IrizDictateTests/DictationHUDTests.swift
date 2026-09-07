@@ -909,6 +909,9 @@ struct DictationHUDPresenterTests {
             triggerMode: { .toggle },
             activeHotkeyHint: { activeHint },
             showsDragHint: { false },
+            // Проба судит СОДЕРЖАНИЕ подсказки, значит включает её явно:
+            // заводски напоминания молчат (решение владельца 07.09.2026).
+            showsReminders: { true },
             reduceMotion: { false },
             surface: { surface }
         )

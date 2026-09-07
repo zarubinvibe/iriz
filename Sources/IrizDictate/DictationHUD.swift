@@ -23,6 +23,14 @@ enum PromptFailureKind: CaseIterable, Equatable {
     case timeout
     case invalidResult
     case artifactConflict
+    /// Агент ответил отказом ОТ СЕБЯ: кончился лимит, нет доступа, не оплачено.
+    ///
+    /// Отдельный класс, потому что чинится он не тем же, чем «не сработал»:
+    /// перезапуск и повтор тут не помогут, идти надо к агенту. Поймано живьём
+    /// 07.09.2026: перевод «не работал», в логе стояло «non-zero exit 1», а
+    /// настоящая причина лежала в stderr — «You've reached your weekly usage
+    /// limit». Владелец не мог узнать этого никак.
+    case agentRefused
 }
 
 /// Состояние плашки. Ровно то, о чём есть что сказать; всё остальное — её
@@ -631,6 +639,8 @@ func dictationHUDVisual(for stage: DictationHUDStage) -> DictationHUDVisual {
         return .init(form: .waveform, accent: .orange,
                      mark: .none, flow: .symmetric, halo: .traveling)
     case .recognizing:
+        // Цвет держит РЕЖИМ, а не стадия. Прежде распознавание было синим при
+        // любом режиме, и лента меняла цвет посреди одной работы.
         return .init(form: .processing, accent: .blue)
     case .buildingPrompt:
         return .init(form: .processing, accent: .cyan)
@@ -1073,6 +1083,7 @@ private func dictationHUDPromptFailureTitle(_ kind: PromptFailureKind) -> String
     case .timeout: return "агент не успел"
     case .invalidResult: return "ответ агента отклонён"
     case .artifactConflict: return "промпт уже сохранён"
+    case .agentRefused: return "агент отказал"
     }
 }
 
@@ -1088,6 +1099,10 @@ private func dictationHUDPromptFailureRecovery(
         return historyHint.isEmpty
             ? "ничего не заменил; откройте историю"
             : "ничего не заменил; откройте историю (\(historyHint))"
+    case .agentRefused:
+        // Повтор тут бесполезен: отказал не запуск, а сам агент. Чинится это у
+        // агента, а не у нас, и сказать надо именно так.
+        action = "проверьте лимит и доступ у агента"
     case .launchRuntime, .timeout, .invalidResult:
         action = "повторите"
     }
@@ -1241,7 +1256,18 @@ func dictationHUDHintLines(stage: DictationHUDStage,
                            triggerMode: TriggerMode,
                            hotkeyLabel: String,
                            historyLabel: String,
-                           showsDragHint: Bool) -> [String] {
+                           showsDragHint: Bool,
+                           showsReminders: Bool = false) -> [String] {
+    // Напоминания про клавиши выключены заводски. Владелец 07.09.2026: «не надо
+    // постоянных напоминаний… когда я делаю запись, там нет визуализации волной,
+    // но при этом написано „правый ⌘ закончить, Escape отменить“. Задумка была
+    // не в этом. Это убрать надо. Надо, чтобы плашка показывала звуковую волну».
+    //
+    // Клавишу, которую человек только что нажал, называть ему незачем: он держит
+    // на ней палец. Слова закрывали собой ровно то, ради чего плашка и заведена.
+    // Подсказка кнопки под мышью сюда НЕ относится - она приходит другим путём и
+    // отвечает на вопрос «что это за значок», а не повторяет известное.
+    guard showsReminders else { return [] }
     var lines: [String]
     switch stage {
     case .resting:
