@@ -74,7 +74,7 @@ fi
 
 mkdir -p "$SCRATCH" "$DIST"
 # Артефакты релиза не должны попадать в индекс git: образы весят сотни мегабайт,
-# а публичное дерево собирается по release/WHITELIST.txt, а не по «что лежит».
+# а публичное дерево собирается по .github/public-release.json, а не по «что лежит».
 printf '*\n' > "$DIST/.gitignore"
 LOG="$SCRATCH/make_release.log"
 : > "$LOG"
