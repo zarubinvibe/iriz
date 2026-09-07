@@ -128,7 +128,7 @@ func captureWindowLive(_ window: NSWindow, kind: IrizBackdrop, dark: Bool, to ur
     backdrop.orderOut(nil)
     guard process.terminationStatus == 0 else {
         throw NSError(domain: "iriz.uilive", code: 2,
-                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect)."])
+                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect). Съёмку запускают небундленным бинарём .build/release/IrizApp: у Iriz.app своя запись в разрешении «Запись экрана», и подпись меняется на каждой сборке, поэтому система молча отказывает."])
     }
 }
 
@@ -180,7 +180,7 @@ private func captureOverBackdrop(kind: IrizBackdrop, dark: Bool, to url: URL,
 
     guard process.terminationStatus == 0 else {
         throw NSError(domain: "iriz.uilive", code: 2,
-                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect)."])
+                      userInfo: [NSLocalizedDescriptionKey: "screencapture отказал на \(rect). Съёмку запускают небундленным бинарём .build/release/IrizApp: у Iriz.app своя запись в разрешении «Запись экрана», и подпись меняется на каждой сборке, поэтому система молча отказывает."])
     }
 }
 

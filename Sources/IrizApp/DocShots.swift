@@ -67,8 +67,9 @@ func captureDocShots(to directory: URL, appDelegate: AppDelegate) throws -> [URL
 @MainActor
 private func docShots(appDelegate: AppDelegate) -> [DocShot] {
     [
-        // Высота задана, а не взята у `fittingSize`: она мерит содержимое ДО
-        // раскладки шрифтов, и низ меню срезало на каждом кадре.
+        // Высота - потолок, а не размер: окно ужимается до содержимого после
+        // раскладки. Раньше здесь стояло жёсткое число, и меню занимало треть
+        // кадра, а две трети были пустой подложкой.
         DocShot(name: "menu", width: 300, height: 700,
                 view: AnyView(MenuContentView(state: docMenuState(), appDelegate: appDelegate))),
         DocShot(name: "history", width: 620, height: 520,
@@ -110,8 +111,14 @@ private func makeDocWindow(width: CGFloat, height: CGFloat?, view: AnyView) -> N
     let host = NSHostingView(rootView: AnyView(
         view.background(IrizGlassBackdrop()).frame(width: width)
     ))
+    // Мерить до раскладки нельзя: `fittingSize` тогда возвращает высоту без
+    // выложенных шрифтов и низ кадра срезается. Раскладку заставляем пройти, а
+    // заданную высоту трактуем как потолок - кадр по содержимому, не по числу.
+    host.frame = CGRect(origin: .zero, size: CGSize(width: width, height: height ?? 2000))
+    host.layoutSubtreeIfNeeded()
     let fitting = host.fittingSize
-    let size = CGSize(width: width, height: height ?? max(120, fitting.height))
+    let vysota = min(height ?? .greatestFiniteMagnitude, max(120, fitting.height))
+    let size = CGSize(width: width, height: vysota)
     let window = NSWindow(contentRect: CGRect(origin: .zero, size: size),
                           styleMask: [.borderless, .fullSizeContentView],
                           backing: .buffered, defer: false)

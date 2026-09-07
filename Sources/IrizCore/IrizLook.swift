@@ -94,7 +94,13 @@ public struct IrizSelection: ViewModifier {
             content
                 .glassEffect(
                     .regular.tint(IRIZ_SELECTION_TINT).interactive(),
-                    in: .rect(cornerRadius: IRIZ_SELECTION_RADIUS)
+                    // Скругление НЕПРЕРЫВНОЕ, как у всего остального в продукте.
+                    // `.rect(cornerRadius:)` даёт обычную дугу, и рядом с
+                    // непрерывными углами соседей она читается угловатой:
+                    // владелец 07.09.2026 сказал «где-то не скруглённые углы, а
+                    // квадратные, причём не везде» — «не везде» и есть подпись
+                    // этого разъезда, потому что подсвечена всегда одна строка.
+                    in: RoundedRectangle(cornerRadius: IRIZ_SELECTION_RADIUS, style: .continuous)
                 )
                 .glassEffectID(group, in: namespace)
         } else if selected {
