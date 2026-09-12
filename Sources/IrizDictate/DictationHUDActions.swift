@@ -122,7 +122,12 @@ public func dictationHUDNextLanguage(after current: DictationLanguage) -> Dictat
 /// значком без кнопки.
 final class DictationHUDActionButton: NSView {
     var action: DictationHUDAction {
-        didSet { if action != oldValue { needsDisplay = true } }
+        didSet {
+            guard action != oldValue else { return }
+            setAccessibilityLabel(action.title)
+            toolTip = action.title
+            needsDisplay = true
+        }
     }
     var onPress: ((DictationHUDActionID) -> Void)?
     /// Кого звать, когда мышь пришла на кнопку или ушла с неё. Владелец
@@ -132,6 +137,8 @@ final class DictationHUDActionButton: NSView {
     var onHover: ((DictationHUDAction?) -> Void)?
 
     private var pressed = false
+    private let reduceMotion: () -> Bool
+    private var displayOptionsObserver: DictationHUDNotificationObserver?
     private var hovered = false {
         didSet {
             guard hovered != oldValue else { return }
@@ -148,6 +155,14 @@ final class DictationHUDActionButton: NSView {
         guard let layer else { return }
         layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
         layer.position = CGPoint(x: frame.midX, y: frame.midY)
+        guard !reduceMotion() else {
+            layer.removeAnimation(forKey: "irizHoverLift")
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            layer.transform = CATransform3DIdentity
+            CATransaction.commit()
+            return
+        }
         let scale: CGFloat = hovered ? 1.18 : 1
         let lift = CABasicAnimation(keyPath: "transform.scale")
         lift.fromValue = layer.value(forKeyPath: "transform.scale") ?? 1
@@ -168,18 +183,34 @@ final class DictationHUDActionButton: NSView {
     }
     private var tracking: NSTrackingArea?
 
-    init(action: DictationHUDAction) {
+    init(action: DictationHUDAction,
+         reduceMotion: @escaping () -> Bool = { dictationHUDReduceMotionEnabled() },
+         displayOptionsCenter: NotificationCenter = NSWorkspace.shared.notificationCenter) {
         self.action = action
+        self.reduceMotion = reduceMotion
         super.init(frame: .zero)
+        setAccessibilityElement(true)
         setAccessibilityRole(.button)
         setAccessibilityLabel(action.title)
         toolTip = action.title
+        displayOptionsObserver = DictationHUDNotificationObserver(displayOptionsCenter.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.applyHoverLift() }
+        }, center: displayOptionsCenter)
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) не поддерживается") }
 
     override var isFlipped: Bool { true }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard !isHiddenOrHasHiddenAncestor, let onPress else { return false }
+        onPress(action.id)
+        return true
+    }
 
     override func updateTrackingAreas() {
         if let tracking { removeTrackingArea(tracking) }
@@ -214,7 +245,7 @@ final class DictationHUDActionButton: NSView {
         pressed = false
         needsDisplay = true
         guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
-        onPress?(action.id)
+        _ = accessibilityPerformPress()
     }
 
     override func draw(_ dirtyRect: NSRect) {

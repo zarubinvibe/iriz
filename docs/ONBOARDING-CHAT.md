@@ -8,10 +8,10 @@ Hello. I am Fil, a lawyer who vibe-codes, and I wrote iriz.
 
 From here an agent takes over. It will tell you what it is about to do BEFORE it does it, and
 name the price of every step: what appears on the disk, where the time goes, where you have a
-choice. If something does not suit you, say so right in the chat — a step can be skipped.
+choice. If something does not suit you, say so right in the chat. A step can be skipped.
 
 One promise this whole thing was built for: the audio of your speech never leaves the machine.
-The single trip to the network is the speech model download, and you start it with a button.
+You download the speech model over the network by pressing a button.
 
 <!-- owner-greeting:end -->
 
@@ -55,35 +55,49 @@ dependencies (about 300 MB into `.build`) and puts the finished app into `/Appli
 
 **What you get:** an icon in the menu bar at the top right, and the welcome window.
 
-**Fork:** if you would rather not hand over `/Applications`, say so — we build into the project
+**Fork:** if you would rather not hand over `/Applications`, say so. We build into the project
 folder and run it from there.
 
-## Step 4: grant the permissions and download the model
+## Step 4: download the model and grant permissions
 
-**What I do:** walk you through three macOS permissions — microphone, Accessibility, Input
-Monitoring — and start the speech model download.
+**What I do:** take you to the second step of the welcome window, right after the greeting.
+Click "Download and install Parakeet". iriz downloads about 500 MB, installs the model and
+selects it for recognition. The window shows progress; download time depends on your connection.
+While it runs, you can click "Next" and grant the macOS permissions.
 
-**Why:** without the microphone there is nothing to hear, without Accessibility there is
-nowhere to paste, without Input Monitoring the key is not heard at all. The model is the half
-a gigabyte for which the app goes online exactly once.
+**Why:** dictation needs a model. The microphone lets iriz hear you, Accessibility lets it
+paste text, and Input Monitoring lets it hear the hotkey. After installation, recognition
+runs on your Mac without an internet connection.
 
-**What changes on disk:** the model lands in `~/Library/Application Support/iriz/Models`. The
-permissions are written into the macOS database, not into the app.
+**What changes on disk:** the model lands in
+`~/Library/Application Support/FluidAudio/Models/parakeet-tdt-0.6b-v3`.
+You do not need to move files yourself. macOS stores the permissions in its system database,
+not in the app.
 
-**What you get:** working dictation. Press the key, say a sentence, press again — the text
-lands where the cursor was blinking.
+**Fork:** "Download later" skips the download. To return, open Settings → Dictation →
+"Download Parakeet model…". The trial step also has a "Set up the model" button when the model
+is missing. If the download fails, read the reason in the window and click "Try again" after
+addressing it. We wait for the model before trying dictation.
+
+**What you get:** once the model is installed and permissions are granted, we test dictation
+in the welcome window. Press the key, say a sentence, press again. The text appears in the
+trial field.
 
 ## Step 5: check that it is all honest
 
-**What I do:** run the project gates and show you their whole output.
+**What I do:** after the model download, run the tests and project gates, show you the output
+and point out any skipped checks.
 
-**Why:** the promise «the audio never leaves the machine» is checked by an instrument, not by a
-paragraph in the README. The gate kicks the set of networking symbols in the built binary and
-asks the kernel whether the running app holds a single open socket.
+**Why:** the network gate compares the built binary's networking symbols with a baseline.
+If the app is running from `/Applications`, it also checks its open sockets at that moment.
+Otherwise it skips that check. A snapshot cannot prove the app has never connected to the
+network; connections are expected during a model download.
 
-**What changes on disk:** nothing. The gates only read and count.
+**What changes on disk:** tests update `.build` and write logs. The gates also clean up their
+temporary test files.
 
-**What you get:** a green report you saw with your own eyes instead of taking on trust.
+**What you get:** a report of the checks that ran. Failures and skipped checks stay in the
+report; they do not become a promise that everything works.
 
 ```bash
 bash scripts/verify.sh && bash scripts/offline_binary_gate.sh

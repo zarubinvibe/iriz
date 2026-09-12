@@ -13,6 +13,17 @@ private let HOTKEY_BUTTON_WIDTH: CGFloat = 150
 /// в строке подписей, иначе шапка съезжает относительно полей.
 private let CORRECTION_TRASH_WIDTH: CGFloat = 22
 
+/// Общий выбор страницы у окна и его содержимого. Переход не пересоздаёт
+/// форму: несохранённые сочетания и очередь файлов остаются на месте.
+@MainActor
+public final class SettingsNavigation: ObservableObject {
+    @Published public var page: SettingsPage
+
+    public init(page: SettingsPage = .keys) {
+        self.page = page
+    }
+}
+
 @MainActor
 public struct IrizSettingsView: View {
     @StateObject private var model: SettingsModel
@@ -22,30 +33,49 @@ public struct IrizSettingsView: View {
     @State private var transferMessage: String?
     @State private var transferFailed = false
     @State private var appProfileMessage: String?
-    @State private var page: SettingsPage
+    @StateObject private var navigation: SettingsNavigation
+    private var page: SettingsPage { navigation.page }
     @State private var languageChoice: IrizLanguage = irizLanguageChoice()
     @State private var appearanceChoice: IrizAppearanceChoice = irizAppearanceChoice()
-    @State private var fileQueue: [IrizDropItem] = []
+    @StateObject private var files = SettingsFileTranscription()
+    @State private var fileLanguage: DictationLanguage = .auto
     @State private var meetingQueue: [IrizDropItem] = []
+    @State private var meetingBusy = false
+    @State private var meetingStopping = false
+    @State private var meetingResults: [MeetingArtifacts] = []
     @State private var meetingProgress: String?
     @State private var meetingReport: String?
     @State private var meetingFailed = false
     @State private var diskEntries: [DiskUsageEntry] = []
     @State private var diskCounting = false
-    @State private var historyEntries: [DictationHistoryEntry] = []
-    @State private var historyQuery = ""
+    @StateObject private var historyModel: DictationHistoryModel
+    private let isPreview: Bool
+    private let openSpeechModelSetup: (() -> Void)?
     @Namespace private var sidebarGlass
     /// Система гасит свою анимацию, но не наш `withAnimation` - морф стекла
     /// приходится гейтить руками (правило M07 линтера).
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(preview: Bool = false, page: SettingsPage = .keys) {
+    public init(preview: Bool = false, page: SettingsPage = .keys,
+                navigation: SettingsNavigation? = nil,
+                openSpeechModelSetup: (() -> Void)? = nil) {
         _model = StateObject(wrappedValue: SettingsModel(preview: preview))
-        _page = State(initialValue: page)
+        _historyModel = StateObject(wrappedValue: DictationHistoryModel(preview: preview))
+        isPreview = preview
+        self.openSpeechModelSetup = openSpeechModelSetup
+        _navigation = StateObject(wrappedValue: navigation ?? SettingsNavigation(page: page))
     }
 
     public var body: some View {
         glassScene
+            .onAppear { model.refreshSpeechModelReadiness() }
+            .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                model.refreshSpeechModelReadiness()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: speechModelDidInstallNotification)) { notification in
+                guard !isPreview, let profile = notification.object as? SpeechModelProfile else { return }
+                model.applyInstalledSpeechModel(profile)
+            }
     }
 
     /// Общего `GlassEffectContainer` здесь НЕТ, и это измеренное решение.
@@ -174,7 +204,7 @@ public struct IrizSettingsView: View {
             // Пресет вместо магических чисел: `.snappy` и есть «доехать с весом,
             // без игры» (правило M02 линтера).
             withAnimation(reduceMotion ? nil : .irizMove) {
-                page = item
+                navigation.page = item
             }
         } label: {
             Label {
@@ -240,8 +270,7 @@ public struct IrizSettingsView: View {
     /// кнопка сохранения, спрятанная на одной из девяти, находится случайно.
     private var footerBar: some View {
         HStack(spacing: 12) {
-            if let message = model.validationMessage,
-               !message.contains(L("settings.konflikt", "Конфликт")), !message.contains("macOS") {
+            if let message = model.validationMessage {
                 Label(message, systemImage: "exclamationmark.triangle.fill")
                     .foregroundStyle(.red)
                     .accessibilityLabel(Lf("settings.error.a11y", "Ошибка настроек: %@", message))
@@ -455,12 +484,7 @@ public struct IrizSettingsView: View {
                 }
             }
 
-            Picker(L("settings.raspoznavatel", "Распознаватель"), selection: $model.speechEngine) {
-                ForEach(SpeechModelProfile.allCases, id: \.self) { profile in
-                    Text(profile.shortName).tag(profile)
-                }
-            }
-            .accessibilityLabel(L("settings.kakoyDvizhokRaspoznavaniyaRechi", "Какой движок распознавания речи использовать"))
+            speechRecognitionControls
 
             settingsNote {
                 Text(L("settings.parakeetBystreeV11", "Parakeet быстрее в 11-15 раз, но транслитерирует английские термины внутри русской фразы: git rebase слышится как «гид репейс». Whisper large-v3 берет их латиницей (19 процентов ошибок на смешанной речи против 44), зато надиктовка в полминуты ждет расшифровки около 16 секунд. Оба считают на этом Маке, наружу не уходит ничего."))
@@ -830,8 +854,49 @@ public struct IrizSettingsView: View {
         }
     }
 
+    @ViewBuilder
+    private var speechRecognitionControls: some View {
+        Picker(L("settings.raspoznavatel", "Распознаватель"), selection: $model.speechEngine) {
+            ForEach(SpeechModelProfile.allCases, id: \.self) { profile in
+                Text(profile.shortName).tag(profile)
+            }
+        }
+        .disabled(files.busy || meetingBusy)
+        .accessibilityLabel(L("settings.kakoyDvizhokRaspoznavaniyaRechi", "Какой движок распознавания речи использовать"))
+        VStack(alignment: .leading, spacing: 8) {
+            Label(model.speechModelInstalled
+                  ? Lf("settings.speechModelInstalled", "%@: модель установлена", model.speechEngine.shortName)
+                  : Lf("settings.speechModelMissing", "%@: модель не установлена", model.speechEngine.shortName),
+                  systemImage: model.speechModelInstalled ? "checkmark.circle" : "arrow.down.circle")
+                .foregroundStyle(.primary)
+            if !model.speechModelInstalled {
+                Text(model.canUseInstalledParakeet
+                     ? L("settings.parakeetAlreadyAvailable", "Parakeet уже установлен. Выбери его и сохрани настройки, чтобы использовать для диктовки.")
+                     : L("settings.speechModelDownloadHelp", "Для распознавания нужна модель на этом Маке. Автоматически можно скачать только Parakeet: около 0,5 ГБ, один раз. После установки он станет выбранным распознавателем. Звук останется на устройстве."))
+                    .font(.footnote)
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
+            if !model.speechModelInstalled, model.canUseInstalledParakeet {
+                Button(L("settings.selectInstalledParakeet", "Выбрать установленный Parakeet")) {
+                    model.speechEngine = .multilingualV3
+                }
+                .modifier(GlassButton())
+                .disabled(files.busy || meetingBusy)
+            } else {
+                Button(model.speechModelInstalled
+                       ? L("settings.speechModelSetup", "Настроить распознавание…")
+                       : L("settings.downloadParakeet", "Скачать модель Parakeet…")) {
+                    openSpeechModelSetup?()
+                }
+                .modifier(GlassButton())
+                .disabled(isPreview || openSpeechModelSetup == nil || files.busy || meetingBusy)
+            }
+        }
+    }
+
     private var behaviorSection: some View {
         Section {
+            speechRecognitionControls
             LabeledContent(L("settings.zaderzhkaEnter", "Задержка Enter")) {
                 HStack(spacing: 6) {
                     // labelsHidden обязателен: в Form(.grouped) заголовок TextField
@@ -1224,13 +1289,77 @@ public struct IrizSettingsView: View {
     /// Расшифровка файлов: бросил запись - получил текст рядом с ней.
     private var filesSection: some View {
         Section {
+            speechRecognitionControls
             IrizDropZone(title: L("settings.perenesiteZapisiSyuda", "Перенесите записи сюда"),
                          subtitle: L("settings.diktofonZvonokEksportIz", "Диктофон, звонок, экспорт из встречи. Текст ляжет рядом с файлом."),
                          extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
-                enqueue(urls, into: $fileQueue)
+                enqueue(urls, into: $files.queue)
             }
-            ForEach(fileQueue) { item in
-                IrizDropRow(item: item) { fileQueue.removeAll { $0.id == item.id } }
+            .disabled(files.busy)
+            Picker(L("files.language", "Язык записи"), selection: $fileLanguage) {
+                ForEach(DictationLanguage.allCases, id: \.self) { language in
+                    Text(language == .auto ? L("files.languageAuto", "Определить автоматически")
+                         : Locale.current.localizedString(forLanguageCode: language.rawValue) ?? language.rawValue)
+                        .tag(language)
+                }
+            }
+            .disabled(files.busy)
+            ForEach(files.queue) { item in
+                VStack(alignment: .leading, spacing: 6) {
+                    IrizDropRow(item: item) { files.queue.removeAll { $0.id == item.id } }
+                        .disabled(files.busy)
+                    if let error = files.errors[item.id] {
+                        Label(error, systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                            .textSelection(.enabled)
+                        let destination = AudioFileBatch.destination(forSource: item.url, in: nil)
+                        Button(L("files.showDestination", "Показать папку результата")) {
+                            NSWorkspace.shared.activateFileViewerSelecting([destination.deletingLastPathComponent()])
+                        }
+                        .modifier(GlassButton())
+                    }
+                }
+            }
+            if !files.queue.isEmpty {
+                Button(files.errors.isEmpty ? L("files.start", "Расшифровать записи")
+                       : L("files.retry", "Повторить оставшиеся")) {
+                    guard !meetingBusy, !isPreview, model.speechModelInstalled else { return }
+                    files.start(engine: model.speechEngine, language: fileLanguage)
+                }
+                .modifier(GlassProminentButton())
+                .disabled(files.busy || meetingBusy || isPreview || !model.speechModelInstalled)
+            }
+            if let progress = files.progress {
+                if let fraction = files.fraction {
+                    ProgressView(value: fraction) { Text(progress) }
+                } else {
+                    ProgressView { Text(progress) }
+                        .controlSize(.small)
+                }
+                Button(files.stopping ? L("files.stopping", "Останавливаю после текущей записи…")
+                       : L("files.stopAfterCurrent", "Остановить после текущей записи")) {
+                    files.stopAfterCurrent()
+                }
+                .modifier(GlassButton())
+                .disabled(files.stopping)
+            }
+            if let report = files.report {
+                Text(report).font(.footnote).textSelection(.enabled)
+            }
+            ForEach(files.results, id: \.source) { result in
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(result.destination.lastPathComponent, systemImage: "checkmark.circle")
+                        .textSelection(.enabled)
+                    HStack {
+                        Button(L("files.openText", "Открыть текст")) { openFileResult(result.destination) }
+                            .modifier(GlassButton())
+                        Button(L("files.showInFinder", "Показать в Finder")) {
+                            NSWorkspace.shared.activateFileViewerSelecting([result.destination])
+                        }
+                        .modifier(GlassButton())
+                    }
+                }
             }
             Text(L("settings.rasshifrovkaIdetNaEtom", "Расшифровка идёт на этом Маке тем же движком, что и диктовка. "
                  + "Звук никуда не отправляется, а сам файл остаётся там, где лежал."))
@@ -1254,25 +1383,39 @@ public struct IrizSettingsView: View {
     /// «вставить» означало бы вставить в него же. Копирование есть.
     private var historySection: some View {
         Section {
-            if historyEntries.isEmpty {
-                Text(L("settings.pokaPustoNadiktovannoePoyavitsya", "Пока пусто. Надиктованное появится здесь."))
+            HStack(spacing: 8) {
+                IrizGlyphView(.history, size: 13)
                     .foregroundStyle(IRIZ_SUBTLE)
-            } else {
-                // Системная оправа `.roundedBorder` рисуется непрозрачной
-                // коробкой: в стеклянном окне она читается как дырка. Своя
-                // оправа - то же стекло, что у плит, только тоньше.
-                HStack(spacing: 8) {
-                    IrizGlyphView(.history, size: 13)
-                        .foregroundStyle(IRIZ_SUBTLE)
-                    TextField(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"), text: $historyQuery)
-                        .textFieldStyle(.plain)
-                        .accessibilityLabel(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"))
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(IrizSearchFieldPlate())
+                TextField(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"), text: $historyModel.query)
+                    .textFieldStyle(.plain)
+                    .accessibilityLabel(L("settings.poiskPoNadiktovkam", "Поиск по надиктовкам"))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(IrizSearchFieldPlate())
 
-                ForEach(filteredDictationHistory(historyEntries, query: historyQuery)) { entry in
+            if historyModel.isLoading {
+                ProgressView(L("history.loading", "Читаю надиктовки…"))
+                    .controlSize(.small)
+            }
+            if let notice = historyModel.notice {
+                Label(notice, systemImage: historyModel.noticeIsError ? "exclamationmark.circle" : "checkmark.circle")
+                    .foregroundStyle(historyModel.noticeIsError ? Color.red : Color.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if !historyModel.isLoading, historyModel.visible.isEmpty, !historyModel.noticeIsError {
+                Text(historyModel.entries.isEmpty
+                     ? L("settings.pokaPustoNadiktovannoePoyavitsya", "Пока пусто. Надиктованное появится здесь.")
+                     : L("history.notFoundTitle", "Ничего не нашлось"))
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
+            if historyModel.query.isEmpty, historyModel.entries.count >= DICTATION_HISTORY_VISIBLE_LIMIT {
+                Text(L("history.loadingBody", "Показываю последние сто. Остальные найдёт поиск."))
+                    .font(.footnote)
+                    .foregroundStyle(IRIZ_SUBTLE)
+            }
+            ForEach(historyModel.visible) { entry in
+                HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(dictationHistoryPreview(entry.displayText))
                             .lineLimit(3)
@@ -1286,55 +1429,53 @@ public struct IrizSettingsView: View {
                         .foregroundStyle(IRIZ_SUBTLE)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .contentShape(Rectangle())
-                    .contextMenu {
-                        Button(L("settings.kopirovat", "Копировать")) { copyHistory(entry) }
-                    }
+                    Button(L("settings.kopirovat", "Копировать")) { copyHistory(entry) }
+                        .disabled(isPreview)
+                }
+                .contextMenu {
+                    Button(L("settings.kopirovat", "Копировать")) { copyHistory(entry) }
+                        .disabled(isPreview)
                 }
             }
         } header: {
             Text(L("settings.istoriyaNadiktovok", "История надиктовок"))
         }
         .onAppear { loadHistory() }
+        .onDisappear { historyModel.cancelLoading() }
     }
 
     private func loadHistory() {
-        // Читается с диска при каждом открытии страницы, а не держится в
-        // памяти: диктовки пишутся другим процессом окна, и кэш разъехался бы
-        // с диском ровно тогда, когда владелец ищет только что сказанное.
-        //
-        // В ФОНЕ и с потолком. Здесь стоял тот же дефект, что в окне истории:
-        // две тысячи каталогов по три файла читались синхронно, 1386 мс, и всё
-        // это время окно настроек не рисовалось. Владелец поймал это дважды -
-        // сперва в окне, потом на этой странице.
-        guard let root = try? DictationStore.dictationsDirectory() else { return }
-        Task.detached(priority: .userInitiated) {
-            let found = dictationHistoryEntries(in: root, limit: DICTATION_HISTORY_VISIBLE_LIMIT)
-            await MainActor.run { historyEntries = found }
-        }
+        historyModel.reload { try DictationStore.dictationsDirectory() }
     }
 
     private func copyHistory(_ entry: DictationHistoryEntry) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(entry.displayText, forType: .string)
-        statusMessage = L("settings.skopirovanoVBuferObmena", "Скопировано в буфер обмена.")
+        guard !isPreview else { return }
+        let copied = DictationHistoryClipboard.copy(entry.displayText)
+        historyModel.noticeIsError = !copied
+        historyModel.notice = copied
+            ? L("history.copiedTimed", "Скопировано. Буфер очистится через 2 минуты.")
+            : L("history.copyFailed", "Не удалось скопировать. Попробуй ещё раз.")
     }
 
     private var meetingsSection: some View {
         Section {
+            speechRecognitionControls
             IrizDropZone(title: L("settings.perenesiteZapisVstrechi", "Перенесите запись встречи"),
-                         subtitle: L("settings.zapisZasedaniyaIliSozvona", "Запись заседания или созвона. Рядом ляжет протокол."),
+                         subtitle: L("meetings.storage", "Запись на русском языке. Звук и протокол сохранятся в архиве iriz; готовые файлы можно открыть отсюда."),
                          extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
                 enqueue(urls, into: $meetingQueue)
             }
+            .disabled(meetingBusy)
             ForEach(meetingQueue) { item in
                 IrizDropRow(item: item) { meetingQueue.removeAll { $0.id == item.id } }
+                    .disabled(meetingBusy)
             }
 
             if !meetingQueue.isEmpty {
-                Button(L("settings.razobratZapisi", "Разобрать записи")) { runMeetings() }
+                Button(meetingFailed ? L("files.retry", "Повторить оставшиеся")
+                       : L("settings.razobratZapisi", "Разобрать записи")) { runMeetings() }
                     .modifier(GlassProminentButton())
-                    .disabled(meetingProgress != nil)
+                    .disabled(meetingBusy || files.busy || isPreview || !model.speechModelInstalled)
                     .accessibilityLabel(L("settings.razobratZapisiVstrech", "Разобрать записи встреч"))
             }
 
@@ -1342,9 +1483,14 @@ public struct IrizSettingsView: View {
                 // Ход показывается словами, а не полосой: у часовой записи
                 // полоса врёт про остаток, а название шага честно говорит,
                 // что именно сейчас происходит.
-                Label(meetingProgress, systemImage: "hourglass")
-                    .font(.footnote)
-                    .foregroundStyle(IRIZ_SUBTLE)
+                ProgressView { Text(meetingProgress) }
+                    .controlSize(.small)
+                Button(meetingStopping ? L("files.stopping", "Останавливаю после текущей записи…")
+                       : L("files.stopAfterCurrent", "Остановить после текущей записи")) {
+                    meetingStopping = true
+                }
+                .modifier(GlassButton())
+                .disabled(meetingStopping)
             }
 
             if let meetingReport {
@@ -1353,6 +1499,21 @@ public struct IrizSettingsView: View {
                     .font(.footnote)
                     .foregroundStyle(meetingFailed ? Color.orange : IRIZ_SUBTLE)
                     .textSelection(.enabled)
+            }
+
+            ForEach(meetingResults, id: \.directory) { artifacts in
+                VStack(alignment: .leading, spacing: 6) {
+                    Label(artifacts.directory.lastPathComponent, systemImage: "checkmark.circle")
+                        .textSelection(.enabled)
+                    HStack {
+                        Button(L("meetings.openProtocol", "Открыть протокол")) { openFileResult(artifacts.transcript) }
+                            .modifier(GlassButton())
+                        Button(L("meetings.showFolder", "Показать папку встречи")) {
+                            NSWorkspace.shared.activateFileViewerSelecting([artifacts.directory])
+                        }
+                        .modifier(GlassButton())
+                    }
+                }
             }
 
             // Здесь продукт нарушает собственное правило, и молчать об этом
@@ -1377,47 +1538,66 @@ public struct IrizSettingsView: View {
     /// Отказ на одной записи не отменяет остальные: владелец принёс папку, и
     /// одна битая запись не должна стоить ему разбора всех.
     private func runMeetings() {
+        guard !meetingBusy, !files.busy, !meetingQueue.isEmpty, !isPreview, model.speechModelInstalled else { return }
+        meetingBusy = true
+        meetingStopping = false
         let items = meetingQueue
+        let engine = model.speechEngine
         meetingReport = nil
         meetingFailed = false
         Task { @MainActor in
-            let pipeline = MeetingPipeline()
+            let pipeline = MeetingPipeline(transcriber: AudioFileTranscriber(engine: engine))
             var done = 0
             var failures: [String] = []
             for item in items {
+                guard !meetingStopping else { break }
                 let name = item.url.deletingPathExtension().lastPathComponent
-                meetingProgress = "\(name): читаю"
+                meetingProgress = "\(name): \(L("files.reading", "читаю запись"))"
                 do {
                     let result = try await pipeline.run(
                         audio: item.url,
                         title: name,
                         progress: { step in
-                            Task { @MainActor in meetingProgress = "\(name): \(step.lowercased())" }
+                            Task { @MainActor in
+                                guard meetingBusy else { return }
+                                meetingProgress = "\(name): \(step.lowercased())"
+                            }
                         }
                     )
                     done += 1
                     meetingQueue.removeAll { $0.id == item.id }
+                    meetingResults.append(result.artifacts)
                     if !result.speakersResolved {
                         // Владелец должен отличить монолог от неудавшегося
                         // разделения: в первом случае имена расставлять не
                         // нужно, во втором нужно.
-                        failures.append("\(name): говорящие не разобраны, протокол одной репликой")
+                        failures.append(Lf("meetings.speakersUnresolved", "%@: говорящие не разделены. Текст сохранён одной репликой; проверьте протокол.", name))
                     }
                 } catch {
-                    let reason = (error as? MeetingPipelineFailure)?.rawValue ?? "\(error)"
+                    let reason = (error as? MeetingPipelineFailure)?.rawValue ?? error.localizedDescription
                     failures.append("\(name): \(reason)")
                 }
             }
             meetingProgress = nil
+            meetingBusy = false
             meetingFailed = !failures.isEmpty
-            let base = done > 0 ? "Разобрано записей: \(done)." : L("settings.razobratNeUdalos", "Разобрать не удалось.")
-            meetingReport = failures.isEmpty ? base : base + " " + failures.joined(separator: "; ")
+            let base = Lf("files.finished", "Готово: %d из %d.", done, items.count)
+                + (meetingStopping ? " " + L("files.stopped", "Очередь остановлена. Оставшиеся файлы можно запустить снова.") : "")
+            meetingReport = failures.isEmpty ? base : base + "\n" + failures.joined(separator: "\n")
+        }
+    }
+
+    private func openFileResult(_ url: URL) {
+        if !NSWorkspace.shared.open(url) {
+            statusMessage = Lf("files.openFailed", "Не удалось открыть %@. Проверь файл через Finder.", url.lastPathComponent)
         }
     }
 
     /// Положить файлы в очередь, не задваивая уже принесённые.
     private func enqueue(_ urls: [URL], into queue: Binding<[IrizDropItem]>) {
-        for url in urls where !queue.wrappedValue.contains(where: { $0.url == url }) {
+        for source in urls {
+            let url = source.standardizedFileURL
+            guard !queue.wrappedValue.contains(where: { $0.url.standardizedFileURL == url }) else { continue }
             let bytes = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
             queue.wrappedValue.append(IrizDropItem(url: url, bytes: bytes ?? 0))
         }

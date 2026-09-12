@@ -1,0 +1,20 @@
+Use case: stylized-concept
+Asset type: wide documentation frame for a project of the Olympuz family
+Primary request: one wide scene of the workplace itself - the marble laptop stands ready and its screen is a blank flat panel waiting for the product picture to be placed into it by a separate instrument.
+Input images: Image 1 is the immutable Pantheon style reference; Image 2 is the required family-signature column; Image 3 is the project prop sheet - the herald staff and the gold voice ribbon must match that sheet exactly.
+Subject: an open laptop carved from white marble stands alone at the centre of a low white-marble table: a thin base with a plain flat lid raised at a comfortable angle. THE SCREEN IS COMPLETELY BLANK - a smooth flat ivory panel with a clean rectangular border, no image, no glow, no reflection, no carving, nothing on it at all. The muted-gold herald staff lies flat on the table beside the laptop, and one continuous muted-gold ribbon of voice curves in from the left and ends at the lower edge of the screen without crossing onto it. No figure is present.
+Composition/framing: 16:9 landscape, the laptop close to the viewer and filling the middle half of the frame, its screen large, flat and facing the viewer almost straight on, all four corners clearly visible and unobstructed. Generous empty ivory space above. A classical white-marble column stands at the right as the family signature. Nothing overlaps the screen. Nothing is cropped by any edge.
+Style/medium: premium restrained 3D marble sculpture render, monumental carving with deep drapery and real weight, physically plausible materials, warm ivory Apple-like presentation
+Lighting/mood: soft daylight from upper left, long gentle shadows, calm and welcoming. The gold ribbon and the gold fittings glow softly FROM WITHIN, as if lit by their own material, never by a lamp or a hard rim light.
+Color palette: ivory #F3EFE8, bright ivory #FBFAF6, white marble, muted gold #C9A87A for the voice ribbon and the metal fittings only, sky blue #B8D6EA for the ground paths only, charcoal #3E3A36
+Constraints:
+- The laptop is carved marble, not a real device: no logo, no ports, no rubber feet, no camera dot, no key legends. Its keys are plain shallow squares of marble.
+- The screen panel is EMPTY and FLAT and evenly lit, with a clear thin border all around, because a real screenshot of the product is placed into it afterwards. Any picture generated on it would be invented interface.
+- The screen is a flat plane. It is not curved, not tilted away from the viewer, and none of its four corners is hidden by a hand, a wing, the staff or the ribbon.
+- Everything carried is held by a closed hand. Everything standing rests on the ground and casts a shadow. Nothing hovers.
+- Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, exactly as on the character sheet.
+- Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
+- No modern devices other than this marble laptop: no phones, no cables, no microphones, no mouse.
+- Preserve the reference style; highest final quality; maximum resolution.
+Avoid: owl, bird, any animal, glowing screen, picture on the screen, reflection on the screen, screen bezel with a logo, rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, scales, sword, spear, hearth, fire, floating staff, floating laptop, a ribbon floating free of the figure, cloth wings, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Text (verbatim): No readable text, no letters, no digits anywhere in the image, and nothing at all on the screen.

@@ -31,6 +31,20 @@ public enum MeetingPipelineFailure: String, Error, Equatable {
     case storeFailed = "не удалось сохранить встречу на диск"
 }
 
+/// Whisper может вернуть текст без времён слов. Успешная диаризация сама по
+/// себе ещё не связывает слова с людьми: весь исходный текст должен сохраниться.
+func meetingSpeakerTurns(transcript: AudioFileTranscript, spans: [SpeakerSpan],
+                         names: SpeakerNames = SpeakerNames())
+    -> (turns: [SpeakerTurn], speakersResolved: Bool) {
+    let turns = speakerTurnsNamed(speakerTurns(tokens: transcript.tokenTimings, spans: spans), names: names)
+    guard !spans.isEmpty,
+          turns.contains(where: { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+        return ([SpeakerTurn(speaker: "Запись", text: transcript.text,
+                             start: 0, end: transcript.audioSeconds)], false)
+    }
+    return (turns, true)
+}
+
 @MainActor
 public final class MeetingPipeline {
     private let transcriber: AudioFileTranscriber
@@ -52,20 +66,33 @@ public final class MeetingPipeline {
     public func run(audio url: URL, title: String, names: SpeakerNames = SpeakerNames(),
                     at date: Date = Date(),
                     progress: @escaping (String) -> Void = { _ in }) async throws -> MeetingResult {
+        try Task.checkCancellation()
         progress("Читаю запись")
-        guard let decoded = try? await AudioFileDecoder.decode(url) else {
+        let decoded: DecodedAudio
+        do {
+            decoded = try await AudioFileDecoder.decode(url)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            try Task.checkCancellation()
             throw MeetingPipelineFailure.audioUnreadable
         }
+        try Task.checkCancellation()
 
         progress("Расшифровываю")
-        _ = try? await transcriber.prepare()
         let transcript: AudioFileTranscript
         do {
+            _ = try await transcriber.prepare()
+            try Task.checkCancellation()
             transcript = try await transcriber.transcribe(decoded, language: .russian)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
+            try Task.checkCancellation()
             log("meeting: расшифровка отказала (\(error))")
             throw MeetingPipelineFailure.transcriptionFailed
         }
+        try Task.checkCancellation()
         guard !transcript.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MeetingPipelineFailure.nothingRecognized
         }
@@ -73,22 +100,28 @@ public final class MeetingPipeline {
         progress("Разбираю говорящих")
         // Отказ диаризатора конвейер не роняет: протокол без разделения хуже
         // полного, но лучше отсутствующего.
-        let spans = (try? await diarizer.spans(of: url)) ?? []
-        let turns = spans.isEmpty
-            ? [SpeakerTurn(speaker: "Запись", text: transcript.text,
-                           start: 0, end: transcript.audioSeconds)]
-            : speakerTurnsNamed(speakerTurns(tokens: transcript.tokenTimings, spans: spans),
-                                names: names)
+        let spans: [SpeakerSpan]
+        do {
+            spans = try await diarizer.spans(of: url)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            try Task.checkCancellation()
+            spans = []
+        }
+        try Task.checkCancellation()
+        let resolved = meetingSpeakerTurns(transcript: transcript, spans: spans, names: names)
 
         progress("Сохраняю")
         let document = MeetingProtocolDocument(title: title, recordedAt: date,
                                                audioSeconds: transcript.audioSeconds,
-                                               turns: turns)
+                                               turns: resolved.turns)
+        try Task.checkCancellation()
         do {
             let artifacts = try MeetingStore.save(audio: url, protocolText: document.text(),
                                                   at: date, title: title, in: storeRoot)
-            return MeetingResult(artifacts: artifacts, turns: turns,
-                                 speakersResolved: !spans.isEmpty,
+            return MeetingResult(artifacts: artifacts, turns: resolved.turns,
+                                 speakersResolved: resolved.speakersResolved,
                                  audioSeconds: transcript.audioSeconds)
         } catch {
             log("meeting: запись на диск отказала (\(error))")

@@ -31,6 +31,7 @@ struct FirstRunDictationField: NSViewRepresentable {
     func makeNSView(context: Context) -> FirstRunFieldBox {
         let textView = FirstRunTextView()
         textView.placeholder = placeholder
+        textView.setAccessibilityLabel(placeholder)
         textView.delegate = context.coordinator
         textView.font = .systemFont(ofSize: 14)
         textView.isEditable = true
@@ -56,6 +57,7 @@ struct FirstRunDictationField: NSViewRepresentable {
         guard let textView = box.textView else { return }
         if textView.string != text { textView.string = text }
         textView.placeholder = placeholder
+        textView.setAccessibilityLabel(placeholder)
         context.coordinator.onSubmit = onSubmit
         // Курсор ставится в это поле и остаётся здесь: диктовка вставляет
         // текст туда, где он мигает.

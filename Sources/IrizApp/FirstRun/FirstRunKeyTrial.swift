@@ -24,7 +24,16 @@ struct FirstRunKeyTrial: View {
 
     var body: some View {
         VStack(spacing: 12) {
-            if canHearKey {
+            if !model.modelIsReady {
+                Text(model.isInstallingModel
+                     ? L("firstrun.trialModelDownloading", "Модель ещё скачивается. Ход установки виден на её странице.")
+                     : L("firstrun.trialModelMissing", "Модель ещё не установлена. Кнопка ниже вернёт к скачиванию."))
+                    .font(.system(size: 13, weight: .medium))
+                    .multilineTextAlignment(.center)
+                    .foregroundStyle(.secondary)
+                Button(L("firstrun.trialOpenModelSetup", "К установке модели")) { model.showModelSetup() }
+                    .modifier(FirstRunProminentButton())
+            } else if canHearKey {
                 // Сама клавиша и есть кнопка замены. Строчка «Клавиша занята?
                 // Поменять» снизу была незаметна: владелец 07.09.2026 сказал
                 // прямо — «снизу не очень заметно… необходимо, чтобы вот та
@@ -88,11 +97,13 @@ struct FirstRunKeyTrial: View {
                 }
             }
 
-            FirstRunDictationField(text: $model.tryItText,
-                                   placeholder: FirstRunCopy.trialFieldPlaceholder,
-                                   onSubmit: { model.goNext() })
-                .frame(height: 68)
-                .frame(maxWidth: 440)
+            if model.modelIsReady {
+                FirstRunDictationField(text: $model.tryItText,
+                                       placeholder: FirstRunCopy.trialFieldPlaceholder,
+                                       onSubmit: { model.goNext() })
+                    .frame(height: 68)
+                    .frame(maxWidth: 440)
+            }
 
 
         }

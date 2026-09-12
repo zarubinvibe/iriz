@@ -13,5 +13,5 @@ Constraints:
 - Her head is uncovered, eyes open, hair parted in the centre and gathered low at the nape, wings folded, exactly as on the character sheet.
 - Anatomically correct hands with exactly five fingers and one readable thumb, fingers not fused.
 - Preserve the reference style; highest final quality; maximum resolution.
-Avoid: rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, floating objects, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
+Avoid: owl, bird, any animal, rainbow of many colors, prismatic colors, veil, helmet, crown, blindfold, closed eyes, floating objects, screens, keyboards, microphones, cables, brand marks, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, extra or missing fingers, fused fingers, callout labels
 Text (verbatim): No readable text, no letters, no digits anywhere in the image.

@@ -472,9 +472,13 @@ struct CodexPromptGeneratorTests {
 
     @Test func timeoutTerminatesFakeProcess() async throws {
         let fake = try makeFakeExecutable(body: """
-        marker=${0%/*}/process.pid
-        printf '%s' "$$" > "$marker"
-        exec /usr/bin/perl -e '$SIG{INT} = $SIG{TERM} = "IGNORE"; sleep 1 while 1'
+        exec /usr/bin/perl -e '
+          $SIG{INT} = $SIG{TERM} = "IGNORE";
+          open my $marker, ">", $ARGV[0] or die $!;
+          print {$marker} $$;
+          close $marker or die $!;
+          sleep 1 while 1
+        ' "${0%/*}/process.pid"
         """)
         let marker = fake.directory.appendingPathComponent("process.pid")
         defer {
@@ -487,14 +491,16 @@ struct CodexPromptGeneratorTests {
         let started = Date()
 
         do {
-            _ = try await fakeGenerator(fake, timeoutSeconds: 1)
+            // Запуск интерпретатора под нагрузкой не обязан уложиться в секунду.
+            _ = try await fakeGenerator(fake, timeoutSeconds: 3)
                 .generate(rawTranscript: raw, markup: PromptEnvelopeBuilder().analyze(raw))
             Issue.record("Runner не сработал по таймауту")
         } catch let error as CodexPromptGeneratorError {
             #expect(error == .timedOut)
         }
         let elapsed = Date().timeIntervalSince(started)
-        #expect(elapsed < 5)
+        // Две попытки по 3 с плюс эскалация до SIGKILL и накладные расходы.
+        #expect(elapsed < 9)
         let pid = try #require(processID(at: marker))
         errno = 0
         #expect(Darwin.kill(pid, 0) == -1)
@@ -545,26 +551,35 @@ struct CodexPromptGeneratorTests {
             printf '%s' "$count" > "$attempts"
             case "$count" in
               1)
-                (trap '' HUP INT TERM; /bin/sleep 5; /usr/bin/printf '%s' 'stale' > "$result"; /usr/bin/printf '%s' 'yes' > "${0%/*}/stale-wrote") &
+                (
+                  trap '' HUP INT TERM
+                  while [ ! -e "${0%/*}/retry-ready" ]; do /bin/sleep 0.02; done
+                  /usr/bin/printf '%s' 'stale' > "$result"
+                  /usr/bin/touch "${0%/*}/stale-wrote"
+                ) &
+                printf '%s' "$!" > "${0%/*}/writer.pid"
                 exec /bin/sleep 60
                 ;;
               2)
                 /usr/bin/printf '%s' '{"status":"ready","taskKind":"general","goal":{"text":"Fresh retry","evidence":"Fresh retry"},"context":[],"requirements":[],"constraints":[],"outputRequirements":[],"acceptance":[],"ambiguities":[],"modules":[]}' > "$result"
-                /bin/sleep 3
+                /usr/bin/touch "${0%/*}/retry-ready"
+                while [ ! -e "${0%/*}/stale-wrote" ]; do /bin/sleep 0.02; done
                 ;;
               *) exit 73 ;;
             esac
             """
         )
-        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let writerPIDURL = fake.directory.appendingPathComponent("writer.pid")
+        defer {
+            if let pid = processID(at: writerPIDURL), Darwin.kill(pid, 0) == 0 {
+                _ = Darwin.kill(pid, SIGKILL)
+            }
+            try? FileManager.default.removeItem(at: fake.directory)
+        }
         let raw = "Fresh retry"
 
-        // Времена разведены с запасом. Раньше устаревшая запись приходила
-        // через 0,1 с после снятия первой попытки и должна была попасть в
-        // трёхсекундное окно второй - зазор в одну десятую секунды не
-        // переживает занятую машину. Теперь: попытка снимается на 4 с,
-        // устаревшая запись приходит на 5-й, вторая попытка идёт 3 с, то есть
-        // окно шире зазора в тридцать раз.
+        // Вторая попытка ждёт устаревшую запись после своего результата:
+        // порядок событий проверяется независимо от скорости машины.
         let generation = try await fakeGenerator(fake, timeoutSeconds: 4)
             .generate(rawTranscript: raw, markup: PromptEnvelopeBuilder().analyze(raw))
 
@@ -579,14 +594,7 @@ struct CodexPromptGeneratorTests {
             #expect(resultPaths[0] != resultPaths[1])
         }
         let staleWriterURL = fake.directory.appendingPathComponent("stale-wrote")
-        var staleWriter = ""
-        for _ in 0..<50 where staleWriter != "yes" {
-            staleWriter = (try? String(contentsOf: staleWriterURL)) ?? ""
-            if staleWriter != "yes" {
-                try await Task.sleep(for: .milliseconds(20))
-            }
-        }
-        #expect(staleWriter == "yes")
+        #expect(FileManager.default.fileExists(atPath: staleWriterURL.path))
     }
 
     @Test func inheritedStderrDoesNotHangRunner() async throws {
@@ -633,7 +641,7 @@ struct CodexPromptGeneratorTests {
         let fake = try makeFakeExecutable(body: """
         marker=${0%/*}/process.pid
         printf '%s' "$$" > "$marker"
-        exec /bin/sleep 5
+        exec /bin/sleep 60
         """)
         let marker = fake.directory.appendingPathComponent("process.pid")
         defer {
@@ -644,10 +652,13 @@ struct CodexPromptGeneratorTests {
         }
         let raw = "Собери отчёт."
         let task = Task {
-            try await fakeGenerator(fake, timeoutSeconds: 10)
+            try await fakeGenerator(fake, timeoutSeconds: 30)
                 .generate(rawTranscript: raw, markup: PromptEnvelopeBuilder().analyze(raw))
         }
-        for _ in 0..<100 where processID(at: marker) == nil {
+        defer { task.cancel() }
+        // Время запуска не входит в проверку скорости отмены: сначала ждём PID.
+        let startupDeadline = ContinuousClock.now.advanced(by: .seconds(10))
+        while processID(at: marker) == nil, ContinuousClock.now < startupDeadline {
             try await Task.sleep(for: .milliseconds(20))
         }
         let pid = try #require(processID(at: marker))

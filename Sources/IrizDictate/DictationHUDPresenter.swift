@@ -1,10 +1,11 @@
 // Порядок показа плашки «идёт голос»: что и когда попадает на экран.
 //
-// Здесь нет ни AppKit, ни решений — решения в DictationHUD.swift, рисование в
+// Решения в DictationHUD.swift, рисование в
 // DictationHUDWindow.swift. Такое разделение позволяет проверить тестом всё
 // поведение (что показали, что погасили, крутится ли опрос уровня), ни разу не
 // поднимая живое окно: под `swift test` его и не поднять.
 import Foundation
+import AppKit
 
 /// Поверхность, на которой плашка рисуется. Единственная реализация в продукте —
 /// `DictationHUDPanelSurface` (NSPanel). В тестах подставляется запоминающая
@@ -112,6 +113,7 @@ final class DictationHUDPresenter {
 
     private var surface: DictationHUDSurface?
     private var dismissTimer: Timer?
+    private var displayOptionsObserver: DictationHUDNotificationObserver?
     private var smoothedLevel: Float = 0
     private var lastLevelSequence: UInt64?
     private var sameLevelSequenceTicks = 0
@@ -131,6 +133,7 @@ final class DictationHUDPresenter {
          recordingPurpose: @escaping () -> DictationRecordingPurpose = { .dictation },
          reduceMotion: @escaping () -> Bool = { dictationHUDReduceMotionEnabled() },
          pump: DictationHUDLevelPump = DictationHUDLevelPump(),
+         displayOptionsCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
          surface: @escaping () -> DictationHUDSurface = { DictationHUDPanelSurface() }) {
         self.levelSnapshot = levelSnapshot
         self.staleGuardEnabled = true
@@ -145,6 +148,7 @@ final class DictationHUDPresenter {
         self.pump = pump
         self.makeSurface = surface
         pump.onTick = { [weak self] in self?.render() }
+        observeDisplayOptions(in: displayOptionsCenter)
     }
 
     /// Совместимость тестов и простых поверхностей без sequence. Живой продукт
@@ -155,6 +159,7 @@ final class DictationHUDPresenter {
          recordingPurpose: @escaping () -> DictationRecordingPurpose = { .dictation },
          reduceMotion: @escaping () -> Bool = { dictationHUDReduceMotionEnabled() },
          pump: DictationHUDLevelPump = DictationHUDLevelPump(),
+         displayOptionsCenter: NotificationCenter = NSWorkspace.shared.notificationCenter,
          surface: @escaping () -> DictationHUDSurface = { DictationHUDPanelSurface() }) {
         self.levelSnapshot = { (level(), 0) }
         self.staleGuardEnabled = false
@@ -169,6 +174,18 @@ final class DictationHUDPresenter {
         self.pump = pump
         self.makeSurface = surface
         pump.onTick = { [weak self] in self?.render() }
+        observeDisplayOptions(in: displayOptionsCenter)
+    }
+
+    private func observeDisplayOptions(in center: NotificationCenter) {
+        displayOptionsObserver = DictationHUDNotificationObserver(center.addObserver(
+            forName: NSWorkspace.accessibilityDisplayOptionsDidChangeNotification,
+            object: nil, queue: .main
+        ) { [weak self] _ in
+            // Ожидание и покой не опрашивают уровень: без уведомления уже
+            // открытая плашка не узнаёт, что владелец изменил Reduce Motion.
+            MainActor.assumeIsolated { self?.render() }
+        }, center: center)
     }
 
     // MARK: - Входы конвейера

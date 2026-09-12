@@ -69,6 +69,11 @@ final class MenuState: ObservableObject {
     /// Раскладка работает, только когда выданы оба разрешения.
     var permissionsOK: Bool { accessibilityOK && inputMonitoringOK }
 
+    /// Ошибка модели не должна отправлять проверять уже выданные разрешения.
+    var dictationRecoveryNeedsPermissions: Bool {
+        !permissionsOK || !microphoneOK || !inputTapOK
+    }
+
     /// Версия из бандла — показывается в окне настроек, не в меню.
     var version: String {
         Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "dev"

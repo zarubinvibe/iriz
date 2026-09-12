@@ -519,6 +519,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private lazy var firstRun: FirstRunWindowController = {
         let controller = FirstRunWindowController()
+        controller.model.openAgentSettings = { [weak self] in
+            self?.openSettings(page: .prompt)
+        }
+        controller.model.onSpeechModelInstalled = { [weak self] in
+            _ = self?.dictationController.prepareAfterModelInstallation()
+        }
         // Проба голосом идёт ТЕМ ЖЕ путём, что и обычная диктовка: кнопка
         // зовёт тот же обработчик, что и клавиша. Иначе знакомство показывало
         // бы не тот продукт, который человеку достанется.
@@ -649,12 +655,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         //
         // Приглашение НЕ повторяется тем, кто уже прошёл этот путь руками:
         // решение целиком в firstRunShouldShow.
+        let modelInstalled = speechModelCacheExists(for: DictationSettings.shared.speechEngine)
         if !interactive,
            firstRunShouldShow(defaults: .standard,
                               permissionsGranted: acc && inp,
-                              modelInstalled: speechModelCacheExists(for: .multilingualV3)) {
+                              modelInstalled: modelInstalled) {
             rslog("First run: showing the welcome window")
-            firstRun.show()
+            if !modelInstalled && UserDefaults.standard.bool(forKey: FIRST_RUN_COMPLETED_KEY) {
+                firstRun.showModelSetup()
+            } else {
+                firstRun.show()
+            }
             return
         }
 
@@ -1182,6 +1193,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Окно живёт столько же, сколько приложение: пересоздавать его на каждый показ —
     /// значит терять несохранённую запись хоткея и позицию окна.
     private var settingsWindow: NSWindow?
+    private let settingsNavigation = SettingsNavigation()
 
     /// Открыть знакомство заново из меню.
     /// Идёт ли запись встречи. Меню спрашивает, чтобы назвать строку словом
@@ -1203,7 +1215,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         firstRun.show()
     }
 
-    func openSettings(page: SettingsPage = .keys) {
+    func showSpeechModelSetup() {
+        firstRun.showModelSetup()
+    }
+
+    func recoverDictation() {
+        if !menuState.microphoneOK {
+            firstRun.showMicrophoneSetup()
+        } else if menuState.dictationRecoveryNeedsPermissions {
+            recheckPermissions()
+        } else {
+            showSpeechModelSetup()
+        }
+    }
+
+    func openSettings(page: SettingsPage? = nil) {
+        if let page { settingsNavigation.page = page }
         if let window = settingsWindow {
             NSApplication.shared.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
@@ -1211,7 +1238,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // Окно собирает общая фабрика: прибор снимает ровно это окно, а не
         // свою копию с другими флагами.
-        let window = makeIrizSettingsWindow(page: page)
+        let window = makeIrizSettingsWindow(navigation: settingsNavigation,
+                                            openSpeechModelSetup: { [weak self] in
+            self?.showSpeechModelSetup()
+        })
         window.center()
         settingsWindow = window
 
@@ -1238,5 +1268,3 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApplication.shared.terminate(nil)
     }
 }
-
-

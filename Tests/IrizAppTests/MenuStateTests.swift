@@ -110,6 +110,20 @@ struct MenuStatePromiseTests {
         #expect(s.permissionAlarm == "Нет доступа к Мониторингу ввода")
     }
 
+    @Test func ошибкаМоделиНеВедётКВыданнымРазрешениям() {
+        let s = state()
+        s.dictationState = .unavailable("Модель распознавания не установлена")
+        #expect(!s.dictationRecoveryNeedsPermissions)
+        s.microphoneOK = false
+        #expect(s.dictationRecoveryNeedsPermissions)
+        s.microphoneOK = true
+        s.inputMonitoringOK = false
+        #expect(s.dictationRecoveryNeedsPermissions)
+        s.inputMonitoringOK = true
+        s.inputTapOK = false
+        #expect(s.dictationRecoveryNeedsPermissions)
+    }
+
     @Test func отвалившийсяТапВидноОтдельноОтРазрешений() {
         // Разрешения на месте, а слежение отвалилось: разные поломки лечатся
         // по-разному, и валить их в одну строку значит отправить владельца

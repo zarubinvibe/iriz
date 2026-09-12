@@ -4,12 +4,17 @@
 import AppKit
 import Foundation
 import QuartzCore
+import IrizCore
 
-private final class DictationHUDNotificationObserver: @unchecked Sendable {
+final class DictationHUDNotificationObserver: @unchecked Sendable {
     let token: NSObjectProtocol
+    private let center: NotificationCenter
 
-    init(_ token: NSObjectProtocol) { self.token = token }
-    deinit { NotificationCenter.default.removeObserver(token) }
+    init(_ token: NSObjectProtocol, center: NotificationCenter = .default) {
+        self.token = token
+        self.center = center
+    }
+    deinit { center.removeObserver(token) }
 }
 
 private final class DictationHUDDisplayLinkStorage: @unchecked Sendable {
@@ -941,6 +946,13 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         container.delegate = self
         container.setAccessibilityElement(true)
         container.setAccessibilityRole(.group)
+        container.setAccessibilityCustomActions([
+            NSAccessibilityCustomAction(name: L("hud.toggleExpanded", "Развернуть или свернуть плашку")) { [weak self] in
+                guard let handler = self?.openToggledHandler else { return false }
+                handler()
+                return true
+            }
+        ])
         let capsule = DictationHUDCapsuleView(frame: CGRect(origin: .zero,
                                                             size: DICTATION_HUD_BASE_SIZE))
         let hint = DictationHUDHintView(frame: .zero)
@@ -1292,9 +1304,16 @@ final class DictationHUDPanelSurface: NSObject, DictationHUDSurface, DictationHU
         }
         if reduceMotionEnabled() {
             stopMotion()
+            hoverProgress = hoverAnimation?.to ?? hoverProgress
+            hoverAnimation = nil
+            hint?.appearanceProgress = hoverProgress
+            // Уже начатый морф тоже завершается при смене настройки.
+            transcriptProgress = transcriptTarget
+            advanceTranscript(dt: 0)
             revealAnimation = nil
             revealProgress = 1
             capsule?.revealProgress = 1
+            layoutPanel(display: true)
         } else {
             startMotionIfNeeded()
         }

@@ -4,6 +4,7 @@
 // который не видит движения, через минуту решает, что зависло, и закрывает
 // окно. Идти дальше при этом можно сразу - загрузка не держит знакомство.
 import IrizDictate
+import IrizCore
 import SwiftUI
 
 struct FirstRunModelInstall: View {
@@ -11,11 +12,7 @@ struct FirstRunModelInstall: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            if model.modelInstalled {
-                Text(FirstRunCopy.modelReady)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.secondary)
-            } else if let phase = model.installPhase {
+            if let phase = model.installPhase, phase != .finished {
                 switch phase {
                 case .failed(let reason):
                     Text(reason)
@@ -25,6 +22,7 @@ struct FirstRunModelInstall: View {
                         .frame(maxWidth: 420)
                     Button(FirstRunCopy.modelFailedRetry) { model.installModel() }
                         .modifier(FirstRunProminentButton())
+                        .keyboardShortcut(.defaultAction)
                 default:
                     Text(speechModelInstallTitle(phase))
                         .font(.system(size: 13, weight: .medium))
@@ -32,12 +30,23 @@ struct FirstRunModelInstall: View {
                         .progressViewStyle(.linear)
                         .frame(width: 260)
                 }
+            } else if model.modelInstalled {
+                Text(FirstRunCopy.modelReady)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.secondary)
+                if model.selectedSpeechModel == .multilingualV3 {
+                    Button(L("firstrun.model.verifyRepair", "Проверить и восстановить Parakeet")) {
+                        model.installModel()
+                    }
+                    .buttonStyle(.bordered)
+                }
             } else {
                 Text(FirstRunCopy.hintModel)
                     .font(.system(size: 12.5, weight: .medium))
                     .foregroundStyle(.secondary)
                 Button(FirstRunCopy.model.action ?? "") { model.installModel() }
                     .modifier(FirstRunProminentButton())
+                    .keyboardShortcut(.defaultAction)
             }
         }
     }

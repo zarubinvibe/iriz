@@ -51,6 +51,9 @@
 
 ![会议：把录音拖进来，纪要会放在旁边](docs/assets/shots/page-meetings.png)
 
+![伊里斯坐在大理石桌前，笔记本屏幕上是 iriz 引导的第一屏](docs/assets/pantheon/desk-firstrun.png)
+
+
 ## 它解决什么问题
 
 靠写字吃饭的人，每天都有几个小时花在打字上。同一个想法，说出来更快也更完整：打字时人在挑词，说话时不挑。
@@ -58,6 +61,9 @@
 只有一件事挡在前面。云端听写把口语整理得比任何本地方案都干净，可你说的内容也随之离开了这台机器：和客户的通话、文件草稿、人名和金额。对医生、律师、心理咨询师来说，这笔交换怎么算都不划算。
 
 所以这里由你的 Mac 来识别，只有你按下按钮时，程序才会联网。
+
+![近处的大理石笔记本，屏幕上是 iriz 的口述记录窗口](docs/assets/pantheon/desk-history.png)
+
 
 ## 最大的优势
 
@@ -195,7 +201,7 @@ claude                   # или пустите агента: он провед
 
 觉得有用？给 iriz 点亮星标：[https://github.com/zarubinvibe/iriz](https://github.com/zarubinvibe/iriz)。这只要一秒，却决定别人能不能找到这个项目。
 
-想改点什么？流程很短：先 fork 仓库，建一个分支 branch，提交 commit，推送 push，然后开一个 Pull Request。请不要直接向 `main` 推送，发布闸门会拒绝。
+想改点什么？流程很短：先 fork 仓库，建一个分支 branch，提交 commit，推送 push，然后开一个 Pull Request。请不要直接向 `main` 推送变更。
 
 发现问题？到 [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) 开一个 issue，写清楚你运行了什么、发生了什么。
 

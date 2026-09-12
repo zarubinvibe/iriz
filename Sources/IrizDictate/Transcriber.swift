@@ -163,13 +163,20 @@ func speechModelCacheDirectory(for profile: SpeechModelProfile) -> URL {
 }
 
 public func speechModelCacheExists(for profile: SpeechModelProfile) -> Bool {
+    speechModelCacheIsComplete(for: profile, at: speechModelCacheDirectory(for: profile))
+}
+
+/// Быстрый probe для интерфейса: состав файлов, не SHA-256 сотен мегабайт.
+/// Полная проверка по закреплённому манифесту остаётся перед загрузкой модели.
+func speechModelCacheIsComplete(for profile: SpeechModelProfile, at directory: URL) -> Bool {
     switch profile {
     case .multilingualV3:
-        return FileManager.default.fileExists(atPath: speechModelCacheDirectory(for: profile).path)
+        return ModelIntegrity.parakeetV3CacheIsComplete(at: directory)
     case .whisperLargeV3, .whisperTurbo:
-        // У whisper модель - ОДИН файл, и каталог без него бесполезен: проверяем файл.
         guard let file = profile.whisperModelFile else { return false }
-        return FileManager.default.fileExists(atPath: whisperModelURL(file).path)
+        let values = try? directory.appendingPathComponent(file)
+            .resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+        return values?.isRegularFile == true && (values?.fileSize ?? 0) > 0
     }
 }
 
@@ -240,6 +247,25 @@ public enum ModelIntegrity {
         ModelFileDigest(relativePath: "parakeet_vocab.json", sha256: "7ec60e05f1b24480736ec0eed40900f4626bce1fa9a60fd700ec7e2a59198735"),
         // END GENERATED PARAKEET_V3_MODEL_MANIFEST
     ]
+
+    static var parakeetV3DownloadFiles: [ModelFileDigest] { parakeetV3Files }
+
+    static func parakeetV3CacheIsComplete(at directory: URL) -> Bool {
+        do {
+            let directories = Set(parakeetV3Files.flatMap { parentDirectories(of: $0.relativePath) })
+            for name in directories {
+                try requireDirectory(directory.appendingPathComponent(name), relativePath: name)
+            }
+            for file in parakeetV3Files {
+                let url = directory.appendingPathComponent(file.relativePath)
+                try requireRegularFile(url, relativePath: file.relativePath)
+                guard (try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0) > 0 else { return false }
+            }
+            return true
+        } catch {
+            return false
+        }
+    }
 
     public static func verifyParakeetV3Model(at directory: URL) throws {
         try verifyFiles(root: directory,

@@ -305,6 +305,12 @@ struct SettingsModelTests {
         model.addCorrection(source: "a", replacement: "b")
         model.promptModeEnabled = true
         model.promptRecipient = .generic
+        model.retentionDays = 0
+        model.hudShowsHints = true
+        model.hudSize = .large
+        model.promptGuidanceInstructions = "Собирай короткий план"
+        model.promptGuidanceExamples = [PromptUserExample(spoken: "проверь", wanted: "Проверь проект")]
+        model.speechEngine = .whisperTurbo
         model.codexPath = "/custom/codex"
         model.setHotkey(recordableHotkeyChoice(forKeycode: 97, modifiers: .maskCommand)!, for: .prompt)
         fixture.dictationSettings.promptOnboardingOffered = true
@@ -316,6 +322,17 @@ struct SettingsModelTests {
         #expect(model.layoutMode == .fixing)
         #expect(model.launchAtLogin)
         #expect(model.corrections.isEmpty)
+        #expect(model.retentionDays == DICTATION_RETENTION_DEFAULT_DAYS)
+        #expect(!model.hudShowsHints)
+        #expect(model.hudSize == DICTATION_HUD_DEFAULT_SIZE)
+        #expect(model.promptGuidanceInstructions.isEmpty)
+        #expect(model.promptGuidanceExamples.isEmpty)
+        #expect(model.speechEngine == .multilingualV3)
+        #expect(fixture.dictationSettings.speechEngine == .multilingualV3)
+        #expect(fixture.dictationSettings.dictationRetentionDays == DICTATION_RETENTION_DEFAULT_DAYS)
+        #expect(!fixture.dictationSettings.dictationHUDShowsHints)
+        #expect(fixture.dictationSettings.dictationHUDSize == DICTATION_HUD_DEFAULT_SIZE)
+        #expect(fixture.dictationSettings.promptUserGuidance == .none)
         #expect(!model.promptModeEnabled)
         #expect(model.promptRecipient == .codex)
         #expect(model.codexPath.isEmpty)
@@ -439,6 +456,30 @@ struct SettingsModelTests {
         #expect(model.save())
         #expect(fixture.launchAtLogin)
     }
+
+    @Test func modelReadinessTracksSelectedEngineAndInstallationKeepsOtherDrafts() {
+        let fixture = Fixture()
+        fixture.dictationSettings.speechEngine = .whisperTurbo
+        let model = fixture.makeModel(speechModelProbe: { $0 == .multilingualV3 })
+        #expect(!model.speechModelInstalled)
+        #expect(model.canUseInstalledParakeet)
+        model.speechEngine = .multilingualV3
+        #expect(model.speechModelInstalled)
+        #expect(!model.canUseInstalledParakeet)
+        model.speechEngine = .whisperLargeV3
+        #expect(!model.speechModelInstalled)
+
+        model.enterDelayText = "987"
+        model.promptGuidanceInstructions = "Unsaved user draft"
+        let savedDelay = fixture.dictationSettings.enterDelayMilliseconds
+        model.applyInstalledSpeechModel(.multilingualV3)
+        #expect(model.speechEngine == .multilingualV3)
+        #expect(model.speechModelInstalled)
+        #expect(model.enterDelayText == "987")
+        #expect(model.promptGuidanceInstructions == "Unsaved user draft")
+        #expect(fixture.dictationSettings.enterDelayMilliseconds == savedDelay)
+        #expect(fixture.dictationSettings.speechEngine == .whisperTurbo)
+    }
 }
 
 @MainActor
@@ -462,7 +503,8 @@ private final class Fixture {
     func makeModel(
         codexDetector: @escaping (String) -> URL? = {
             DictationSettings.detectCodexExecutable(storedPath: $0)
-        }
+        },
+        speechModelProbe: @escaping (SpeechModelProfile) -> Bool = { _ in false }
     ) -> SettingsModel {
         SettingsModel(
             dictationSettings: dictationSettings,
@@ -473,7 +515,9 @@ private final class Fixture {
                 writeLaunchAtLogin: { self.launchAtLogin = $0 }
             ),
             layoutHotkeys: .settings(layoutHotkeySettings),
-            codexDetector: codexDetector
+            codexDetector: codexDetector,
+            installedSpeechEngine: { .multilingualV3 },
+            speechModelProbe: speechModelProbe
         )
     }
 }

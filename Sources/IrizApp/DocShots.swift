@@ -9,9 +9,8 @@
 // следующего переименования кнопки. Здесь кадры собираются из ТЕХ ЖЕ видов,
 // которыми живёт продукт, и пересобираются одной командой.
 //
-// Язык переключается настройкой, той же, которую владелец меняет в окне: другой
-// дороги нет и быть не должно - прибор обязан снимать то, что увидит человек, а
-// не свою параллельную сборку строк.
+// Язык подставляется в штатный поиск настроек через volatile domain: строки
+// остаются продуктовыми, а пользовательская настройка на диске не меняется.
 import AppKit
 import IrizCore
 import IrizDictate
@@ -34,12 +33,15 @@ private struct DocShot {
 func captureDocShots(to directory: URL, appDelegate: AppDelegate) throws -> [URL] {
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
                                             attributes: [.posixPermissions: 0o755])
-    let previous = irizLanguageChoice()
-    defer { setIrizLanguageChoice(previous) }
+    let defaults = UserDefaults.standard
+    let previous = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+    defer { defaults.setVolatileDomain(previous, forName: UserDefaults.argumentDomain) }
 
     var written: [URL] = []
     for language in [IrizLanguage.ru, .en, .zh] {
-        setIrizLanguageChoice(language)
+        var arguments = previous
+        arguments[IRIZ_LANGUAGE_KEY] = language.rawValue
+        defaults.setVolatileDomain(arguments, forName: UserDefaults.argumentDomain)
         let tag = language.rawValue
 
         // Настройки: живое окно со стеклом, страница клавиш - её открывают первой.
@@ -140,12 +142,38 @@ private func docShots(appDelegate: AppDelegate) -> [DocShot] {
                 view: dictationHistoryShotView(.list)),
         DocShot(name: "rescue", width: 620, height: 520,
                 view: dictationHistoryShotView(.rescue)),
-        // Знакомство: единственная поверхность, которая переведена целиком.
-        // Остальные пока показывают русский на любом выбранном языке - у них
-        // нет ни одного вызова `L()`, и это честно названо в документации.
-        DocShot(name: "firstrun", width: 620, height: 520,
-                view: AnyView(FirstRunView(model: FirstRunModel()))),
+    ] + docFirstRunShots()
+}
+
+/// Установка в кадре — заданное состояние, без загрузки, разрешений и записи
+/// настроек. Размер совпадает с FirstRunView: прежние 620×520 обрезали окно.
+@MainActor
+private func docFirstRunShots() -> [DocShot] {
+    let scenes: [(name: String, installed: Bool, phase: SpeechModelInstallPhase?)] = [
+        ("firstrun", false, nil),
+        ("firstrun-model-missing", false, nil),
+        ("firstrun-model-downloading", false, .downloading(0.42)),
+        ("firstrun-model-failed", false, .failed(speechModelInstallFailureMessage(for: URLError(.notConnectedToInternet)))),
+        ("firstrun-model-ready", true, nil),
     ]
+    return scenes.map { scene in
+        let defaults = UserDefaults(suiteName: "iriz.docshots.\(UUID().uuidString)")!
+        // Registration domain живёт в памяти. NSArgumentDomain общий для
+        // процесса: его замена здесь стирала язык, выбранный съёмкой выше.
+        defaults.register(defaults: [
+            "ru.smltlk.transcriptCorrectionsSeeded": true,
+            "speech_engine_v1": SpeechModelProfile.multilingualV3.rawValue,
+        ])
+        let model = FirstRunModel(defaults: defaults,
+                                  settings: DictationSettings(defaults: defaults),
+                                  refreshSystemState: false,
+                                  modelProbe: { _ in scene.installed })
+        model.refreshModelAvailability()
+        if scene.name != "firstrun" { model.showModelSetup() }
+        if let phase = scene.phase { model.installationDidProgress(phase) }
+        return DocShot(name: scene.name, width: 640, height: 560,
+                       view: AnyView(FirstRunView(model: model)))
+    }
 }
 
 /// Рабочее состояние меню: модель готова, история не пуста. Аварийные состояния

@@ -45,21 +45,31 @@ public enum MeetingStore {
     @discardableResult
     public static func save(audio: URL, protocolText: String, at date: Date = Date(),
                             title: String, in root: URL? = nil) throws -> MeetingArtifacts {
-        let directory = try meetingDirectory(at: date, title: title, in: root)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true,
-                                                attributes: [.posixPermissions: 0o700])
-        let audioCopy = directory.appendingPathComponent("audio." + audio.pathExtension)
-        if FileManager.default.fileExists(atPath: audioCopy.path) {
-            try FileManager.default.removeItem(at: audioCopy)
-        }
-        try FileManager.default.copyItem(at: audio, to: audioCopy)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: audioCopy.path)
+        let manager = FileManager.default
+        let base = try meetingDirectory(at: date, title: title, in: root)
+        let identifier = UUID().uuidString.lowercased()
+        let directory = base.deletingLastPathComponent()
+            .appendingPathComponent(base.lastPathComponent + "-" + identifier, isDirectory: true)
+        let staging = base.deletingLastPathComponent()
+            .appendingPathComponent(".saving-" + identifier, isDirectory: true)
+        try manager.createDirectory(at: staging, withIntermediateDirectories: true,
+                                    attributes: [.posixPermissions: 0o700])
+        // Новый архив появляется только целиком. Старые записи, в том числе с
+        // тем же названием и временем, никогда не служат временным каталогом.
+        defer { try? manager.removeItem(at: staging) }
+        let audioName = "audio." + audio.pathExtension
+        let audioCopy = staging.appendingPathComponent(audioName)
+        try manager.copyItem(at: audio, to: audioCopy)
+        try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: audioCopy.path)
 
-        let transcript = directory.appendingPathComponent("protocol.md")
+        let transcript = staging.appendingPathComponent("protocol.md")
         try protocolText.write(to: transcript, atomically: true, encoding: .utf8)
-        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: transcript.path)
+        try manager.setAttributes([.posixPermissions: 0o600], ofItemAtPath: transcript.path)
+        try manager.moveItem(at: staging, to: directory)
 
-        return MeetingArtifacts(directory: directory, audio: audioCopy, transcript: transcript)
+        return MeetingArtifacts(directory: directory,
+                                audio: directory.appendingPathComponent(audioName),
+                                transcript: directory.appendingPathComponent("protocol.md"))
     }
 
     /// Имя папки из названия встречи: латиница и цифры, остальное в дефис.

@@ -1,14 +1,14 @@
 {
   "schema_version": 1,
   "kind": "pantheon-visual-judge",
-  "receipt_id": "b55fc1c9-6dff-4cef-ae84-2021511d568f",
-  "checked_at": "2026-09-05T09:50:10Z",
-  "runtime": "codex",
-  "tool": "view_image",
-  "route_id": "codex:view_image:managed-frontier",
+  "receipt_id": "iriz-judge-wave-2026-09-07",
+  "checked_at": "2026-09-07T20:26:09Z",
+  "runtime": "claude",
+  "tool": "read_image",
+  "route_id": "claude:read_image:frontier",
   "model": {
-    "id": "provider-managed",
-    "revision": "provider-managed",
+    "id": "claude-opus-5",
+    "revision": "claude-opus-5[1m]",
     "tier": "frontier"
   },
   "quality": "highest",
@@ -25,18 +25,18 @@
     },
     {
       "role": "bible-character",
-      "sha256": "5ff407694adc22f497af22819bde47b61204f55629a3aded4d4caca1edd2f7af"
+      "sha256": "2e903928afe81e84d15d37db52c3d19e2e6c3e6fba20810d55cf753ca957926e"
     },
     {
       "role": "bible-props",
-      "sha256": "ad9275c7948b65915d8757b8eea6633e1ddcc81420f18689ff7c08ae0b668152"
+      "sha256": "7cc61571accfb50c67d5f5ef704c8fb3f8c187f13c2c0522c4f09fc697bd778e"
     }
   ],
   "outputs": [
     {
       "role": "hero",
       "path": "docs/assets/pantheon/hero.png",
-      "sha256": "ff02cfbef989f040db9e729265b84636ff0a94f5120718d1e94a066bc4381fb4",
+      "sha256": "5c8c42c7758c737b47af8d4702b1f5a96ab54bae94565cdd1bfa4e919b29496d",
       "verdict": "pass",
       "hard_constraints": {
         "column": true,
@@ -66,7 +66,7 @@
     {
       "role": "emblem",
       "path": "docs/assets/pantheon/emblem.png",
-      "sha256": "daf6fd93f9ab2aa98274b0085be08b1e0a47042873b358cd550639cbdfbc6d47",
+      "sha256": "915d77676dbf1ff062ba13e0f0087f4202570e7bc7aba51c1a766293c660e820",
       "verdict": "pass",
       "hard_constraints": {
         "column": true,
@@ -93,5 +93,6 @@
         "readme-render": 5
       }
     }
-  ]
+  ],
+  "notes": "Кадры пересняты 07.09.2026: на табличке Ириды золотая звуковая волна вместо резной канавки, как в плашке продукта. Владелец осмотрел серию в смотрелке и принял все кадры; машинная запись вердиктов с SHA-256 - art-review-server, 2026-09-07T20:51:32.453Z. Принято: 01-bible-props, 02-bible-character, 03-hero, 04-emblem, 05-doc-onboarding, 06-doc-contributing, 07-takt-03-decode, 08-takt-04-insert, 09-vstavka-znakomstvo, 10-vstavka-istoriya. Первые две вставки он забраковал словами «скриншот криво встал» и «это не скриншот, это просто иконка»: углы экрана врали на 36 точек, а на экране лежала иконка вместо окна. Переделаны и приняты."
 }

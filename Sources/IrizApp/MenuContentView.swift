@@ -192,7 +192,7 @@ struct MenuContentView: View {
         case .fault(let reason):
             actionRow(L("menu.dictation", "Диктовка"), key: reason, target: .dictation) {
                 chrome.close()
-                appDelegate.recheckPermissions()
+                appDelegate.recoverDictation()
             }
         }
 
@@ -342,7 +342,7 @@ struct MenuContentView: View {
         order.append(.mode)
         order.append(.layout)
         if case .fault = state.dictationHint { order.append(.dictation) }
-        order += [.settings, .quit]
+        order += [.meeting, .history, .welcome, .settings, .quit]
         return order
     }
 
@@ -361,9 +361,13 @@ struct MenuContentView: View {
     /// стрелки ← → обрабатывают сами, им активация не нужна.
     private func activateFocused() -> Bool {
         switch focus {
-        case .permissions, .dictation:
+        case .permissions:
             chrome.close()
             appDelegate.recheckPermissions()
+            return true
+        case .dictation:
+            chrome.close()
+            appDelegate.recoverDictation()
             return true
         case .meeting:
             chrome.close()

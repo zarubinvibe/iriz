@@ -38,7 +38,7 @@ public func irizDropSizeText(_ bytes: Int64) -> String {
 /// Годится ли файл. Чистая функция: решение о приёме проверяется тестом без
 /// окна и без диска.
 public func irizDropAccepts(_ url: URL, extensions: [String]) -> Bool {
-    extensions.contains(url.pathExtension.lowercased())
+    url.isFileURL && extensions.contains(url.pathExtension.lowercased())
 }
 
 public struct IrizDropZone: View {
@@ -49,6 +49,7 @@ public struct IrizDropZone: View {
 
     @State private var dragging = false
     @State private var refused: String?
+    @Environment(\.isEnabled) private var isEnabled
 
     public init(title: String,
                 subtitle: String,
@@ -78,7 +79,7 @@ public struct IrizDropZone: View {
                     .foregroundStyle(IRIZ_SUBTLE)
                     .multilineTextAlignment(.center)
 
-                Button("Выбрать файлы") { choose() }
+                Button(L("files.choose", "Выбрать файлы")) { choose() }
                     .modifier(IrizDropZoneButton())
                     .padding(.top, 2)
             }
@@ -96,6 +97,7 @@ public struct IrizDropZone: View {
             // картинка, и человек не понимает, отпускать тут или нет.
             .animation(irizAnimation(.irizQuick), value: dragging)
             .onDrop(of: [.fileURL], isTargeted: $dragging) { providers in
+                guard isEnabled, !providers.isEmpty else { return false }
                 accept(providers)
                 return true
             }
@@ -111,6 +113,7 @@ public struct IrizDropZone: View {
     }
 
     private func choose() {
+        guard isEnabled else { return }
         let panel = NSOpenPanel()
         panel.allowsMultipleSelection = true
         panel.canChooseDirectories = false
@@ -120,20 +123,33 @@ public struct IrizDropZone: View {
     }
 
     private func accept(_ providers: [NSItemProvider]) {
-        for provider in providers {
-            _ = provider.loadObject(ofClass: URL.self) { url, _ in
-                guard let url else { return }
-                DispatchQueue.main.async { accept([url]) }
+        Task { @MainActor in
+            var urls: [URL] = []
+            for provider in providers {
+                let url: URL? = await withCheckedContinuation { continuation in
+                    _ = provider.loadObject(ofClass: URL.self) { url, _ in
+                        continuation.resume(returning: url)
+                    }
+                }
+                if let url { urls.append(url) }
             }
+            accept(urls, unreadableCount: providers.count - urls.count)
         }
     }
 
-    private func accept(_ urls: [URL]) {
-        let fitting = urls.filter { irizDropAccepts($0, extensions: extensions) }
-        let refusedCount = urls.count - fitting.count
+    private func accept(_ urls: [URL], unreadableCount: Int = 0) {
+        guard isEnabled else { return }
+        let fitting = urls.filter {
+            irizDropAccepts($0, extensions: extensions)
+                && (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true
+                && FileManager.default.isReadableFile(atPath: $0.path)
+        }
+        let refusedCount = urls.count - fitting.count + unreadableCount
         // Отказ называется вслух и с числом. Молча проглоченный файл выглядит
         // как поломка переноса, и человек пробует снова тем же способом.
-        refused = refusedCount == 0 ? nil : "Не приняты файлы: \(refusedCount). Годятся только \(extensions.joined(separator: ", "))."
+        refused = refusedCount == 0 ? nil
+            : Lf("files.refused", "Не приняты файлы: %d. Выбери доступные для чтения записи: %@.",
+                 refusedCount, extensions.joined(separator: ", "))
         guard !fitting.isEmpty else { return }
         onAdd(fitting)
     }
@@ -183,6 +199,8 @@ public struct IrizDropRow: View {
             Button(action: onRemove) {
                 IrizGlyphView(.files, size: 12).opacity(0)
                     .overlay(Text("✕").font(.system(size: 12)))
+                    .frame(minWidth: 24, minHeight: 24)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(IRIZ_SUBTLE)

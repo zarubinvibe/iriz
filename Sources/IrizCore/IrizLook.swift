@@ -58,12 +58,14 @@ public extension Animation {
 /// Нажатие. Без отклика кнопка кажется картинкой: нажал, ничего не шевельнулось.
 /// 0.97 - предел, за которым сжатие уже видно как трюк.
 public struct IrizPressStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.irizQuick, value: configuration.isPressed)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .animation(reduceMotion ? nil : .irizQuick, value: configuration.isPressed)
     }
 }
 

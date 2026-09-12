@@ -1,10 +1,194 @@
 import Foundation
+import IrizDictate
+import IrizPrompt
 import Testing
 
 @testable import IrizApp
 
 @Suite("знакомство: решения, а не картинки")
 struct FirstRunTests {
+    @MainActor
+    @Test func freshInstallExplainsDownloadBeforeOtherSetupAndCanRecoverLater() throws {
+        let name = "ru.iriz.tests.firstRun.download.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        settings.speechEngine = .multilingualV3
+        let model = FirstRunModel(defaults: defaults, settings: settings,
+                                  refreshSystemState: false, modelProbe: { _ in false })
+        model.prepareForPresentation()
+        #expect(model.step == .welcome)
+        model.goNext()
+        #expect(model.step == .model)
+        #expect(model.nextButtonTitle != FirstRunCopy.next)
+        #expect(!model.modelInstalled)
+        #expect(FirstRunCopy.welcome.note?.contains("модел") == true)
+        #expect(FirstRunCopy.model.action?.contains("Parakeet") == true)
+        #expect(FirstRunCopy.model.body.contains("Без модели диктовка не работает"))
+
+        // Пропустить установку можно, но это не скрывает её при следующем запуске.
+        model.finish()
+        #expect(firstRunShouldShow(defaults: defaults, permissionsGranted: true, modelInstalled: false))
+        model.prepareForPresentation()
+        #expect(model.step == .model)
+    }
+
+    @MainActor
+    @Test func installedModelMatchesSelectedEngineAndRestartsRecognitionOnce() throws {
+        let name = "ru.iriz.tests.firstRun.engine.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        settings.speechEngine = .whisperTurbo
+        let model = FirstRunModel(defaults: defaults, settings: settings,
+                                  refreshSystemState: false, modelProbe: { $0 == .multilingualV3 })
+        model.refreshModelAvailability()
+        #expect(!model.modelInstalled, "Наличие Parakeet не делает выбранный Whisper готовым")
+        var restarts = 0
+        model.onSpeechModelInstalled = { restarts += 1 }
+        model.installationDidFinish()
+        #expect(settings.speechEngine == .multilingualV3)
+        model.refreshModelAvailability()
+        #expect(model.modelInstalled)
+        #expect(restarts == 1)
+        model.installationWasRefused(.alreadyInstalled)
+        #expect(restarts == 1, "Дублирующий callback установщика не запускает второй прогрев")
+    }
+
+    @MainActor
+    @Test func installProgressKeepsDownloadPrimaryUntilItStartsAndAllowsRetry() throws {
+        let name = "ru.iriz.tests.firstRun.progress.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        settings.speechEngine = .whisperTurbo
+        let model = FirstRunModel(defaults: defaults, settings: settings,
+                                  refreshSystemState: false, modelProbe: { _ in false })
+        model.showModelSetup()
+        #expect(model.modelInstallIsPrimaryAction)
+        model.installationDidProgress(.downloading(0.42))
+        #expect(model.isInstallingModel)
+        #expect(!model.modelInstallIsPrimaryAction)
+        #expect(model.nextButtonTitle == FirstRunCopy.next)
+        #expect(settings.speechEngine == .whisperTurbo)
+        model.installationDidProgress(.failed("Synthetic network failure"))
+        #expect(!model.isInstallingModel)
+        #expect(!model.modelInstalled)
+        #expect(model.modelInstallIsPrimaryAction)
+        #expect(settings.speechEngine == .whisperTurbo)
+        model.installationDidProgress(.downloading(0))
+        model.installationDidProgress(.compiling)
+        #expect(model.isInstallingModel)
+        #expect(!model.modelInstalled)
+        model.installationDidProgress(.finished)
+        #expect(model.modelInstalled)
+        #expect(!model.modelInstallIsPrimaryAction)
+        #expect(settings.speechEngine == .multilingualV3)
+    }
+
+    @MainActor
+    @Test func repairingInstalledCacheDoesNotHideProgressOrAllowTrialOnFailure() throws {
+        let name = "ru.iriz.tests.firstRun.repair.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        settings.speechEngine = .multilingualV3
+        let model = FirstRunModel(defaults: defaults, settings: settings,
+                                  refreshSystemState: false, modelProbe: { _ in true })
+        model.showModelSetup()
+        model.refreshModelAvailability()
+        #expect(model.modelIsReady)
+        model.installationDidProgress(.downloading(0.42))
+        model.refreshModelAvailability()
+        #expect(model.modelInstalled, "Быстрая проверка видит файлы, но не знает об их целостности")
+        #expect(!model.modelIsReady)
+        model.installationDidProgress(.failed("Synthetic corrupt cache"))
+        #expect(model.modelInstallIsPrimaryAction)
+        var audioStarted = false
+        model.toggleDictation = { audioStarted = true }
+        model.toggleTrial()
+        #expect(model.step == .model)
+        #expect(!audioStarted)
+        model.installationDidProgress(.finished)
+        #expect(model.modelIsReady)
+    }
+
+    @MainActor
+    @Test func trialWithoutModelReturnsToInstallerWithoutStartingAudio() throws {
+        let name = "ru.iriz.tests.firstRun.trial.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        settings.speechEngine = .multilingualV3
+        let model = FirstRunModel(defaults: defaults, settings: settings,
+                                  refreshSystemState: false, modelProbe: { _ in false })
+        var audioStarted = false
+        model.toggleDictation = { audioStarted = true }
+        model.toggleTrial()
+        #expect(model.step == .model)
+        #expect(!model.isRecording)
+        #expect(!audioStarted)
+    }
+
+    @MainActor
+    @Test func agentConnectionValidatesModelAndNotifiesRunningApp() throws {
+        let name = "ru.iriz.tests.firstRun.settings.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let settings = DictationSettings(defaults: defaults)
+        let model = FirstRunModel(defaults: defaults, settings: settings, refreshSystemState: false)
+        let received = FirstRunNotificationCount()
+        let observer = NotificationCenter.default.addObserver(
+            forName: DictationController.settingsDidSaveNotification,
+            object: settings,
+            queue: .main
+        ) { _ in MainActor.assumeIsolated { received.value += 1 } }
+        defer { NotificationCenter.default.removeObserver(observer) }
+
+        model.connectAgent(PromptAgentCatalog.codexID)
+        #expect(settings.promptModeEnabled)
+        #expect(model.connectedAgentID == PromptAgentCatalog.codexID)
+        #expect(received.value == 1)
+        model.enableTranslation()
+        #expect(settings.translationModeEnabled)
+        #expect(received.value == 2)
+
+        model.connectAgent(PromptAgentCatalog.ollamaID)
+        #expect(model.agentConnectionError != nil)
+        #expect(settings.promptAgentID == PromptAgentCatalog.codexID)
+        #expect(model.connectedAgentID == PromptAgentCatalog.codexID)
+        #expect(received.value == 2)
+
+        settings.promptAgentModel = "local-test-model"
+        model.connectAgent(PromptAgentCatalog.ollamaID)
+        #expect(model.agentConnectionError == nil)
+        #expect(settings.promptAgentID == PromptAgentCatalog.ollamaID)
+        #expect(model.connectedAgentID == PromptAgentCatalog.ollamaID)
+        #expect(received.value == 3)
+    }
+
+    @MainActor
+    @Test func installationRefusalShowsRecoveryInsteadOfPendingDownload() throws {
+        let name = "ru.iriz.tests.firstRun.install.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let model = FirstRunModel(defaults: defaults,
+                                  settings: DictationSettings(defaults: defaults),
+                                  refreshSystemState: false)
+        for refusal in [SpeechModelInstallRefusal.dictationBusy, .alreadyRunning] {
+            model.installationWasRefused(refusal)
+            guard case .failed(let reason) = model.installPhase else {
+                Issue.record("Отказ оставил установку без понятного результата")
+                return
+            }
+            #expect(!reason.isEmpty)
+            #expect(!model.modelInstalled)
+        }
+        model.installationWasRefused(.alreadyInstalled)
+        #expect(model.installPhase == .finished)
+        #expect(model.modelInstalled)
+    }
+
     /// Порядок шагов - это сценарий, а не список. Разрешения идут от самого
     /// понятного к самому пугающему: человеку, которому уже объяснили микрофон,
     /// спокойнее отвечать на «сможет читать все нажатия».
@@ -23,6 +207,7 @@ struct FirstRunTests {
         // человек щёлкает переключатели в системном окне, загрузка идёт, и
         // время тратится один раз, а не дважды.
         let model = steps.firstIndex(of: .model)!
+        #expect(model == 1, "Обязательная загрузка объясняется сразу после приветствия")
         #expect(model < mic, "загрузка модели обязана начинаться раньше разрешений")
         #expect(model < tryIt, "проба без модели невозможна")
         // Агент уводит речь с этого Мака, поэтому он идёт ПОСЛЕ пробы: человек
@@ -80,6 +265,8 @@ struct FirstRunTests {
         defaults.set(true, forKey: FIRST_RUN_COMPLETED_KEY)
         #expect(!firstRunShouldShow(defaults: defaults, permissionsGranted: false),
                 "знакомство повторилось после прохождения")
+        #expect(firstRunShouldShow(defaults: defaults, permissionsGranted: true, modelInstalled: false),
+                "Пройденное знакомство скрывает незавершённую установку модели")
     }
 
     /// Разрешение просит ровно тот шаг, который про него рассказывает.
@@ -156,4 +343,9 @@ struct FirstRunTests {
             }
         }
     }
+}
+
+@MainActor
+private final class FirstRunNotificationCount {
+    var value = 0
 }

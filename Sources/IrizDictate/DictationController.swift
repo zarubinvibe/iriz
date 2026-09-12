@@ -62,6 +62,7 @@ public final class DictationController {
     private var isBusy = false
     private var isRecording = false
     private var modelReady = false
+    private var lastRequestedModelProfile: SpeechModelProfile?
     /// Идёт ли прогрев прямо сейчас. Отдельно от `modelReady`, потому что
     /// «грузится» и «нет вовсе» - разные состояния с разными последствиями.
     private var warmUpTask: Task<Void, Never>?
@@ -88,6 +89,7 @@ public final class DictationController {
     private var powerLifecycle = AudioPowerLifecycle()
     /// Подмена таймаута распознавания — только тестами, чтобы не ждать живьём.
     private let transcriptionTimeoutOverride: Double?
+    private let modelLoader: (@Sendable (SpeechModelProfile) async throws -> Void)?
     /// Счётчики доставки: их читает status.json (scripts/gate_app.sh).
     private let insertionStats: InsertionStats
     private var settingsObserver: NotificationObserver?
@@ -95,6 +97,7 @@ public final class DictationController {
     public init() {
         self.settings = .shared
         self.transcriptionTimeoutOverride = nil
+        self.modelLoader = nil
         self.insertionStats = InsertionStats()
         observeSettings()
     }
@@ -102,9 +105,11 @@ public final class DictationController {
     /// Для тестов и будущих точек сборки.
     init(settings: DictationSettings,
          transcriptionTimeout: Double? = nil,
-         insertionStats: InsertionStats = InsertionStats()) {
+         insertionStats: InsertionStats = InsertionStats(),
+         modelLoader: (@Sendable (SpeechModelProfile) async throws -> Void)? = nil) {
         self.settings = settings
         self.transcriptionTimeoutOverride = transcriptionTimeout
+        self.modelLoader = modelLoader
         self.insertionStats = insertionStats
         observeSettings()
     }
@@ -187,9 +192,17 @@ public final class DictationController {
 
     public func stop() {
         if isRecording {
-            // Sleep/выход отменяет клип: не запускаем распознавание и не
-            // создаём raw/audio recovery-артефакт.
-            handleCancel()
+            if recordingPurpose == .meeting {
+                // Уже записанная встреча переживает sleep/выход. ASR здесь
+                // не запускаем: исходник можно разобрать после возвращения.
+                isRecording = false
+                recordingPurpose = .dictation
+                let captured = audio.endRecording()
+                finishMeetingRecording(samples: captured.samples, process: false)
+                hotkeys.resetToggleState()
+            } else {
+                handleCancel()
+            }
         }
         maxDurationTask?.cancel()
         maxDurationTask = nil
@@ -223,9 +236,31 @@ public final class DictationController {
         start()
     }
 
+    /// Вызывается после явной установки. Греет выбранный движок, не повторяя
+    /// start(), запросы разрешений и запуск записи; настройки не меняет.
+    @discardableResult
+    public func prepareAfterModelInstallation() -> Bool {
+        guard !isBusy, !isRecording, warmUpTask == nil, !powerLifecycle.isSuspended else { return false }
+        DownloadUtils.enforceOffline = true
+        modelReady = false
+        state = .warmingUp
+        warmUpTask = Task { [weak self] in await self?.warmUpModel() }
+        return true
+    }
+
     private func warmUpModel() async {
+        let profile = settings.speechEngine
+        lastRequestedModelProfile = profile
+        defer {
+            warmUpTask = nil
+            if settings.speechEngine != profile { prepareChangedSpeechModelIfIdle() }
+        }
         do {
-            try await asr.load(profile: settings.speechEngine)
+            if let modelLoader {
+                try await modelLoader(profile)
+            } else {
+                try await asr.load(profile: profile)
+            }
             // Рычаг под смешанную речь включен и в ЖИВОЙ диктовке, а не только в
             // CLI: без него термины внутри русской фразы ломаются ровно там, где
             // владелец диктует каждый день.
@@ -233,6 +268,7 @@ public final class DictationController {
             modelReady = true
             if state == .warmingUp { state = .ready }
         } catch {
+            modelReady = false
             log("ASR warmup failed: \(error.localizedDescription)")
             state = .unavailable(error.localizedDescription)
         }
@@ -312,33 +348,121 @@ public final class DictationController {
     /// Файл пишется ДО разбора и остаётся на диске, даже если разбор упадёт:
     /// запись заседания дороже протокола, её нельзя терять из-за отказа
     /// распознавателя.
-    private func finishMeetingRecording(samples: [Float]) {
+    private func finishMeetingRecording(samples: [Float], process: Bool = true) {
         state = .ready
         guard !samples.isEmpty else {
             log("meeting: пустая запись, сохранять нечего")
+            if process {
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = L("meeting.emptyRecording", "Звук не записался")
+                alert.informativeText = L("meeting.emptyRecording.help", "Проверь микрофон и повтори запись встречи.")
+                alert.addButton(withTitle: L("meeting.close", "Закрыть"))
+                _ = runMeetingAlert(alert)
+            }
             return
         }
-        do {
-            let url = try meetingRecordingScratchURL()
-            let recording = try writeMeetingWAV(samples: samples,
-                                                sampleRate: SAMPLE_RATE,
-                                                to: url)
-            log("meeting: записано \(Int(recording.seconds)) с в \(url.lastPathComponent)")
-            Task { @MainActor in
-                let pipeline = MeetingPipeline()
-                let title = "Встреча " + meetingDateFormatter().string(from: Date())
-                do {
-                    let result = try await pipeline.run(audio: recording.url, title: title)
-                    log("meeting: протокол готов, реплик \(result.turns.count)")
-                } catch {
-                    // Разбор упал, но звук уже на диске - его можно принести в
-                    // окно встреч руками и разобрать ещё раз.
-                    log("meeting: разбор отказал (\(error)), звук остался в \(recording.url.path)")
+        let date = Date()
+        isBusy = true
+        state = .transcribing
+        let recording = saveMeetingRecording(samples: samples, at: date)
+        isBusy = false
+        state = .ready
+        guard let recording else { return }
+        log("meeting: записано \(Int(recording.seconds)) с в \(recording.url.lastPathComponent)")
+        guard process else { return }
+        processMeetingRecording(recording, at: date)
+    }
+
+    private func saveMeetingRecording(samples: [Float], at date: Date) -> MeetingRecording? {
+        while true {
+            do {
+                return try writeMeetingWAV(samples: samples, sampleRate: SAMPLE_RATE,
+                                           to: meetingRecordingScratchURL(at: date))
+            } catch {
+                log("meeting: не удалось сохранить звук (\(error))")
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = L("meeting.saveFailed", "Не удалось сохранить запись встречи")
+                alert.informativeText = L("meeting.saveFailed.help", "Звук ещё в памяти. Освободи место на диске и повтори сохранение. Если удалить запись, восстановить её будет нельзя.")
+                    + "\n\n" + error.localizedDescription
+                alert.addButton(withTitle: L("meeting.retrySave", "Повторить сохранение"))
+                alert.addButton(withTitle: L("meeting.discardUnsaved", "Удалить несохранённую запись"))
+                guard runMeetingAlert(alert) == .alertFirstButtonReturn else { return nil }
+            }
+        }
+    }
+
+    /// Тот же барьер, что у диктовки: пока встреча разбирается, второй
+    /// распознаватель не запускается ни хоткеем, ни повтором из сообщения.
+    func beginMeetingProcessing() -> UInt64? {
+        guard !isBusy, !isRecording else { return nil }
+        transcriptionGeneration &+= 1
+        isBusy = true
+        state = .transcribing
+        return transcriptionGeneration
+    }
+
+    private func processMeetingRecording(_ recording: MeetingRecording, at date: Date) {
+        guard let generation = beginMeetingProcessing() else { return }
+        let title = L("meeting.title", "Встреча") + " " + meetingDateFormatter().string(from: date)
+        let pipeline = MeetingPipeline(transcriber: AudioFileTranscriber(engine: settings.speechEngine,
+                                                                         initialPrompt: whisperDefaultInitialPrompt))
+        pipelineTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.finishTranscription(generation: generation) }
+            do {
+                let result = try await pipeline.run(audio: recording.url, title: title, at: date)
+                guard !Task.isCancelled, self.transcriptionGeneration == generation else { return }
+                self.finishTranscription(generation: generation)
+                let alert = NSAlert()
+                alert.messageText = L("meeting.protocolReady", "Протокол встречи готов")
+                alert.informativeText = result.artifacts.transcript.path
+                if !result.speakersResolved {
+                    alert.informativeText += "\n\n" + L("meeting.speakersUnresolved", "Не удалось разделить говорящих. Текст сохранён одной репликой.")
+                }
+                alert.addButton(withTitle: L("meeting.openProtocol", "Открыть протокол"))
+                alert.addButton(withTitle: L("meeting.showRecording", "Показать запись"))
+                alert.addButton(withTitle: L("meeting.close", "Закрыть"))
+                switch self.runMeetingAlert(alert) {
+                case .alertFirstButtonReturn:
+                    if !NSWorkspace.shared.open(result.artifacts.transcript) {
+                        NSWorkspace.shared.activateFileViewerSelecting([result.artifacts.transcript])
+                    }
+                case .alertSecondButtonReturn:
+                    NSWorkspace.shared.activateFileViewerSelecting([result.artifacts.audio])
+                default: break
+                }
+            } catch {
+                guard !Task.isCancelled, self.transcriptionGeneration == generation else { return }
+                self.finishTranscription(generation: generation)
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = L("meeting.processingFailed", "Не удалось разобрать встречу")
+                let reason = (error as? MeetingPipelineFailure)?.rawValue ?? error.localizedDescription
+                alert.informativeText = reason + "\n\n"
+                    + L("meeting.recordingSaved", "Запись сохранена. Можно повторить разбор или открыть её в Finder.")
+                    + "\n" + recording.url.path
+                alert.addButton(withTitle: L("meeting.retryProcessing", "Повторить разбор"))
+                alert.addButton(withTitle: L("meeting.showRecording", "Показать запись"))
+                alert.addButton(withTitle: L("meeting.close", "Закрыть"))
+                switch self.runMeetingAlert(alert) {
+                case .alertFirstButtonReturn:
+                    self.processMeetingRecording(recording, at: date)
+                case .alertSecondButtonReturn:
+                    NSWorkspace.shared.activateFileViewerSelecting([recording.url])
+                default: break
                 }
             }
-        } catch {
-            log("meeting: не удалось сохранить звук (\(error))")
         }
+    }
+
+    private func runMeetingAlert(_ alert: NSAlert) -> NSApplication.ModalResponse {
+        // LSUIElement не имеет обычного главного окна; alert должен оказаться
+        // над постоянной floating-плашкой, иначе вопрос останется под ней.
+        alert.window.level = .floating
+        NSApp.activate(ignoringOtherApps: true)
+        return alert.runModal()
     }
 
     /// Кого звать, когда с плашки просят настройки. Ставит приложение: у
@@ -361,6 +485,12 @@ public final class DictationController {
         hotkeys.setTranslationHotkeyEnabled(settings.translationModeEnabled)
         hotkeys.setAlternateCompletionEnabled(settings.alternateCompletionEnabled)
         hotkeys.setTriggerMode(settings.triggerMode)
+        prepareChangedSpeechModelIfIdle()
+    }
+
+    private func prepareChangedSpeechModelIfIdle() {
+        guard let previous = lastRequestedModelProfile, previous != settings.speechEngine else { return }
+        _ = prepareAfterModelInstallation()
     }
 
     private func observeSettings() {
@@ -556,7 +686,15 @@ public final class DictationController {
     }
 
     public func toggleDictationFromUI() {
-        handlePress(purpose: .dictation)
+        if isRecording {
+            // Кнопка HUD уже показывает «Закончить запись». Завершаем текущий
+            // purpose тем же путём, что хоткей, не меняя встречу на диктовку.
+            hotkeys.resetToggleState()
+            handleRelease(shortcut: .standard,
+                          hotkeyDetectedAt: ProcessInfo.processInfo.systemUptime)
+        } else {
+            handlePress(purpose: .dictation)
+        }
     }
 
     /// Начать запись для промпта прямо из интерфейса. Тот же вход, что и у
@@ -571,6 +709,7 @@ public final class DictationController {
     }
 
     private func handlePress(purpose: DictationRecordingPurpose) {
+        prepareChangedSpeechModelIfIdle()
         if let refusal = startRefusal() {
             log("dictation: press refused — \(refusal.rawValue)")
             hud?.startRefused(refusal)
@@ -1249,6 +1388,7 @@ public final class DictationController {
         default:
             break
         }
+        prepareChangedSpeechModelIfIdle()
     }
 
     private func handleCancel() {
@@ -1268,14 +1408,19 @@ public final class DictationController {
 
     private func scheduleMaxDurationAutoRelease() {
         maxDurationTask?.cancel()
+        let limit = Self.recordingLimitSeconds(for: recordingPurpose)
         maxDurationTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: UInt64(MAX_RECORDING_SECONDS) * 1_000_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(limit) * 1_000_000_000)
             guard !Task.isCancelled, let self, self.isRecording else { return }
             log("dictation: max recording duration reached — auto release")
             self.hotkeys.resetToggleState()
             self.handleRelease(shortcut: .standard,
                                hotkeyDetectedAt: ProcessInfo.processInfo.systemUptime)
         }
+    }
+
+    nonisolated static func recordingLimitSeconds(for purpose: DictationRecordingPurpose) -> TimeInterval {
+        purpose == .meeting ? meetingRecordingLimitSeconds : MAX_RECORDING_SECONDS
     }
 
     #if DEBUG

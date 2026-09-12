@@ -7,6 +7,7 @@
 // Ничего не выбрать - нормальный исход. Диктовка и раскладка работают без
 // агента, и шаг об этом говорит прямо, а не намекает.
 import SwiftUI
+import IrizCore
 
 struct FirstRunAgentConnect: View {
     @ObservedObject var model: FirstRunModel
@@ -35,6 +36,15 @@ struct FirstRunAgentConnect: View {
                     .padding(.vertical, 2)
                 }
                 .frame(maxHeight: 150)
+            }
+            if let error = model.agentConnectionError {
+                Text(error)
+                    .font(.system(size: 12.5))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: 430)
+                Button(L("firstrun.agentSettings", "Настройки агента…")) { model.openAgentSettings?() }
+                    .modifier(FirstRunTrialButtonStyle())
             }
         }
         .onAppear { model.refreshAgents() }

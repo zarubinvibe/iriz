@@ -59,8 +59,13 @@ func pasteboardRestoreDecision(transientChangeCount: Int?,
 }
 
 @MainActor
-enum DictationHistoryClipboard {
+public enum DictationHistoryClipboard {
     private static var pending: HistoryClipboardTransaction?
+
+    /// Общий путь копирования для настроек и плавающего окна.
+    public static func copy(_ text: String) -> Bool {
+        copy(text, pasteboard: .general)
+    }
 
     /// Кладёт текст в буфер. `false` — буфер отказал, вызывающий обязан сказать
     /// владельцу, что копирование не состоялось.
@@ -69,7 +74,7 @@ enum DictationHistoryClipboard {
     /// дописывает в живой лог владельца.
     @discardableResult
     static func copy(_ text: String,
-                     pasteboard: NSPasteboard = .general,
+                     pasteboard: NSPasteboard,
                      hold: TimeInterval = HISTORY_CLIPBOARD_HOLD_SECONDS,
                      logLine: @escaping (String) -> Void = { log($0) }) -> Bool {
         quench(reason: "вытеснено следующим копированием")

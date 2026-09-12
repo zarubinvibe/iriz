@@ -38,6 +38,7 @@ final class FirstRunModel: ObservableObject {
     /// Модель на диске. Читается живьём при каждом обновлении разрешений: она
     /// могла приехать и до знакомства.
     @Published private(set) var modelInstalled = false
+    var onSpeechModelInstalled: (() -> Void)?
 
     /// Агенты, которые уже стоят на этом Маке. Ищутся на диске, а не
     /// спрашиваются у человека: спросить «где у тебя лежит codex» значит
@@ -45,6 +46,8 @@ final class FirstRunModel: ObservableObject {
     @Published private(set) var agents: [FirstRunAgent] = []
     /// Кто выбран. nil - никто, и это нормальный исход шага.
     @Published private(set) var connectedAgentID: String?
+    @Published private(set) var agentConnectionError: String?
+    var openAgentSettings: (() -> Void)?
     /// Перевод включён. Отдельно от подключения агента: агент нужен обоим
     /// режимам, но включать их за человека нельзя.
     @Published private(set) var translationEnabled = false
@@ -95,19 +98,68 @@ final class FirstRunModel: ObservableObject {
     }
 
     private let defaults: UserDefaults
+    private let settings: DictationSettings
+    private let modelProbe: (SpeechModelProfile) -> Bool
     private var poll: Timer?
     /// Что сделать, когда знакомство кончилось.
     var onFinish: (() -> Void)?
 
-    init(defaults: UserDefaults = .standard) {
+    init(defaults: UserDefaults = .standard,
+         settings: DictationSettings = .shared,
+         refreshSystemState: Bool = true,
+         modelProbe: @escaping (SpeechModelProfile) -> Bool = speechModelCacheExists) {
         self.defaults = defaults
-        refreshPermissions()
-        refreshHotkeyLabel()
-        refreshTranslationHotkeyLabel()
+        self.settings = settings
+        self.modelProbe = modelProbe
+        if refreshSystemState {
+            refreshPermissions()
+            refreshHotkeyLabel()
+            refreshTranslationHotkeyLabel()
+        }
     }
 
     var canGoBack: Bool { firstRunPreviousStep(before: step) != nil }
     var isLastStep: Bool { firstRunNextStep(after: step) == nil }
+    var selectedSpeechModel: SpeechModelProfile { settings.speechEngine }
+    var selectedSpeechModelTitle: String { selectedSpeechModel.shortName }
+    var modelIsReady: Bool {
+        modelInstalled && (installPhase == nil || installPhase == .finished)
+    }
+    var isInstallingModel: Bool {
+        switch installPhase {
+        case .downloading, .compiling: true
+        default: false
+        }
+    }
+    var modelInstallIsPrimaryAction: Bool {
+        step == .model && !modelIsReady && !isInstallingModel
+    }
+    var nextButtonTitle: String {
+        if isLastStep { return FirstRunCopy.done }
+        if modelInstallIsPrimaryAction {
+            return L("firstrun.model.installLater", "Скачать позже")
+        }
+        return FirstRunCopy.next
+    }
+
+    func refreshModelAvailability() {
+        modelInstalled = modelProbe(settings.speechEngine)
+    }
+
+    func prepareForPresentation() {
+        refreshModelAvailability()
+        if !modelInstalled, defaults.bool(forKey: FIRST_RUN_COMPLETED_KEY) {
+            showModelSetup()
+        }
+    }
+
+    func showModelSetup() {
+        step = .model
+    }
+
+    func showMicrophoneSetup() {
+        step = .microphone
+    }
 
     func goNext() {
         guard firstRunCanAdvance(from: step) else { return }
@@ -159,22 +211,53 @@ final class FirstRunModel: ObservableObject {
     /// Начать установку модели. Идёт в фоне: пока она едет, человек проходит
     /// разрешения, и время не тратится дважды.
     func installModel() {
-        guard !SpeechModelInstaller.shared.isRunning else { return }
+        guard !SpeechModelInstaller.shared.isRunning else {
+            installationWasRefused(.alreadyRunning)
+            return
+        }
         installPhase = .downloading(0)
         Task { @MainActor [weak self] in
             guard let self else { return }
-            await SpeechModelInstaller.shared.install(dictating: self.isRecording) { phase in
-                Task { @MainActor in
-                    self.installPhase = phase
-                    if case .finished = phase { self.modelInstalled = true }
-                }
+            let refusal = await SpeechModelInstaller.shared.install(dictating: self.isRecording) { phase in
+                self.installationDidProgress(phase)
             }
+            if let refusal { self.installationWasRefused(refusal) }
         }
+    }
+
+    func installationDidProgress(_ phase: SpeechModelInstallPhase) {
+        if case .finished = phase {
+            installationDidFinish()
+        } else {
+            installPhase = phase
+        }
+    }
+
+    func installationWasRefused(_ refusal: SpeechModelInstallRefusal) {
+        switch refusal {
+        case .alreadyInstalled:
+            installationDidFinish()
+        case .alreadyRunning:
+            installPhase = .failed(L("firstrun.modelAlreadyDownloading", "Модель уже скачивается. Дождись окончания установки."))
+        case .dictationBusy:
+            installPhase = .failed(L("firstrun.modelInstallWhileRecording", "Сначала закончи запись, затем повтори установку модели."))
+        }
+    }
+
+    func installationDidFinish() {
+        guard installPhase != .finished || !modelInstalled || settings.speechEngine != .multilingualV3 else { return }
+        settings.speechEngine = .multilingualV3
+        modelInstalled = true
+        installPhase = .finished
+        NotificationCenter.default.post(name: speechModelDidInstallNotification,
+                                        object: SpeechModelProfile.multilingualV3)
+        NotificationCenter.default.post(name: DictationController.settingsDidSaveNotification,
+                                        object: settings)
+        onSpeechModelInstalled?()
     }
 
     /// Найти агентов на диске и вспомнить, кто выбран.
     func refreshAgents() {
-        let settings = DictationSettings.shared
         agents = PromptAgentCatalog.identifiers.compactMap { id in
             guard let adapter = PromptAgentCatalog.adapter(id: id, customArguments: []) else { return nil }
             // Свой CLI без пути искать негде: он и есть «введи путь руками»,
@@ -190,19 +273,28 @@ final class FirstRunModel: ObservableObject {
     /// Подключить агента: выбрать его и включить режим задания. Включение
     /// сказано вслух на самом шаге - молча уводить речь наружу нельзя.
     func connectAgent(_ id: String) {
-        let settings = DictationSettings.shared
+        guard let adapter = PromptAgentCatalog.adapter(id: id) else { return }
+        guard !adapter.requiresModel || !settings.promptAgentModel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            agentConnectionError = Lf("firstrun.agentModelRequired", "Для %@ выбери модель в настройках промпт-режима, затем подключи агента здесь.", adapter.displayName)
+            return
+        }
         settings.promptAgentID = id
         settings.promptModeEnabled = true
         connectedAgentID = id
+        agentConnectionError = nil
+        NotificationCenter.default.post(name: DictationController.settingsDidSaveNotification,
+                                        object: settings)
     }
 
     func enableTranslation() {
-        DictationSettings.shared.translationModeEnabled = true
+        settings.translationModeEnabled = true
         translationEnabled = true
+        NotificationCenter.default.post(name: DictationController.settingsDidSaveNotification,
+                                        object: settings)
     }
 
     func refreshPermissions() {
-        modelInstalled = speechModelCacheExists(for: .multilingualV3)
+        refreshModelAvailability()
         refreshAgents()
         var next: [FirstRunPermission: Bool] = [:]
         for permission in FirstRunPermission.allCases {
@@ -231,7 +323,10 @@ final class FirstRunModel: ObservableObject {
 
     /// Проба голосом. Идёт тем же путём, что и обычная диктовка.
     func toggleTrial() {
-        isRecording.toggle()
+        guard modelIsReady else {
+            showModelSetup()
+            return
+        }
         toggleDictation?()
     }
 
@@ -269,7 +364,18 @@ final class FirstRunWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     let model = FirstRunModel()
 
+    func showModelSetup() {
+        model.showModelSetup()
+        show()
+    }
+
+    func showMicrophoneSetup() {
+        show()
+        model.showMicrophoneSetup()
+    }
+
     func show() {
+        model.prepareForPresentation()
         // Пока знакомство открыто, приложение перестаёт быть невидимкой из
         // строки меню. Без этого у окна нет ни значка в Dock, ни места в
         // Cmd-Tab: человек уходит в Системные настройки, окно проваливается за

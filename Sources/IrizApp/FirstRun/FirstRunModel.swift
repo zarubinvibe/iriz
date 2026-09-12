@@ -10,13 +10,13 @@ import Foundation
 import IrizCore
 
 /// Шаги знакомства. Порядок - это и есть сценарий, и он не случайный: сначала
-/// «что это» и «где оно живёт», потом разрешения от самого понятного к самому
-/// пугающему, и только потом проба голосом. Человек, которому уже объяснили,
+/// «что это» и установка распознавания, затем «где оно живёт», разрешения от
+/// самого понятного к самому пугающему и проба голосом. Человек, которому уже объяснили,
 /// зачем нужен микрофон, спокойнее отвечает на «сможет читать все нажатия».
 enum FirstRunStep: String, CaseIterable, Equatable {
     case welcome
-    case whereItLives
     case model
+    case whereItLives
     case microphone
     case accessibility
     case inputMonitoring
@@ -103,11 +103,11 @@ let FIRST_RUN_COMPLETED_KEY = "ru.smltlk.firstRunCompleted"
 func firstRunShouldShow(defaults: UserDefaults,
                         permissionsGranted: Bool,
                         modelInstalled: Bool = true) -> Bool {
-    if defaults.bool(forKey: FIRST_RUN_COMPLETED_KEY) { return false }
     // Без модели продукт не работает вовсе, а поставить её можно только
     // отсюда. Человек с выданными разрешениями и пустым диском иначе не увидел
     // бы ни знакомства, ни модели - только отказ распознавания.
     if !modelInstalled { return true }
+    if defaults.bool(forKey: FIRST_RUN_COMPLETED_KEY) { return false }
     // Разрешения уже выданы - значит человек прошёл этот путь руками до того,
     // как знакомство появилось в продукте. Ему показывать нечего.
     return !permissionsGranted

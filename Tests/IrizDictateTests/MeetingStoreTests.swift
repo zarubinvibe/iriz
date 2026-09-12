@@ -90,4 +90,47 @@ struct MeetingStoreTests {
         let text = try String(contentsOf: second.transcript, encoding: .utf8)
         #expect(text == "второй")
     }
+
+    @Test("разные русские записи одной минуты не перезаписывают друг друга")
+    func коллизияНазванийНеЗатираетАрхив() throws {
+        let root = try sandbox()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let firstAudio = try fakeAudio(in: root)
+        let secondAudio = root.appendingPathComponent("second.wav")
+        let secondData = Data([0x01, 0x02, 0x03])
+        try secondData.write(to: secondAudio)
+        let date = Date(timeIntervalSince1970: 1_757_000_000)
+        let first = try MeetingStore.save(audio: firstAudio, protocolText: "первый",
+                                          at: date, title: "Встреча", in: root)
+        let second = try MeetingStore.save(audio: secondAudio, protocolText: "второй",
+                                           at: date, title: "Заседание", in: root)
+
+        #expect(first.directory != second.directory)
+        #expect(try Data(contentsOf: first.audio) == Data(contentsOf: firstAudio))
+        #expect(try String(contentsOf: first.transcript, encoding: .utf8) == "первый")
+        #expect(try Data(contentsOf: second.audio) == secondData)
+        #expect(try String(contentsOf: second.transcript, encoding: .utf8) == "второй")
+    }
+
+    @Test("отказ нового сохранения оставляет старую пару целой и убирает staging")
+    func отказСохраненияНеРазрушаетАрхив() throws {
+        let root = try sandbox()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let audio = try fakeAudio(in: root)
+        let date = Date(timeIntervalSince1970: 1_757_000_000)
+        let saved = try MeetingStore.save(audio: audio, protocolText: "сохранённый протокол",
+                                          at: date, title: "Встреча", in: root)
+        let missing = root.appendingPathComponent("missing.wav")
+
+        #expect(throws: (any Error).self) {
+            try MeetingStore.save(audio: missing, protocolText: "не сохранится",
+                                  at: date, title: "Встреча", in: root)
+        }
+        #expect(try Data(contentsOf: saved.audio) == Data(contentsOf: audio))
+        #expect(try String(contentsOf: saved.transcript, encoding: .utf8) == "сохранённый протокол")
+        let children = try FileManager.default.contentsOfDirectory(
+            at: MeetingStore.meetingsDirectory(in: root), includingPropertiesForKeys: nil)
+        #expect(children.map { $0.resolvingSymlinksInPath().path }
+            == [saved.directory.resolvingSymlinksInPath().path])
+    }
 }

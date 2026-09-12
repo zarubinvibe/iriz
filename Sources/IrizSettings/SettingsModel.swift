@@ -194,7 +194,10 @@ final class SettingsModel: ObservableObject {
     /// Какой распознаватель стоит. Выбор с ценой на обеих сторонах, поэтому он
     /// у владельца, а не зашит: Whisper берет английские термины внутри русской
     /// фразы, Parakeet быстрее в 11-15 раз. Разбор - `bench/BENCH-CANDIDATES-2026-09-03.md`.
-    @Published var speechEngine: SpeechModelProfile
+    @Published var speechEngine: SpeechModelProfile {
+        didSet { refreshSpeechModelReadiness() }
+    }
+    @Published private(set) var speechModelInstalled = false
     @Published var promptRecipient: PromptRecipientSetting
     /// Явные записи «приложение → профиль». Всё, чего в списке нет, получает
     /// `promptRecipient`, поэтому отдельного «дефолтного» ряда тут не бывает.
@@ -212,6 +215,8 @@ final class SettingsModel: ObservableObject {
     private let layoutSettings: LayoutSettingsAccess
     private let layoutHotkeys: LayoutHotkeySettingsAccess
     private let agentDetector: (String, PromptAgentAdapter) -> URL?
+    private let installedSpeechEngine: () -> SpeechModelProfile
+    private let speechModelProbe: (SpeechModelProfile) -> Bool
     private var savedLaunchAtLogin: Bool
 
     convenience init(preview: Bool = false) {
@@ -220,7 +225,8 @@ final class SettingsModel: ObservableObject {
             self.init(
                 dictationSettings: DictationSettings(defaults: defaults),
                 layoutSettings: .preview(defaults: defaults),
-                layoutHotkeys: .settings(SettingsManager(defaults: defaults))
+                layoutHotkeys: .settings(SettingsManager(defaults: defaults)),
+                speechModelProbe: { _ in false }
             )
         } else {
             self.init(
@@ -238,11 +244,15 @@ final class SettingsModel: ObservableObject {
         dictationSettings: DictationSettings,
         layoutSettings: LayoutSettingsAccess,
         layoutHotkeys: LayoutHotkeySettingsAccess,
-        codexDetector: ((String) -> URL?)? = nil
+        codexDetector: ((String) -> URL?)? = nil,
+        installedSpeechEngine: @escaping () -> SpeechModelProfile = { .installedDefault() },
+        speechModelProbe: @escaping (SpeechModelProfile) -> Bool = speechModelCacheExists
     ) {
         self.dictationSettings = dictationSettings
         self.layoutSettings = layoutSettings
         self.layoutHotkeys = layoutHotkeys
+        self.installedSpeechEngine = installedSpeechEngine
+        self.speechModelProbe = speechModelProbe
         agentDetector = codexDetector.map { detector in
             { path, _ in detector(path) }
         } ?? { path, adapter in
@@ -279,6 +289,21 @@ final class SettingsModel: ObservableObject {
         wavePalette = dictationSettings.dictationHUDWavePalette
         rescueWindowEnabled = dictationSettings.rescueWindowEnabled
         hotkeys = Self.loadHotkeys(dictationSettings: dictationSettings, layoutHotkeys: layoutHotkeys)
+        refreshSpeechModelReadiness()
+    }
+
+    func refreshSpeechModelReadiness() {
+        speechModelInstalled = speechModelProbe(speechEngine)
+    }
+
+    var canUseInstalledParakeet: Bool {
+        speechEngine != .multilingualV3 && speechModelProbe(.multilingualV3)
+    }
+
+    /// Явная установка выбирает скачанный движок. Остальные черновики формы
+    /// остаются у пользователя; общая settingsDidSave сюда не подключается.
+    func applyInstalledSpeechModel(_ profile: SpeechModelProfile) {
+        speechEngine = profile
     }
 
     /// Адаптер выбранного агента: свой CLI собирается из введённых аргументов.
@@ -586,8 +611,13 @@ final class SettingsModel: ObservableObject {
         launchAtLogin = true
         corrections = []
         snippets = []
+        retentionDays = DICTATION_RETENTION_DEFAULT_DAYS
+        hudShowsHints = false
+        hudSize = DICTATION_HUD_DEFAULT_SIZE
+        promptGuidanceInstructions = PromptUserGuidance.none.instructions
+        promptGuidanceExamples = PromptUserGuidance.none.examples
         promptModeEnabled = false
-        speechEngine = .whisperTurbo
+        speechEngine = installedSpeechEngine()
         promptRecipient = .codex
         appProfiles = []
         promptAgentID = PromptAgentCatalog.defaultID

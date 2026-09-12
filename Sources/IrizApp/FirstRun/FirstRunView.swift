@@ -46,19 +46,26 @@ struct FirstRunView: View {
             FirstRunHero(step: step)
                 .frame(height: 96)
 
-            Text(step.copy.title)
+            Text(step == .model && model.modelIsReady
+                 ? L("firstrun.model.alreadyReadyTitle", "Распознавание уже установлено")
+                 : step.copy.title)
                 .font(.system(size: 27, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(step.copy.body)
+            Text(step == .model && model.modelIsReady
+                 ? Lf("firstrun.model.alreadyReadyBody", "%@ готов к диктовке. Скачивать ничего не нужно.", model.selectedSpeechModelTitle)
+                 : (step == .tryIt && !model.modelIsReady
+                    ? L("firstrun.trialNeedsModel", "Перед первой диктовкой нужно скачать модель распознавания.")
+                    : step.copy.body))
                 .font(.system(size: 15))
                 .foregroundStyle(.primary.opacity(0.88))
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: 440)
 
-            if let note = step.copy.note {
+            if let note = step.copy.note, !(step == .model && model.modelIsReady),
+               !(step == .tryIt && !model.modelIsReady) {
                 Text(note)
                     .font(.system(size: 12.5))
                     .foregroundStyle(.secondary)
@@ -110,9 +117,14 @@ struct FirstRunView: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button(model.isLastStep ? FirstRunCopy.done : FirstRunCopy.next) { model.goNext() }
-                .modifier(FirstRunProminentButton())
-                .keyboardShortcut(.defaultAction)
+            if model.modelInstallIsPrimaryAction {
+                Button(model.nextButtonTitle) { model.goNext() }
+                    .buttonStyle(.bordered)
+            } else {
+                Button(model.nextButtonTitle) { model.goNext() }
+                    .modifier(FirstRunProminentButton())
+                    .keyboardShortcut(.defaultAction)
+            }
         }
         .overlay { FirstRunProgress(step: step) }
     }

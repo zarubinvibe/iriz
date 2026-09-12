@@ -14,7 +14,7 @@ import IrizCore
 /// сортировки и то, что показывается владельцу. Ключ именно имя, а не mtime:
 /// после импорта из старого приложения mtime врёт (см. PromptEnvelope.swift,
 /// `latestDictation`) — папки пишутся на диск в обратном порядку номеров.
-public struct DictationHistoryEntry: Equatable, Identifiable {
+public struct DictationHistoryEntry: Equatable, Identifiable, Sendable {
     let directory: URL
     public let label: String
     /// Сырьё — ответ ASR байт в байт. Есть всегда, иначе записи нет.
@@ -66,11 +66,16 @@ public let DICTATION_HISTORY_KEEP_LIMIT = 500
 /// никогда.
 public func dictationHistoryDirectories(in dictationsRoot: URL,
                                         fileManager: FileManager = .default) -> [URL] {
-    let urls = (try? fileManager.contentsOfDirectory(
+    (try? readDictationHistoryDirectories(in: dictationsRoot, fileManager: fileManager)) ?? []
+}
+
+private func readDictationHistoryDirectories(in dictationsRoot: URL,
+                                             fileManager: FileManager) throws -> [URL] {
+    let urls = try fileManager.contentsOfDirectory(
         at: dictationsRoot,
         includingPropertiesForKeys: [.isDirectoryKey],
         options: [.skipsHiddenFiles]
-    )) ?? []
+    )
     return urls
         .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
         .sorted { $0.lastPathComponent > $1.lastPathComponent }
@@ -79,7 +84,14 @@ public func dictationHistoryDirectories(in dictationsRoot: URL,
 public func dictationHistoryEntries(in dictationsRoot: URL,
                              limit: Int? = nil,
                              fileManager: FileManager = .default) -> [DictationHistoryEntry] {
-    var directories = dictationHistoryDirectories(in: dictationsRoot, fileManager: fileManager)
+    (try? readDictationHistoryEntries(in: dictationsRoot, limit: limit, fileManager: fileManager)) ?? []
+}
+
+/// Для интерфейса: недоступный каталог — ошибка, а не пустая история.
+public func readDictationHistoryEntries(in dictationsRoot: URL,
+                                        limit: Int? = nil,
+                                        fileManager: FileManager = .default) throws -> [DictationHistoryEntry] {
+    var directories = try readDictationHistoryDirectories(in: dictationsRoot, fileManager: fileManager)
     // Обрезаем ДО чтения содержимого: смысл потолка в том, чтобы не открывать
     // тысячи файлов, а не в том, чтобы открыть их и показать сотню.
     if let limit, directories.count > limit { directories = Array(directories.prefix(limit)) }
@@ -199,7 +211,8 @@ enum DictationHistoryKeyAction: Equatable {
 
 func dictationHistoryKeyAction(keyCode: CGKeyCode,
                                charactersIgnoringModifiers: String?,
-                               hasCommand: Bool) -> DictationHistoryKeyAction {
+                               hasCommand: Bool,
+                               hasTextSelection: Bool = false) -> DictationHistoryKeyAction {
     if hasCommand {
         // ⌘⌫ здесь СОЗНАТЕЛЬНО не занят. Это документированный системный
         // шорткат текстового поля («удалить от курсора до начала строки»), а
@@ -208,7 +221,7 @@ func dictationHistoryKeyAction(keyCode: CGKeyCode,
         // расшифровку речи клиента. Удаление живёт в контекстном меню, где его
         // нельзя нажать не глядя.
         switch charactersIgnoringModifiers?.lowercased() {
-        case "c": return .copySelected
+        case "c": return hasTextSelection ? .passThrough : .copySelected
         default: return .passThrough
         }
     }

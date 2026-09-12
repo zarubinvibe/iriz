@@ -14,6 +14,63 @@ import Testing
 
 @Suite("Решения конвейера встречи")
 struct MeetingPipelineTests {
+    @MainActor
+    @Test("отменённый разбор не читает запись и не начинает распознавание")
+    func отменаДоНачалаОстанавливаетКонвейер() async {
+        let task = Task { @MainActor in
+            withUnsafeCurrentTask { $0?.cancel() }
+            var startedStages: [String] = []
+            do {
+                _ = try await MeetingPipeline().run(
+                    audio: URL(fileURLWithPath: "/iriz-test-no-audio.wav"), title: "Встреча",
+                    progress: { startedStages.append($0) })
+                Issue.record("Отменённый разбор не должен завершаться успешно")
+            } catch is CancellationError {
+                #expect(startedStages.isEmpty)
+            } catch {
+                Issue.record("Отмена подменена отказом обработки: \(error)")
+            }
+        }
+        await task.value
+    }
+
+    @Test("без времён слов полный текст сохраняется даже при успешной диаризации")
+    func текстБезТайминговНеТеряется() {
+        let spans = [SpeakerSpan(speaker: "speaker-1", start: 0, end: 12)]
+        let tokenCases: [[DictationTokenTiming]] = [
+            [], [DictationTokenTiming(token: " ", start: 0, end: 1, confidence: 1)]
+        ]
+        for tokens in tokenCases {
+            let transcript = AudioFileTranscript(text: "Первая реплика.\nВторая реплика.",
+                                                  processingSeconds: 1, audioSeconds: 12,
+                                                  tokenTimings: tokens)
+            let resolved = meetingSpeakerTurns(transcript: transcript, spans: spans)
+            #expect(!resolved.speakersResolved)
+            #expect(resolved.turns == [SpeakerTurn(speaker: "Запись", text: transcript.text,
+                                                  start: 0, end: 12)])
+            let document = MeetingProtocolDocument(title: "Встреча", recordedAt: Date(),
+                                                   audioSeconds: 12, turns: resolved.turns)
+            #expect(document.text().contains(transcript.text))
+        }
+    }
+
+    @Test("при пригодных таймингах сохраняются реплики и имена говорящих")
+    func таймингиПозволяютРазделитьГоворящих() {
+        let transcript = AudioFileTranscript(text: "Да. Нет.", processingSeconds: 1, audioSeconds: 2,
+                                              tokenTimings: [
+                                                DictationTokenTiming(token: "Да.", start: 0, end: 1, confidence: 1),
+                                                DictationTokenTiming(token: "Нет.", start: 1, end: 2, confidence: 1)
+                                              ])
+        let resolved = meetingSpeakerTurns(
+            transcript: transcript,
+            spans: [SpeakerSpan(speaker: "one", start: 0, end: 1),
+                    SpeakerSpan(speaker: "two", start: 1, end: 2)],
+            names: SpeakerNames(names: ["one": "Анна", "two": "Борис"]))
+        #expect(resolved.speakersResolved)
+        #expect(resolved.turns.map(\.speaker) == ["Анна", "Борис"])
+        #expect(resolved.turns.map(\.text) == ["Да.", "Нет."])
+    }
+
     @Test("отказы названы поимённо")
     func отказыНазваныПоимённо() {
         // Разбирать будут запись заседания: «не смог» без причины неотличимо

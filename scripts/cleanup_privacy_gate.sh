@@ -56,21 +56,24 @@ check() {
 }
 
 if [ "${1:-}" = "--selftest" ]; then
-    TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+    TMP=$(mktemp -d) || exit 1
+    trap 'rm -rf "$TMP"' EXIT
+    cp -R Sources "$TMP/Sources" || exit 1
+    cd "$TMP" || exit 1
     ok=0
-    check > /dev/null || { echo "ПРОВАЛ: живое дерево не проходит ворота"; ok=1; }
-    echo "     OK  живое дерево принято"
+    if check > /dev/null; then
+        echo "     OK  копия дерева принята"
+    else
+        echo "ПРОВАЛ: копия дерева не проходит ворота"; ok=1
+    fi
 
     # Подделка: второй путь наружу.
-    cp "$CONTROLLER" "$TMP/backup"
     printf '\n// let sneak = SpeechCleanupRequest.body(text: "x")\n' >> Sources/IrizDictate/SpeechCleanup.swift
     if check > /dev/null; then
         echo "ПРОВАЛ: второй путь наружу не пойман"; ok=1
     else
         echo "     OK  второй путь наружу отвергнут"
     fi
-    git checkout -- Sources/IrizDictate/SpeechCleanup.swift 2>/dev/null
-
     [ $ok -eq 0 ] && echo "SELFTEST OK"
     exit $ok
 fi

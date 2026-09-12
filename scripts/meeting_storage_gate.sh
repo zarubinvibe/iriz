@@ -31,7 +31,9 @@ check() {
 
     # M02: у встречи сохраняются ОБА файла. Половина доказательства хуже его
     # отсутствия: она создаёт видимость.
-    grep -q "let audioCopy = directory.appendingPathComponent" Sources/IrizDictate/MeetingStore.swift \
+    # Копирование может идти в staging до атомарного переноса пары.
+    # Имя промежуточного каталога не определяет, сохранён ли звук.
+    grep -q 'copyItem(at: audio, to: audioCopy)' Sources/IrizDictate/MeetingStore.swift \
         || { echo "M02: встреча перестала сохранять звук"; rc=1; }
     grep -q "protocol.md" Sources/IrizDictate/MeetingStore.swift \
         || { echo "M02: встреча перестала сохранять расшифровку"; rc=1; }

@@ -21,26 +21,26 @@
     "bible": {
       "character_sheet": {
         "published_path": "docs/assets/pantheon/bible-character.png",
-        "published_sha256": "5ff407694adc22f497af22819bde47b61204f55629a3aded4d4caca1edd2f7af",
+        "published_sha256": "2e903928afe81e84d15d37db52c3d19e2e6c3e6fba20810d55cf753ca957926e",
         "alt": "Карта персонажа: Ирида из белого мрамора в четырех видах с мраморными крыльями, жезлом вестницы, табличкой и золотой лентой голоса, рядом этюды предметов"
       },
       "prop_sheet": {
         "published_path": "docs/assets/pantheon/bible-props.png",
-        "published_sha256": "ad9275c7948b65915d8757b8eea6633e1ddcc81420f18689ff7c08ae0b668152",
+        "published_sha256": "7cc61571accfb50c67d5f5ef704c8fb3f8c187f13c2c0522c4f09fc697bd778e",
         "alt": "Карта предметов: жезл с гладким кольцом, мраморная табличка с одной бороздой, крылатая сандалия, золотая лента голоса, мраморная клавиша и чаша на слоновой кости"
       }
     },
     "hero": {
       "source_path": "docs/assets/pantheon/hero-source.png",
-      "source_sha256": "9fa6a4e6ae3867707636ac60f781603c46bae45e64217373922119b9503683c5",
+      "source_sha256": "d2bf33d71b0068c8af26e6a8b12cc49c9c6e3f037c2aa51e9e8b4dca359fc4b1",
       "published_path": "docs/assets/pantheon/hero.png",
-      "published_sha256": "ff02cfbef989f040db9e729265b84636ff0a94f5120718d1e94a066bc4381fb4"
+      "published_sha256": "5c8c42c7758c737b47af8d4702b1f5a96ab54bae94565cdd1bfa4e919b29496d"
     },
     "emblem": {
       "source_path": "docs/assets/pantheon/emblem-source.png",
-      "source_sha256": "e228f8333ee8d6752f4f2ad7c08229ca65bc4060f50d154f10d5c401490b220b",
+      "source_sha256": "1d56460678f01b8e944b46057cee68e486edbbedf9335f3cd6a899fd6b1b40f1",
       "published_path": "docs/assets/pantheon/emblem.png",
-      "published_sha256": "daf6fd93f9ab2aa98274b0085be08b1e0a47042873b358cd550639cbdfbc6d47"
+      "published_sha256": "915d77676dbf1ff062ba13e0f0087f4202570e7bc7aba51c1a766293c660e820"
     },
     "takt": {
       "source_path": "docs/assets/pantheon/takt.png",
@@ -100,9 +100,9 @@
         "diagram_ru": "Разбор",
         "diagram_zh": "识别",
         "source_path": "docs/assets/pantheon/workflow/03-decode.png",
-        "source_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd",
+        "source_sha256": "a054a2b1983cbbd1b8a318c751273bae656f2c773fabb4d7c2522f674c7f44bc",
         "published_path": "docs/assets/pantheon/workflow/03-decode.png",
-        "published_sha256": "21164a8f7b84052f3d73b948df6712a7950a444e9b3eca0e25ab2002c1b39bcd"
+        "published_sha256": "a054a2b1983cbbd1b8a318c751273bae656f2c773fabb4d7c2522f674c7f44bc"
       },
       {
         "id": "insert",
@@ -113,15 +113,15 @@
         "diagram_ru": "Текст",
         "diagram_zh": "落字",
         "source_path": "docs/assets/pantheon/workflow/04-insert.png",
-        "source_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc",
+        "source_sha256": "5a763bc59513e96e44af5a4ca67bca95e7c2afd72f6054f6af0d3e3e76c59680",
         "published_path": "docs/assets/pantheon/workflow/04-insert.png",
-        "published_sha256": "6542096a504282a4478a8e79f1324d9fad9b2fc7a03e8990e2f8edebc14d1efc"
+        "published_sha256": "5a763bc59513e96e44af5a4ca67bca95e7c2afd72f6054f6af0d3e3e76c59680"
       }
     ],
     "doc_frames": {
       "contributing": {
         "published_path": "docs/assets/pantheon/doc-contributing.png",
-        "published_sha256": "d1cfa5ca7a5a50a3492d90e2f9ac5a07a7481b8e450031fe303c2718a87ba133",
+        "published_sha256": "583b69a545c9afed6a496ae74b8867d111b63c15282b48f83e209a621b5c73ca",
         "alt": "Две одинаковые мраморные таблички на низком столе, в левой лежит золотая лента голоса, правая пустая и ждет, рядом стоит жезл вестницы",
         "pages": {
           "en": "CONTRIBUTING.md",
@@ -187,6 +187,24 @@
         "frames": [
           "docs/assets/pantheon/window-wash-source.png"
         ]
+      }
+    ],
+    "inserts": [
+      {
+        "role": "desk-firstrun",
+        "published_path": "docs/assets/pantheon/desk-firstrun.png",
+        "published_sha256": "64c84c628ebc7cdb856b62b38614eea882693b0a56ecacccc702362485ebed67",
+        "alt": "Ирида за мраморным столом: на экране ноутбука первый экран знакомства iriz с плашкой и волной",
+        "screen_source": "docs/assets/shots/firstrun-ru.png",
+        "scene_source": "docs/assets/pantheon/doc-desk-source.png"
+      },
+      {
+        "role": "desk-history",
+        "published_path": "docs/assets/pantheon/desk-history.png",
+        "published_sha256": "749780636be9e7614d38aec56fd8156ffcc6492ee2d29720b014221e56d13d0f",
+        "alt": "Мраморный ноутбук крупно: на экране окно истории надиктовок iriz со списком и поиском",
+        "screen_source": "docs/assets/shots/history-ru.png",
+        "scene_source": "docs/assets/pantheon/doc-desk-close-source.png"
       }
     ]
   },

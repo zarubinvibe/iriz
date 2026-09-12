@@ -16,6 +16,7 @@
 // у неё нет подписей, она говорит цветом и формой. Панель - другое: её работа
 // и есть показать текст.
 import AppKit
+import IrizCore
 
 /// Сколько строк займёт текст на самом деле.
 ///
@@ -298,13 +299,32 @@ final class DictationHUDTranscriptView: NSView {
 /// на любом фоне.
 final class DictationHUDCopyPill: NSView {
     var title: String = "" {
-        didSet { if title != oldValue { needsDisplay = true } }
+        didSet {
+            guard title != oldValue else { return }
+            setAccessibilityLabel(title)
+            needsDisplay = true
+        }
     }
     var onPress: (() -> Void)?
 
     private var pressed = false
 
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) не поддерживается") }
+
     override var isFlipped: Bool { true }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard !isHiddenOrHasHiddenAncestor, let onPress else { return false }
+        onPress()
+        return true
+    }
 
     var fittingWidth: CGFloat {
         (title as NSString).size(withAttributes: [.font: Self.font]).width + 26
@@ -321,7 +341,7 @@ final class DictationHUDCopyPill: NSView {
         pressed = false
         needsDisplay = true
         guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
-        onPress?()
+        _ = accessibilityPerformPress()
     }
 
     override func draw(_ dirtyRect: NSRect) {
@@ -359,7 +379,23 @@ final class DictationHUDCloseRing: NSView {
 
     private var pressed = false
 
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        setAccessibilityElement(true)
+        setAccessibilityRole(.button)
+        setAccessibilityLabel(L("common.close", "Закрыть"))
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) не поддерживается") }
+
     override var isFlipped: Bool { true }
+
+    override func accessibilityPerformPress() -> Bool {
+        guard !isHiddenOrHasHiddenAncestor, let onPress else { return false }
+        onPress()
+        return true
+    }
 
     override func mouseDown(with event: NSEvent) {
         pressed = true
@@ -370,7 +406,7 @@ final class DictationHUDCloseRing: NSView {
         pressed = false
         needsDisplay = true
         guard bounds.contains(convert(event.locationInWindow, from: nil)) else { return }
-        onPress?()
+        _ = accessibilityPerformPress()
     }
 
     override func draw(_ dirtyRect: NSRect) {

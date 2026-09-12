@@ -5,12 +5,41 @@
 // разница между режимами - сохранённый звук, и путаница здесь стоит записи
 // заседания.
 import AppKit
+import Foundation
+import IrizCore
 import Testing
 
 @testable import IrizDictate
 
 @Suite("Состояние записи встречи")
 struct MeetingRecordingStateTests {
+    @Test("встреча записывается до трёх часов, диктовка — до двадцати минут")
+    func отдельныйПределВстречи() {
+        #expect(DictationController.recordingLimitSeconds(for: .meeting) == 3 * 60 * 60)
+        for purpose in [DictationRecordingPurpose.dictation, .prompt, .translation] {
+            #expect(DictationController.recordingLimitSeconds(for: purpose) == 20 * 60)
+        }
+    }
+
+    @MainActor
+    @Test("разбор встречи показывает занятость и блокирует повторное распознавание")
+    func разборЗанимаетОбщийКонвейер() {
+        let name = "iriz-meeting-processing-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: name)!
+        defer { removeSuiteFile(named: name, defaults: defaults) }
+        let controller = DictationController(settings: DictationSettings(defaults: defaults),
+                                            insertionStats: InsertionStats(defaults: defaults))
+        #expect(controller.beginMeetingProcessing() != nil)
+        #expect(controller.state == .transcribing)
+        #expect(controller.isBusyForTesting)
+        #expect(controller.beginMeetingProcessing() == nil)
+        #expect(dictationStartRefusal(modelReady: true, isRecording: false,
+                                      isBusy: controller.isBusyForTesting,
+                                      secureInputActive: false) == .transcriptionInFlight)
+        controller.stop()
+        #expect(!controller.isBusyForTesting)
+    }
+
     @Test("у записи встречи свой цвет, не совпадающий ни с одним другим")
     func свойЦвет() {
         let meeting = dictationHUDWaveColor(.meeting)

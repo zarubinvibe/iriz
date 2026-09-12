@@ -11,7 +11,9 @@ import IrizSettings
 import SwiftUI
 
 @MainActor
-func makeIrizSettingsWindow(preview: Bool = false, page: SettingsPage = .keys) -> NSWindow {
+func makeIrizSettingsWindow(preview: Bool = false, page: SettingsPage = .keys,
+                           navigation: SettingsNavigation? = nil,
+                           openSpeechModelSetup: (() -> Void)? = nil) -> NSWindow {
     let window = NSWindow(
         // Окно шире прежнего: слева боковик со страницами, справа сама
         // страница. В 700 pt на две колонки не помещалось ничего.
@@ -41,7 +43,9 @@ func makeIrizSettingsWindow(preview: Bool = false, page: SettingsPage = .keys) -
     // `.fullSizeContentView` сохраняет системную рамку. Замер по кадру дал
     // радиус около 27 pt при зашитых 16, то есть своя маска ещё и врала бы.
     window.contentMinSize = NSSize(width: 900, height: 620)
-    window.contentView = NSHostingView(rootView: IrizSettingsView(preview: preview, page: page))
+    window.contentView = NSHostingView(rootView: IrizSettingsView(preview: preview, page: page,
+                                                               navigation: navigation,
+                                                               openSpeechModelSetup: openSpeechModelSetup))
     window.isReleasedWhenClosed = false  // иначе закрытие окна уронит приложение
     return window
 }

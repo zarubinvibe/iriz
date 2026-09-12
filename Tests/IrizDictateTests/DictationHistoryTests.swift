@@ -131,6 +131,92 @@ struct DictationHistorySearchTests {
 
 // MARK: - Порядок
 
+@Suite("UI-MACOS-208/209: загрузка истории и приватное превью")
+struct DictationHistoryLoadingTests {
+    @MainActor
+    @Test func поздняяСотняНеПерезаписываетПолныйПоиск() {
+        let model = DictationHistoryModel()
+        let recent = DictationHistoryEntry(directory: URL(fileURLWithPath: "/tmp/recent"), text: "свежее")
+        let older = DictationHistoryEntry(directory: URL(fileURLWithPath: "/tmp/older"), text: "старый ответ")
+        let partial = model.beginLoading(all: false)
+        let full = model.beginLoading(all: true)
+        model.completeLoading(.success([recent, older]), generation: full, all: true)
+        model.completeLoading(.success([recent]), generation: partial, all: false)
+        #expect(model.entries == [recent, older])
+        #expect(model.didLoadAll)
+        #expect(!model.isLoading)
+
+        let closed = model.beginLoading(all: true)
+        model.cancelLoading()
+        model.completeLoading(.success([]), generation: closed, all: true)
+        #expect(model.entries == [recent, older])
+    }
+
+    @MainActor
+    @Test func previewНеВызываетДажеПровайдерРеальногоКаталога() {
+        let model = DictationHistoryModel(preview: true)
+        var rootCalls = 0
+        model.query = "закрытая запись"
+        model.reload {
+            rootCalls += 1
+            throw CocoaError(.fileReadNoPermission)
+        }
+        #expect(rootCalls == 0)
+        #expect(model.entries.isEmpty)
+        #expect(!model.isLoading)
+        #expect(model.notice == nil)
+    }
+
+    @MainActor
+    @Test func ошибкаЧтенияНеВыдаётсяЗаПустуюИсторию() {
+        let model = DictationHistoryModel()
+        let generation = model.beginLoading(all: true)
+        model.completeLoading(.failure(CocoaError(.fileReadNoPermission)),
+                              generation: generation, all: true)
+        #expect(!model.isLoading)
+        #expect(!model.didLoadAll)
+        #expect(model.noticeIsError)
+        #expect(model.notice?.isEmpty == false)
+    }
+
+    @MainActor
+    @Test func повторноеОткрытиеСЗапросомИОчисткаВидятЗаписиЗаПределамиПятисот() async throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("iriz-history-full-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        for index in 0..<503 {
+            _ = try makeEntryOnDisk(in: root, label: String(format: "%04d", index),
+                                    raw: index == 0 ? "самая старая искомая фраза" : "свежая запись")
+        }
+        // Это снимок для подтверждения «Очистить всё»; реальные удаления не нужны.
+        #expect(try readDictationHistoryEntries(in: root).count == 503)
+        #expect(try readDictationHistoryEntries(in: root, limit: DICTATION_HISTORY_VISIBLE_LIMIT).count == 100)
+
+        let model = DictationHistoryModel()
+        model.query = "искомая фраза"
+        for _ in 0..<2 {
+            model.reload { root }
+            for _ in 0..<500 {
+                if !model.isLoading { break }
+                try await Task.sleep(nanoseconds: 10_000_000)
+            }
+            #expect(!model.isLoading)
+            #expect(model.didLoadAll)
+            #expect(model.entries.count == 503)
+            #expect(model.visible.map(\.label) == ["0000"])
+            model.cancelLoading()
+        }
+    }
+
+    @Test func commandCУступаетВыделенномуТекстуПоиска() {
+        #expect(dictationHistoryKeyAction(keyCode: 8, charactersIgnoringModifiers: "c",
+                                          hasCommand: true, hasTextSelection: true) == .passThrough)
+        #expect(dictationHistoryKeyAction(keyCode: 8, charactersIgnoringModifiers: "c",
+                                          hasCommand: true, hasTextSelection: false) == .copySelected)
+    }
+}
+
 @Suite("Порядок записей истории")
 struct DictationHistoryOrderTests {
 

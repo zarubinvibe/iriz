@@ -13,5 +13,5 @@ Constraints:
 - Every plate rests on the ground and casts a shadow. Nothing hovers.
 - The gold ribbon is one continuous piece touching every plate in order, never a chain of separate segments.
 - Preserve the reference style; highest final quality; maximum resolution.
-Avoid: writing of any kind, letters, digits, numbers on the plates, arrows drawn as glyphs, boxes drawn with lines, screens, keyboards, cables, figures, faces, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
+Avoid: owl, bird, any animal, writing of any kind, letters, digits, numbers on the plates, arrows drawn as glyphs, boxes drawn with lines, screens, keyboards, cables, figures, faces, dark background, black background, neon, purple gradient, smoky cinema lighting, heavy bronze, metallic or plastic marble, watermark, callout labels
 Text (verbatim): No readable text, no letters, no digits anywhere in the image. The plate faces stay empty.

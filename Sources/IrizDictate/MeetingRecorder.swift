@@ -88,5 +88,5 @@ public func meetingRecordingScratchURL(at date: Date = Date()) throws -> URL {
         .appendingPathComponent("_recording", isDirectory: true)
     try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true,
                                             attributes: [.posixPermissions: 0o700])
-    return root.appendingPathComponent("meeting-\(formatter.string(from: date)).wav")
+    return root.appendingPathComponent("meeting-\(formatter.string(from: date))-\(UUID().uuidString.lowercased()).wav")
 }

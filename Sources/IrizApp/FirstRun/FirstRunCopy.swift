@@ -29,7 +29,7 @@ enum FirstRunCopy {
 
     /// Подпись у стрелки. Говорит, ЧТО случится от нажатия, а не «нажмите
     /// кнопку»: человек и так видит кнопку, ему нужна причина.
-    static var hintModel: String { L("firstrun.hintModel", "нажми сюда, качать примерно пять минут") }
+    static var hintModel: String { L("firstrun.hintModel", "Нажми кнопку ниже. iriz сам скачает и установит модель.") }
     static var hintMicrophone: String { L("firstrun.hintMicrophone", "нажми сюда") }
     static var hintAccessibility: String { L("firstrun.hintAccessibility", "нажми сюда, откроются настройки системы") }
     static var hintInputMonitoring: String { L("firstrun.hintInputMonitoring", "нажми сюда, откроются настройки системы") }
@@ -64,7 +64,8 @@ enum FirstRunCopy {
         title: L("firstrun.welcome.title", "Ты говоришь, я печатаю"),
         body: L("firstrun.welcome.body", "Нажми клавишу, скажи фразу, нажми еще раз. Текст появится там, где стоял "
             + "курсор: в письме, в чате, в терминале."),
-        note: L("firstrun.welcome.note", "Все считается прямо на твоем Маке. Ни звук, ни текст никуда не отправляются.")
+        note: L("firstrun.welcome.note", "Перед первой диктовкой скачаем модель распознавания: следующий шаг покажет кнопку установки. "
+            + "После этого речь будет распознаваться на твоём Маке, без интернета.")
     ) }
 
     static var whereItLives: Step { Step(
@@ -77,13 +78,14 @@ enum FirstRunCopy {
     ) }
 
     static var model: Step { Step(
-        title: L("firstrun.model.title", "Скачаем распознавание"),
-        body: L("firstrun.model.body", "Речь я разбираю прямо у тебя на Маке, без интернета. Для этого нужна модель: "
-            + "полгигабайта, качается один раз."),
-        note: L("firstrun.model.note", "В образе её нет намеренно: модель обновляется чаще, чем сам iriz. "
-            + "Клади её отдельно: иначе вместе с программой приедет устаревшая.\n\n"
-            + "Пока она скачивается, продолжай: разрешения можно выдать прямо сейчас."),
-        action: L("firstrun.model.action", "Скачать модель")
+        title: L("firstrun.model.title", "Установи распознавание речи"),
+        body: L("firstrun.model.body", "Без модели диктовка не работает. Кнопка ниже скачает Parakeet, "
+            + "установит его в нужную папку и выберет для распознавания."),
+        note: L("firstrun.model.note", "Скачается около 500 МБ. Нужны интернет и свободное место на диске. "
+            + "Скорость зависит от соединения; ход установки появится здесь. "
+            + "Файлы вручную искать и переносить не нужно.\n\n"
+            + "Пока модель скачивается, можно перейти к разрешениям. Диктовку попробуем после установки."),
+        action: L("firstrun.model.action", "Скачать и установить Parakeet")
     ) }
 
     static var modelReady: String { L("firstrun.modelReady", "Модель на месте") }

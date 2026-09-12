@@ -51,6 +51,9 @@ It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a wo
 
 ![Meetings: drop the recording, the minutes land next to it](docs/assets/shots/page-meetings.png)
 
+![Iris at a marble table: the laptop screen carries the first screen of the iriz walkthrough](docs/assets/pantheon/desk-firstrun.png)
+
+
 ## Why It Helps
 
 Anyone who writes for a living loses hours to typing. The same thought comes out faster and whole when spoken: typing, you hunt for words; speaking, you do not.
@@ -58,6 +61,9 @@ Anyone who writes for a living loses hours to typing. The same thought comes out
 One thing gets in the way. Cloud dictation cleans speech better than anything local, but what you said leaves the machine: a client call, a draft, names and figures. For a doctor, a lawyer, a therapist, that trade never pays off.
 
 So here your Mac does the decoding, and the app reaches the network only when you press the button.
+
+![A marble laptop up close: the iriz dictation history window on its screen](docs/assets/pantheon/desk-history.png)
+
 
 ## The Main Advantage
 
@@ -193,7 +199,7 @@ Deeper: [the step-by-step walkthrough with a frame of every surface](docs/ONBOAR
 
 Useful? Give iriz a star: [https://github.com/zarubinvibe/iriz](https://github.com/zarubinvibe/iriz). It takes a second and it decides whether other people ever find the project.
 
-Want to change something? The path is short: fork the repository, create a branch, commit your change, push the branch, then open a Pull Request. Do not push directly to `main`; the release gate rejects it.
+Want to change something? The path is short: fork the repository, create a branch, commit your change, push the branch, then open a Pull Request. Do not push directly to `main`.
 
 Found a problem instead? Open an issue at [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) and say what you ran and what happened.
 
