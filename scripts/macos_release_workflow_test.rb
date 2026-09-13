@@ -47,8 +47,8 @@ check(draft['if'] == draft_guard, 'Only manual build_only runs may skip the draf
 end
 check(build['permissions'] == { 'contents' => 'read' }, 'Build must not receive a write token')
 check(draft['permissions'] == { 'contents' => 'write' } && draft['needs'] == 'build', 'Draft must depend on the read-only build')
-check(build['runs-on'] == 'macos-15' && build['env']['SMLTLK_SIGN_IDENTITY'] == '-', 'Build must use standard ARM64 and ad-hoc signing')
-check(build['env']['DEVELOPER_DIR'] == '/Applications/Xcode_26.3.app/Contents/Developer', 'Pin the available Xcode 26.3 toolchain')
+check(build['runs-on'] == 'macos-26' && build['env']['SMLTLK_SIGN_IDENTITY'] == '-', 'Build must use standard ARM64 and ad-hoc signing')
+check(build['env']['DEVELOPER_DIR'] == '/Applications/Xcode_26.6.app/Contents/Developer', 'Pin the Xcode 26.6 toolchain')
 check(build['env']['IRIZ_NOTARY_PROFILE'] == '' && build['env']['IRIZ_DMG_HEADLESS'] == '1', 'No Apple credentials or Finder in CI')
 check(build['steps'].any? { |step| step['run'] == 'swift test --no-parallel --jobs 2' }, 'Serial tests must precede packaging')
 test_index = build['steps'].index { |step| step['run'] == 'swift test --no-parallel --jobs 2' }
@@ -90,7 +90,8 @@ git() { [[ "$*" == 'rev-parse HEAD' ]] || return 99; printf '%s\n' "$SOURCE_SHA"
 BASH
 Dir.mktmpdir('iriz-workflow-test-') do |fixture|
   defaults = { version: '0.2.1', ref_type: 'branch', ref_name: 'main', arch: 'arm64',
-               swift: 'Swift version 6.2.3', xcode: "Xcode 26.3\nBuild version 17C529", sdk: '26.2' }
+               swift: 'Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)',
+               xcode: "Xcode 26.6\nBuild version 17F113", sdk: '26.5' }
   [
     ['manual version', {}, nil],
     ['matching version tag', { ref_type: 'tag', ref_name: 'v0.2.1' }, nil],
@@ -99,8 +100,12 @@ Dir.mktmpdir('iriz-workflow-test-') do |fixture|
     ['mismatched version tag', { ref_type: 'tag', ref_name: 'v0.2.2' }, 'The tag must match RELEASE_VERSION.'],
     ['invalid version', { version: '../bad' }, 'Invalid RELEASE_VERSION'],
     ['Intel runner', { arch: 'x86_64' }, 'An ARM64 runner is required.'],
-    ['old Xcode', { xcode: 'Xcode 16.4' }, 'Xcode 26 is required.'],
-    ['old Swift', { swift: 'Swift version 5.10' }, 'Swift 6 is required.'],
+    ['old Xcode', { xcode: 'Xcode 16.4' }, 'Xcode 26.6 build 17F113 is required.'],
+    ['older Xcode 26', { xcode: "Xcode 26.3\nBuild version 17C529" }, 'Xcode 26.6 build 17F113 is required.'],
+    ['wrong Xcode build', { xcode: "Xcode 26.6\nBuild version 17F114" }, 'Xcode 26.6 build 17F113 is required.'],
+    ['old Swift', { swift: 'Swift version 5.10' }, 'Swift 6.3.3 is required.'],
+    ['older Swift 6', { swift: 'Apple Swift version 6.2.3' }, 'Swift 6.3.3 is required.'],
+    ['Swift patch prefix', { swift: 'Apple Swift version 6.3.30' }, 'Swift 6.3.3 is required.'],
     ['old SDK', { sdk: '15.5' }, 'macOS SDK 26 or newer is required.'],
     ['empty SDK', { sdk: '' }, 'macOS SDK 26 or newer is required.'],
     ['malformed SDK', { sdk: '26.2-beta' }, 'macOS SDK 26 or newer is required.'],

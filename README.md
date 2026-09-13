@@ -146,7 +146,7 @@ Download the [macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/dow
 
 Open iriz and choose Download and install Parakeet in onboarding (about 500 MB). Grant the permissions in the following steps. Wait for readiness, focus a text field, and try your dictation key.
 
-[Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, install Xcode 26 or newer with the macOS 26 SDK and Swift 6 and use one of the paths below.
+[Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, use the tested Xcode 26.6 toolchain (macOS 26 SDK, Swift 6.3.3) and one of the paths below.
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz

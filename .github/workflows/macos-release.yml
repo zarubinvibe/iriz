@@ -28,13 +28,13 @@ jobs:
     if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'
     # Standard ARM64 runner, not the paid macos-*-large/xlarge variants.
     # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
-    runs-on: macos-15
+    runs-on: macos-26
     timeout-minutes: 90
     permissions:
       contents: read
     env:
-      # macOS 26 APIs need the newer SDK even with a macOS 14 deployment target.
-      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
+      # Match the compiler that built the verified release; SDK 26 alone is insufficient.
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       SMLTLK_SIGN_IDENTITY: '-'
       IRIZ_NOTARY_PROFILE: ''
       IRIZ_DMG_HEADLESS: '1'
@@ -62,10 +62,12 @@ jobs:
           [[ "$(uname -m)" == arm64 ]] || { echo 'An ARM64 runner is required.'; exit 1; }
           xcode_version=$(xcodebuild -version)
           printf '%s\n' "$xcode_version"
-          [[ "$xcode_version" == 'Xcode 26.'* ]] || { echo 'Xcode 26 is required.'; exit 1; }
+          [[ "$xcode_version" == $'Xcode 26.6\nBuild version 17F113' ]] \
+            || { echo 'Xcode 26.6 build 17F113 is required.'; exit 1; }
           swift_version=$(xcrun swift --version)
           printf '%s\n' "$swift_version"
-          [[ "$swift_version" == *'Swift version 6.'* ]] || { echo 'Swift 6 is required.'; exit 1; }
+          [[ "$swift_version" =~ Swift[[:space:]]version[[:space:]]6\.3\.3([[:space:]]|$) ]] \
+            || { echo 'Swift 6.3.3 is required.'; exit 1; }
           sdk_version=$(xcrun --sdk macosx --show-sdk-version)
           printf 'macOS SDK: %s\n' "$sdk_version"
           [[ "$sdk_version" =~ ^([0-9]+)(\.[0-9]+){0,2}$ ]] && (( 10#${BASH_REMATCH[1]} >= 26 )) \
