@@ -8,6 +8,7 @@ prompt_*.md
 /catalog
 .landing/
 .build/
+/release/
 build/
 *.app
 # Граф знаний ЕДЕТ ВМЕСТЕ С ДОМОМ: агент в свежем клоне без него слеп.

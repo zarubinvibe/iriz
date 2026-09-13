@@ -1,0 +1,170 @@
+name: macOS release draft
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+# This workflow is inert in the private working repository and in forks.
+permissions:
+  contents: read
+
+concurrency:
+  group: macos-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'
+    # Standard ARM64 runner, not the paid macos-*-large/xlarge variants.
+    # https://docs.github.com/en/actions/reference/runners/github-hosted-runners
+    runs-on: macos-15
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      SMLTLK_SIGN_IDENTITY: '-'
+      IRIZ_NOTARY_PROFILE: ''
+      IRIZ_DMG_HEADLESS: '1'
+      IRIZ_RELEASE_VARIANTS: arm64
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      source_sha: ${{ steps.version.outputs.source_sha }}
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Validate version and Swift 6 toolchain
+        id: version
+        run: |
+          set -euo pipefail
+          version=$(<RELEASE_VERSION)
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo 'Invalid RELEASE_VERSION'; exit 1; }
+          if [[ "$GITHUB_REF_TYPE" == tag && "$GITHUB_REF_NAME" != "v$version" ]]; then
+            echo 'The tag must match RELEASE_VERSION.'
+            exit 1
+          fi
+          [[ "$(uname -m)" == arm64 ]] || { echo 'An ARM64 runner is required.'; exit 1; }
+          xcodebuild -version
+          swift_version=$(xcrun swift --version)
+          printf '%s\n' "$swift_version"
+          [[ "$swift_version" == *'Swift version 6.'* ]] || { echo 'Swift 6 is required.'; exit 1; }
+          printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
+          printf 'source_sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Check workflow guards offline
+        run: ruby scripts/macos_release_workflow_test.rb --selftest
+
+      - name: Run tests without parallel test execution
+        run: swift test --no-parallel --jobs 2
+
+      - name: Check packaging and installer failure paths
+        run: |
+          bash scripts/make_release_test.sh --selftest
+          bash scripts/build_app_test.sh --selftest
+
+      - name: Build and verify the ad-hoc signed DMG
+        run: bash scripts/make_release.sh
+
+      - name: Verify the exact release files
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        working-directory: release/dist
+        run: |
+          set -euo pipefail
+          for file in "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json; do
+            [[ -f "$file" && ! -L "$file" && -s "$file" ]] || { echo "Missing release file: $file"; exit 1; }
+          done
+          shasum -a 256 -c SHA256SUMS.txt
+          cmp "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg
+
+      - name: Keep the four release files
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: iriz-${{ steps.version.outputs.version }}-arm64-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            release/dist/iriz-${{ steps.version.outputs.version }}-arm64.dmg
+            release/dist/iriz-macos-arm64.dmg
+            release/dist/SHA256SUMS.txt
+            release/dist/release-manifest.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+          overwrite: false
+
+  draft:
+    needs: build
+    if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    # No checkout or repository scripts run with this write token.
+    permissions:
+      contents: write
+    env:
+      RELEASE_VERSION: ${{ needs.build.outputs.version }}
+      SOURCE_SHA: ${{ needs.build.outputs.source_sha }}
+    steps:
+      - name: Download only this build's artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact_id }}
+          path: release-files
+          merge-multiple: true
+          digest-mismatch: error
+
+      - name: Verify release metadata and checksums
+        working-directory: release-files
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          for file in "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json; do
+            [[ -f "$file" && ! -L "$file" && -s "$file" ]]
+          done
+          jq -e --arg version "$RELEASE_VERSION" --arg sha "$SOURCE_SHA" '
+            .version == $version and .source_sha == $sha and
+            .source_dirty == false and .notarized == false and
+            .signing.mode == "ad-hoc" and .signing.identity == "-"
+          ' release-manifest.json
+          sha256sum --check --strict SHA256SUMS.txt
+          cmp "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg
+
+      - name: Create a new draft only
+        working-directory: release-files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: zarubinvibe/iriz
+        run: |
+          set -euo pipefail
+          tag="v$RELEASE_VERSION"
+          # List all pages, including drafts. Any API failure stops the job.
+          releases=$(gh api --paginate --slurp "repos/$GH_REPO/releases?per_page=100")
+          release_exists=$(jq -r --arg tag "$tag" 'any(.[][]; .tag_name == $tag)' <<< "$releases")
+          if [[ "$release_exists" != false ]]; then
+            echo "Release $tag already exists; no release or asset was changed."
+            exit 1
+          fi
+          # An existing tag must identify the commit that produced these files.
+          tags=$(gh api --paginate --slurp "repos/$GH_REPO/tags?per_page=100")
+          tagged_sha=$(jq -r --arg tag "$tag" '.[][] | select(.name == $tag) | .commit.sha' <<< "$tags")
+          if [[ -n "$tagged_sha" && "$tagged_sha" != "$SOURCE_SHA" ]]; then
+            echo "Tag $tag points to a different commit; nothing was changed."
+            exit 1
+          fi
+          gh release create "$tag" \
+            "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg \
+            SHA256SUMS.txt release-manifest.json \
+            --repo "$GH_REPO" --target "$SOURCE_SHA" --draft --latest=false \
+            --title "iriz $RELEASE_VERSION" \
+            --notes "Draft for manual review. Apple Silicon / macOS 14+. Ad-hoc signed, not notarized by Apple. Speech models are downloaded separately in the app. Verify the checksums, installation and first-run flow before publishing. Source: $SOURCE_SHA."
+          printf 'Created draft %s. Publishing and marking Latest require manual review.\n' "$tag" >> "$GITHUB_STEP_SUMMARY"

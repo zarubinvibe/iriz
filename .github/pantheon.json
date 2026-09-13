@@ -132,6 +132,18 @@
     },
     "doc_pages": [
       {
+        "path": "docs/DOWNLOAD.md",
+        "frames": ["assets/pantheon/doc-onboarding.png"]
+      },
+      {
+        "path": "docs/DOWNLOAD.ru.md",
+        "frames": ["assets/pantheon/doc-onboarding.png"]
+      },
+      {
+        "path": "docs/DOWNLOAD.zh.md",
+        "frames": ["assets/pantheon/doc-onboarding.png"]
+      },
+      {
         "path": "docs/ONBOARDING.md",
         "frames": [
           "assets/pantheon/doc-onboarding.png",

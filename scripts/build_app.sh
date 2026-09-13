@@ -3,28 +3,48 @@
 # бандл, подпись smltlk-selfsign, установка по фиксированному пути.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-swift build -c release
+VERSION=$(tr -d '\n' < RELEASE_VERSION)
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "build_app: неверная RELEASE_VERSION" >&2; exit 1; }
+fail() { printf 'build_app: %s\n' "$*" >&2; exit 1; }
+swift build -c release --arch arm64
 # Иконка: тот же IrizMark.iconImage → iconset → .build/AppIcon.icns (render_marks.sh).
 bash scripts/render_marks.sh
-APP=/Applications/iriz.app
-OLD_APP=/Applications/smltlk.app
-# Запущенное приложение держит свой бандл: rm -rf по нему может не пройти, и скрипт
-# МОЛЧА оставит старую сборку — «поставил и не работает» с правильным кодом в репозитории.
-# Поэтому сначала гасим процесс, потом сверяем, что бандла действительно нет.
-if pgrep -x iriz || pgrep -x smltlk; then
-  pkill -x iriz 2>/dev/null || true
-  pkill -x smltlk 2>/dev/null || true
-else
-  rc=$?
-  [ "$rc" -eq 1 ] || { echo "build_app: pgrep завершился с кодом $rc"; exit "$rc"; }
-fi
-sleep 1
-if pgrep -x iriz || pgrep -x smltlk; then
-  echo "build_app: не удалось остановить приложение — установка отменена"
-  exit 1
-fi
-rm -rf "$APP"
-[ -e "$APP" ] && { echo "build_app: не удалось удалить $APP — установка отменена"; exit 1; }
+INSTALL_DIR=/Applications
+BACKUP_PARENT="$HOME/Library/Application Support"
+INSTALL_APP="$INSTALL_DIR/iriz.app"
+OLD_APP="$INSTALL_DIR/smltlk.app"
+STAGE_ROOT=$(mktemp -d "$PWD/.build/install-app.XXXXXX")
+APP="$STAGE_ROOT/iriz.app"
+BACKUP_DIR=""
+INSTALLING=0
+NEW_INSTALL_STARTED=0
+finish() {
+  local result=$?
+  trap - EXIT
+  if [ "$INSTALLING" -eq 1 ]; then
+    # Не удаляем даже неполную новую копию: при ошибке она остаётся рядом с backup.
+    if [ "$NEW_INSTALL_STARTED" -eq 1 ] && { [ -e "$INSTALL_APP" ] || [ -L "$INSTALL_APP" ]; }; then
+      mv "$INSTALL_APP" "$BACKUP_DIR/failed-iriz.app" \
+        || { printf 'build_app: откат требует помощи; резервный каталог: %s\n' "$BACKUP_DIR" >&2; exit 1; }
+    fi
+    if { [ -e "$BACKUP_DIR/iriz.app" ] || [ -L "$BACKUP_DIR/iriz.app" ]; } \
+        && [ ! -e "$INSTALL_APP" ] && [ ! -L "$INSTALL_APP" ]; then
+      mv "$BACKUP_DIR/iriz.app" "$INSTALL_APP" \
+        || { printf 'build_app: не удалось вернуть прежнее приложение из %s\n' "$BACKUP_DIR" >&2; exit 1; }
+    fi
+    printf 'build_app: замена отменена, файловое состояние до замены восстановлено\n' >&2
+    result=1
+  fi
+  if [ "$result" -eq 0 ]; then
+    rmdir "$STAGE_ROOT" 2>/dev/null || true
+  else
+    printf 'build_app: рабочий каталог: %s\n' "$STAGE_ROOT" >&2
+  fi
+  exit "$result"
+}
+trap finish EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/IrizApp "$APP/Contents/MacOS/iriz"
 cp .build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
@@ -35,14 +55,9 @@ cp .build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 # показывает русский на любом выбранном языке: английский и китайский падают в
 # оригинал, потому что `L()` возвращает исходную строку, когда таблицы нет.
 # Поймано кадром 06.09.2026: `settings-zh.png` вышел целиком по-русски.
-# `-L`, потому что `.build/release` - симлинк на каталог с тройкой платформы,
-# а find без него по симлинку не идёт и молча находит пусто.
-BUNDLES=$(find -L .build/release -maxdepth 1 -type d -name '*.bundle')
-if [ -z "$BUNDLES" ]; then
-    echo "build_app: ресурсные бандлы не найдены - переводов в приложении не будет" >&2
-    exit 1
-fi
-for bundle in $BUNDLES; do
+# Берём бандлы рядом с бинарём; кавычки сохраняют пробелы в именах.
+[ -d .build/release/IrizApp_IrizCore.bundle ] || fail "ресурсный бандл IrizApp_IrizCore.bundle не найден"
+for bundle in .build/release/*.bundle; do
     cp -R "$bundle" "$APP/Contents/Resources/"
 done
 
@@ -52,21 +67,25 @@ done
 # с «Library not loaded: @rpath/whisper.framework» - тесты и CLI при этом работали,
 # потому что бегут прямо из .build, где фреймворк лежит рядом. Поймано живьём
 # 03.09.2026, ПОСЛЕ того как всё остальное было зелёным.
-WHISPER_FRAMEWORK="$(find .build -maxdepth 3 -type d -name whisper.framework -path '*release*' | head -1)"
-if [ -z "$WHISPER_FRAMEWORK" ]; then
+WHISPER_FRAMEWORK=.build/release/whisper.framework
+if [ ! -d "$WHISPER_FRAMEWORK" ]; then
     echo "build_app: whisper.framework не найден в .build - движок диктовки не запустится" >&2
     exit 1
 fi
 mkdir -p "$APP/Contents/Frameworks"
-rm -rf "$APP/Contents/Frameworks/whisper.framework"
 cp -R "$WHISPER_FRAMEWORK" "$APP/Contents/Frameworks/"
-install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/iriz" 2>/dev/null || true
+if ! otool -l "$APP/Contents/MacOS/iriz" | awk '$1 == "path" && $2 == "@executable_path/../Frameworks" { found=1 } END { exit !found }'; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$APP/Contents/MacOS/iriz" \
+        || fail "не удалось добавить rpath фреймворков"
+fi
+otool -l "$APP/Contents/MacOS/iriz" | awk '$1 == "path" && $2 == "@executable_path/../Frameworks" { found=1 } END { exit !found }' \
+    || fail "rpath фреймворков отсутствует"
 # Фреймворк приходит подписанным вендором, и dyld отказывается его грузить в наш
 # процесс: «different Team IDs». --deep на приложении чужую подпись не перебивает,
 # поэтому фреймворк подписывается ОТДЕЛЬНО и до подписи бандла.
 codesign --force --sign "smltlk-selfsign" --options runtime \
-    "$APP/Contents/Frameworks/whisper.framework"
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+    "$APP/Contents/Frameworks/whisper.framework" || fail "подпись фреймворка не прошла"
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
@@ -76,25 +95,50 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
 <key>CFBundleDisplayName</key><string>iriz</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleIconFile</key><string>AppIcon</string>
-<key>CFBundleShortVersionString</key><string>0.2.0</string>
-<key>CFBundleVersion</key><string>1</string>
+<key>CFBundleShortVersionString</key><string>$VERSION</string>
+<key>CFBundleVersion</key><string>$VERSION</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
-<key>NSMicrophoneUsageDescription</key><string>Микрофон нужен, чтобы превращать вашу речь в текст.</string>
+<key>NSMicrophoneUsageDescription</key><string>Микрофон нужен, чтобы превращать твою речь в текст.</string>
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
-codesign --force --deep --sign "smltlk-selfsign" --options runtime --entitlements entitlements.plist "$APP"
-codesign --verify --deep --strict "$APP"
+codesign --force --deep --sign "smltlk-selfsign" --options runtime --entitlements entitlements.plist "$APP" \
+    || fail "подпись приложения не прошла"
+codesign --verify --deep --strict "$APP" || fail "проверка подготовленной подписи не прошла"
 codesign -dv --verbose=2 "$APP" 2>&1 | grep -E 'Authority|Identifier'
-# Установленный бинарь обязан быть НОВЕЕ собранного источника — иначе установка не состоялась.
-if [ "$APP/Contents/MacOS/iriz" -ot .build/release/IrizApp ]; then
-  echo "build_app: в /Applications лежит старый бинарь — установка не состоялась"; exit 1
-fi
-echo "build_app: установлено $(date -r "$APP/Contents/MacOS/iriz" '+%H:%M:%S')"
 
-# Старый бандл убирается ПОСЛЕ успешной установки нового: иначе неудачная
-# сборка оставила бы владельца вообще без приложения.
-if [ -d "$OLD_APP" ] && [ -x "$APP/Contents/MacOS/iriz" ]; then
-    rm -rf "$OLD_APP"
-    echo "build_app: старый $OLD_APP удалён"
+# До этой точки установленное приложение и его процессы не менялись.
+mkdir -p "$BACKUP_PARENT"
+BACKUP_DIR=$(mktemp -d "$BACKUP_PARENT/iriz-app-backup.XXXXXX")
+for process in iriz smltlk; do
+    if pgrep -x "$process" >/dev/null; then
+        pkill -x "$process" || { rc=$?; [ "$rc" -eq 1 ] || fail "не удалось остановить $process"; }
+    else
+        rc=$?
+        [ "$rc" -eq 1 ] || fail "pgrep завершился с кодом $rc"
+    fi
+done
+sleep 1
+for process in iriz smltlk; do
+    if pgrep -x "$process" >/dev/null; then
+        fail "не удалось остановить $process; установка отменена"
+    else
+        rc=$?
+        [ "$rc" -eq 1 ] || fail "pgrep завершился с кодом $rc"
+    fi
+done
+INSTALLING=1
+if [ -e "$INSTALL_APP" ] || [ -L "$INSTALL_APP" ]; then
+    mv "$INSTALL_APP" "$BACKUP_DIR/iriz.app" || fail "не удалось сохранить прежнее приложение"
+fi
+NEW_INSTALL_STARTED=1
+mv "$APP" "$INSTALL_APP" || fail "не удалось установить подготовленное приложение"
+codesign --verify --deep --strict "$INSTALL_APP" || fail "проверка установленной подписи не прошла"
+INSTALLING=0
+printf 'build_app: установлено %s; резервный каталог: %s\n' "$VERSION" "$BACKUP_DIR"
+
+# Старое имя тоже сохраняется, а не удаляется безвозвратно.
+if [ -e "$OLD_APP" ] || [ -L "$OLD_APP" ]; then
+    mv "$OLD_APP" "$BACKUP_DIR/smltlk.app" \
+        || printf 'build_app: не удалось перенести старый %s; он оставлен на месте\n' "$OLD_APP" >&2
 fi

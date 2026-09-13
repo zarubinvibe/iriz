@@ -106,6 +106,28 @@ public func Lf(_ key: String, _ original: String, _ arguments: CVarArg...) -> St
     String(format: L(key, original), arguments: arguments)
 }
 
+/// SwiftPM ищет свой bundle рядом с executable либо по абсолютному пути
+/// сборки. В упакованном macOS-приложении ресурсы лежат в Contents/Resources;
+/// обращение к Bundle.module на другой машине завершается fatalError.
+func irizResourceBundle(in host: Bundle) -> Bundle? {
+    let locations = [host.resourceURL, host.bundleURL,
+                     host.executableURL?.deletingLastPathComponent(),
+                     host.bundleURL.deletingLastPathComponent()].compactMap { $0 }
+    return locations.lazy.compactMap {
+        Bundle(url: $0.appendingPathComponent("IrizApp_IrizCore.bundle", isDirectory: true))
+    }.first
+}
+
+private final class IrizResourceBundleMarker: NSObject {}
+
+func irizResourceBundle() -> Bundle? {
+    // swift test загружает .xctest в системный test-host: Bundle.main указывает
+    // на Xcode, а bundle класса из IrizCore - на реально загруженный .xctest.
+    irizResourceBundle(in: .main) ?? irizResourceBundle(in: Bundle(for: IrizResourceBundleMarker.self))
+}
+
+private let irizResources = irizResourceBundle()
+
 /// Бандл таблицы перевода, найденный БЕЗ УЧЁТА РЕГИСТРА.
 ///
 /// Прямой поиск по имени папки ломается о SwiftPM: он кладёт `zh-Hans.lproj`
@@ -116,11 +138,16 @@ public func Lf(_ key: String, _ original: String, _ arguments: CVarArg...) -> St
 ///
 /// Поэтому имя папки сверяется в нижнем регистре, а не берётся как есть.
 public func irizLocalizationBundle(for language: IrizLanguage) -> Bundle? {
-    if let path = Bundle.module.path(forResource: language.folder, ofType: "lproj"),
+    guard let resources = irizResources else { return nil }
+    return irizLocalizationBundle(for: language, resources: resources)
+}
+
+func irizLocalizationBundle(for language: IrizLanguage, resources: Bundle) -> Bundle? {
+    if let path = resources.path(forResource: language.folder, ofType: "lproj"),
        let bundle = Bundle(path: path) {
         return bundle
     }
-    guard let root = Bundle.module.resourceURL,
+    guard let root = resources.resourceURL,
           let entries = try? FileManager.default.contentsOfDirectory(
             at: root, includingPropertiesForKeys: nil) else { return nil }
     let wanted = (language.folder + ".lproj").lowercased()

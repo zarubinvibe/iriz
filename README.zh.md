@@ -2,6 +2,14 @@
 
 你说出来，屏幕上就有字。识别由你自己的 Mac 完成，声音不会上传到别人的云。
 
+[![下载 macOS 版](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%20macOS%20%E7%89%88-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
+
+Apple Silicon · macOS 14+ · 语音模型需另行下载，约 500 MB
+
+[安装与首次听写](docs/DOWNLOAD.zh.md) · [更新说明](https://github.com/zarubinvibe/iriz/releases/latest)
+
+应用使用自签名，尚未通过 Apple 公证。此下载不支持 Intel。
+
 [English](README.md) · [Русский](README.ru.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/zarubinvibe/iriz?style=flat&color=C9A87A)](https://github.com/zarubinvibe/iriz/stargazers) [![Status](https://img.shields.io/badge/status-working-brightgreen.svg)](https://github.com/zarubinvibe/iriz) [![Olympuz](https://img.shields.io/badge/olympuz-family-B8D6EA.svg)](https://github.com/zarubinvibe/athena#olympuz-family)
@@ -134,17 +142,21 @@
 
 ## 快速开始
 
-需要一台 macOS 14 或更新的 Mac，还有三项系统权限：麦克风、辅助功能、输入监控。从源码构建另外要 Xcode 和 Swift 6。接下来有三条路，走哪条都行。
+[下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，打开后将 iriz 拖入 Applications。需要 Apple Silicon Mac 和 macOS 14 或更新版本，不需要 Xcode 或终端。
+
+打开 iriz，在引导中点击「下载并安装 Parakeet」（约 500 MB），然后按后续步骤授予权限。等模型就绪，将光标放入文本框，再试用听写快捷键。
+
+[安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建另需 Xcode 和 Swift 6，命令及其他安装方式见下方。
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz
 cd ~/iriz
 bash install.sh          # просто терминал, без единого агента
-code .                   # или откройте папку в редакторе
-claude                   # или пустите агента: он проведет установку разговором
+code .                   # или открой папку в редакторе
+claude                   # или пусти агента: он проведет установку разговором
 ```
 
-不想构建？到 Releases 拿现成的磁盘映像：打开，把图标拖进 Applications。没有 Git？下载 [ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip)，解压后在里面执行同一条命令。第一次用？在 Claude Code 里打开项目并运行 `/iriz-setup`：安装以对话的方式进行，一次问一个问题，没有你点头不会装任何东西。
+没有 Git？下载[源码 ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip)，解压后运行同一个安装脚本。也可以在 Claude Code 中打开项目并运行 `/iriz-setup`，让智能体逐步引导安装，每次安装前都会先询问。
 
 第一次做这件事？[上手引导](docs/ONBOARDING.zh.md) 会一步一步带你走完第一次运行，并写清楚每条命令之后你会看到什么。
 
@@ -188,12 +200,11 @@ claude                   # или пустите агента: он провед
 
 状态：可用。作者每天都在用它口述。
 
-- 语音模型认十八种欧洲语言，中文不在其中：中文口述它听不懂。
-- 自动换键盘布局只管英语和俄语这一对，对拼音、五笔这类中文输入法不适用。
-- 应用界面目前只有俄文，说明文档才有中文。
-- 只支持 macOS 14 及以上。没有 Windows，没有 Linux，也没有 iPad。
-- 还没有做公证：下载来的构建第一次打开要用右键的“打开”。
-- 通用二进制里带着 Intel 那一片，可是作者手上没有 Intel 的 Mac，从来没在上面验过。
+- 此下载面向 Apple Silicon 和 macOS 14 及以上。Intel 未经验证；不支持 Windows、Linux 或 iPad。
+- 自动修正键盘布局只支持英语和俄语。界面支持俄语、英语和简体中文。
+- 应用使用自签名，尚未通过 Apple 公证。首次启动的安全提示见下载指南。
+- 默认 Parakeet 模型需要单独下载，约 500 MB，不识别中文语音。其他模型支持的语言不同。
+- 更新需手动完成：下载新 DMG，退出 iriz，再替换应用。模型与历史记录保存在应用包之外。
 
 更深入：[逐步上手，每个界面都有截图](docs/ONBOARDING.zh.md)、[如何参与](CONTRIBUTING.zh.md)、[安全](SECURITY.zh.md)。
 

@@ -2,6 +2,14 @@
 
 Speak out loud and the text appears. Your Mac does the decoding, and nothing travels to somebody else's cloud.
 
+[![Download for macOS](https://img.shields.io/badge/Download%20for%20macOS-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
+
+Apple Silicon · macOS 14+ · Model download: about 500 MB
+
+[Install & first dictation](docs/DOWNLOAD.md) · [Release notes](https://github.com/zarubinvibe/iriz/releases/latest)
+
+Self-signed; not notarized by Apple. Intel is not supported by this download.
+
 [Русский](README.ru.md) · [中文](README.zh.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/zarubinvibe/iriz?style=flat&color=C9A87A)](https://github.com/zarubinvibe/iriz/stargazers) [![Status](https://img.shields.io/badge/status-working-brightgreen.svg)](https://github.com/zarubinvibe/iriz) [![Olympuz](https://img.shields.io/badge/olympuz-family-B8D6EA.svg)](https://github.com/zarubinvibe/athena#olympuz-family)
@@ -134,17 +142,21 @@ It goes into the field you were already in: an email, a chat, a terminal. If the
 
 ## Quickstart
 
-You need a Mac on macOS 14 or newer. Building from source also wants Xcode with Swift 6. Three doors from here, any of them works.
+Download the [macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), open it, and drag iriz into Applications. This build needs Apple Silicon and macOS 14 or newer. No Xcode or Terminal is needed.
+
+Open iriz and choose Download and install Parakeet in onboarding (about 500 MB). Grant the permissions in the following steps. Wait for readiness, focus a text field, and try your dictation key.
+
+[Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, install Xcode with Swift 6 and use one of the paths below.
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz
 cd ~/iriz
 bash install.sh          # просто терминал, без единого агента
-code .                   # или откройте папку в редакторе
-claude                   # или пустите агента: он проведет установку разговором
+code .                   # или открой папку в редакторе
+claude                   # или пусти агента: он проведет установку разговором
 ```
 
-Do not want to build? Take the ready disk image from Releases: open it, drag the icon onto Applications. No Git? Download [the ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), unpack it, and run the same command inside. First time? Open the project in Claude Code and run `/iriz-setup`: the install goes as a conversation, one question at a time, and nothing is installed without your yes.
+Without Git, download [the source ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), unpack it and run the same installer there. Or open the project in Claude Code and run `/iriz-setup` for a guided install. It asks before installing.
 
 Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole first run step by step and says what you see after every command.
 
@@ -188,10 +200,11 @@ One thing goes out, and only on your button: the one-time speech model download.
 
 Status: working. The author dictates with it every day.
 
-- macOS 14 and newer only. No Windows, no Linux, no iPad.
-- Automatic layout switching covers the English and Russian pair.
-- No notarization yet: a downloaded build opens through a right-click the first time.
-- The universal binary carries an Intel slice, but the author owns no Intel Mac and never verified it there.
+- This download supports Apple Silicon Macs on macOS 14 or newer. Intel is unverified; Windows, Linux and iPad are not supported.
+- Automatic layout repair covers English and Russian. The interface has Russian, English and Simplified Chinese.
+- The app is self-signed and not notarized by Apple. Read the first-launch security warning in the download guide.
+- The default Parakeet model needs a separate download of about 500 MB and does not recognize Chinese. Other models have different language coverage.
+- Updates are manual: download the new DMG, quit iriz and replace the application. Models and local history remain outside the app bundle.
 
 Deeper: [the step-by-step walkthrough with a frame of every surface](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), [security](SECURITY.md).
 

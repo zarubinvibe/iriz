@@ -1,19 +1,21 @@
 #!/bin/bash
-# Сборка релиза iriz: два DMG в release/dist/ —
+# Сборка релиза iriz в release/dist/ —
 #   iriz-<version>-arm64.dmg      (Apple Silicon)
-#   iriz-<version>-universal.dmg  (arm64 + x86_64, Intel-маки на macOS 14+)
+#   universal — только с IRIZ_RELEASE_VARIANTS='arm64 universal'; это проверка
+#   архитектур пакета, а не обещание проверенного на Intel распознавания.
+#   IRIZ_DMG_HEADLESS=1 — образ без Finder/фона для CI; по умолчанию при CI=true.
+#   SMLTLK_SIGN_IDENTITY=- — ad-hoc подпись для проверки сборки на чужой машине.
 #
 # Отличия от scripts/build_app.sh (тот — установка разработчика в /Applications):
 #   • собирает в отдельный scratch-path, чтобы не драться за лок SwiftPM с .build;
-#   • собирает universal через `--arch arm64 --arch x86_64` и ПРОВЕРЯЕТ результат
-#     через `lipo -archs` — это единственное машинное доказательство поддержки
-#     Intel, живого Intel-мака здесь нет;
+#   • universal включается отдельно; lipo подтверждает архитектуры, но живого
+#     Intel-мака для проверки распознавания здесь нет;
 #   • кладёт в образ ТОЛЬКО приложение и ссылку на Applications: установка -
 #     перетаскивание, как у любой программы Apple. Модель распознавания
 #     приезжает потом, из самого приложения (шаг знакомства «Скачаем
 #     распознавание»): возить в выпуске слепок модели значит раздать всем
 #     прошлогоднюю версию и полгигабайта сверху;
-#   • ничего не ставит в систему и никуда не отправляет.
+#   • ничего не ставит в систему; нотаризация только с notary-профилем.
 #
 # Нотаризация включается переменной IRIZ_NOTARY_PROFILE - именем профиля
 # учётки notarytool в связке ключей. Заводится один раз:
@@ -22,35 +24,41 @@
 #     --apple-id <почта Apple ID> --team-id <TEAMID> --password <пароль-приложения>
 #
 # С профилем выпуск подписывается настоящим Developer ID, уходит на проверку в
-# Apple, получает билет на приложение и на образ, и Gatekeeper у получателя
-# молчит. Без профиля всё как раньше: самоподпись, и получатель снимает
-# карантин руками (правый клик, «Открыть», ещё раз «Открыть»).
+# Apple, получает билет на приложение и на образ; Gatekeeper проверяется
+# на машине сборки. Без профиля нотаризации нет, запуск у получателя не обещан.
 #
 # Переменные окружения:
-#   SMLTLK_VERSION         — версия (по умолчанию берётся из scripts/build_app.sh)
+#   SMLTLK_VERSION         — версия (по умолчанию первая строка RELEASE_VERSION)
+#   IRIZ_BUNDLE_VERSION    — CFBundleVersion (по умолчанию та же версия)
 #   SMLTLK_SIGN_IDENTITY   — имя сертификата (по умолчанию smltlk-selfsign)
 #   IRIZ_NOTARY_PROFILE    — профиль notarytool; пусто = без нотаризации
 #   SMLTLK_SCRATCH         — каталог сборки (по умолчанию release/build)
+#   IRIZ_RELEASE_DIST      — каталог результата (по умолчанию release/dist)
+#   IRIZ_RELEASE_VARIANTS  — arm64 или 'arm64 universal'
+#   IRIZ_DMG_HEADLESS      — 1/0; без Finder или с оформлением (по умолчанию CI)
 #   SMLTLK_DMG_FORMAT      — формат hdiutil (по умолчанию ULFO, lzfse)
 #
-# Коды возврата: 0 — оба образа собраны; 1 — любая проверка не прошла.
+# Коды возврата: 0 — выбранные образы собраны; 1 — проверка не прошла.
 
 set -euo pipefail
 cd "$(dirname "$0")/.."
-ROOT="$PWD"
+ROOT="$(pwd -P)"
 
 BUNDLE_ID="ru.iriz.app"
 IDENTITY="${SMLTLK_SIGN_IDENTITY:-smltlk-selfsign}"
 SCRATCH="${SMLTLK_SCRATCH:-$ROOT/release/build}"
-DIST="$ROOT/release/dist"
+DIST="${IRIZ_RELEASE_DIST:-$ROOT/release/dist}"
 DMG_FORMAT="${SMLTLK_DMG_FORMAT:-ULFO}"
-# Нотаризация включается наличием профиля учётки notarytool в связке ключей
-# (создаётся один раз: xcrun notarytool store-credentials). Пусто - выпуск
-# собирается как раньше, самоподписью и без похода в Apple. Так решает МАШИНА,
-# а не память сборщика: забыть переменную можно, а собрать наполовину
-# нотаризованный образ нельзя.
+VARIANTS="${IRIZ_RELEASE_VARIANTS:-arm64}"
+HEADLESS="${IRIZ_DMG_HEADLESS:-${CI:-0}}"
+# Пустой профиль отключает нотаризацию. Developer ID всё равно использует
+# сервер меток времени Apple; ad-hoc и локальная самоподпись обходятся без него.
 NOTARY_PROFILE="${IRIZ_NOTARY_PROFILE:-}"
-if [ -n "$NOTARY_PROFILE" ]; then
+fail() { printf 'make_release: %s\n' "$*" >&2; exit 1; }
+if [ -n "$NOTARY_PROFILE" ] && [[ "$IDENTITY" != "Developer ID Application: "* ]]; then
+  fail "нотаризация требует Developer ID Application и профиль notarytool"
+fi
+if [[ "$IDENTITY" == "Developer ID Application: "* ]]; then
   ENTITLEMENTS="entitlements-notarized.plist"
   # Метка времени обязательна для нотаризации: без неё Apple отклоняет пакет.
   # Самоподписи она не нужна и стоит похода на сервер Apple на каждую подпись.
@@ -61,26 +69,57 @@ else
 fi
 MIN_OS="14.0"
 
-# Версия — из scripts/build_app.sh, чтобы бандлы не разъехались.
-VERSION_FROM_BUILD_APP=$(sed -n 's|.*<key>CFBundleShortVersionString</key><string>\([^<]*\)</string>.*|\1|p' scripts/build_app.sh | sed -n '1p')
-BUNDLE_VERSION_FROM_BUILD_APP=$(sed -n 's|.*<key>CFBundleVersion</key><string>\([^<]*\)</string>.*|\1|p' scripts/build_app.sh | sed -n '1p')
-VERSION="${SMLTLK_VERSION:-$VERSION_FROM_BUILD_APP}"
-BUNDLE_VERSION="${BUNDLE_VERSION_FROM_BUILD_APP:-1}"
+# Общая версия с локальной сборкой. Подстановка проверяется до создания путей.
+VERSION="${SMLTLK_VERSION:-$(sed -n '1p' RELEASE_VERSION)}"
+BUNDLE_VERSION="${IRIZ_BUNDLE_VERSION:-$VERSION}"
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || fail "версия должна иметь вид 0.2.1"
+[[ "$BUNDLE_VERSION" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] || fail "невалидный CFBundleVersion"
+case "$HEADLESS" in 1|true) HEADLESS=1 ;; 0|false|"") HEADLESS=0 ;; *) fail "IRIZ_DMG_HEADLESS: только 0 или 1" ;; esac
+case "$DMG_FORMAT" in ULFO|UDZO|UDBZ) ;; *) fail "неподдерживаемый формат DMG: $DMG_FORMAT" ;; esac
+case "$VARIANTS" in arm64|"arm64 universal") ;; *) fail "IRIZ_RELEASE_VARIANTS: arm64 или 'arm64 universal'" ;; esac
 
-if [ -z "$VERSION" ]; then
-  echo "make_release: не удалось прочитать версию из scripts/build_app.sh" >&2
-  exit 1
-fi
+# Все рабочие пути — внутри двух служебных каталогов этого checkout. Ни
+# симлинк, ни ../ не должны превратить очистку stage в очистку чужих файлов.
+safe_work_path() {
+  python3 - "$ROOT" "$1" <<'PY'
+import os, sys
+root, raw = sys.argv[1:]
+path = os.path.abspath(raw)
+allowed = [os.path.join(root, name) for name in (".build", "release")]
+if path != os.path.realpath(path) or not any(path.startswith(base + os.sep) for base in allowed):
+    sys.exit("make_release: рабочий путь должен быть внутри .build/ или release/, без симлинков")
+print(path)
+PY
+}
+SCRATCH=$(safe_work_path "$SCRATCH")
+DIST=$(safe_work_path "$DIST")
+case "$DIST/" in "$SCRATCH/"*) fail "scratch и dist должны быть раздельными" ;; esac
+case "$SCRATCH/" in "$DIST/"*) fail "scratch и dist должны быть раздельными" ;; esac
+SOURCE_SHA=$(git rev-parse HEAD)
+[[ "$SOURCE_SHA" =~ ^[0-9a-f]{40,64}$ ]] || fail "не удалось определить commit сборки"
+SOURCE_DIRTY=false
+[ -z "$(git status --porcelain)" ] || SOURCE_DIRTY=true
 
-mkdir -p "$SCRATCH" "$DIST"
-# Артефакты релиза не должны попадать в индекс git: образы весят сотни мегабайт,
-# а публичное дерево собирается по .github/public-release.json, а не по «что лежит».
-printf '*\n' > "$DIST/.gitignore"
-LOG="$SCRATCH/make_release.log"
-: > "$LOG"
+mkdir -p "$SCRATCH"
+RUN_ROOT=$(mktemp -d "$SCRATCH/run.XXXXXX")
+mkdir -p "$RUN_ROOT/dist"
+LOG="$RUN_ROOT/make_release.log"
+ACTIVE_MOUNT=""
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [ -n "$ACTIVE_MOUNT" ]; then
+    hdiutil detach "$ACTIVE_MOUNT" -quiet >> "$LOG" 2>&1 \
+      || hdiutil detach "$ACTIVE_MOUNT" -force -quiet >> "$LOG" 2>&1 \
+      || { printf 'make_release: не удалось снять собственный том %s\n' "$ACTIVE_MOUNT" >&2; result=1; }
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 say()  { printf '\n=== %s\n' "$*"; }
-fail() { printf 'make_release: %s\n' "$*" >&2; exit 1; }
 
 # Полного вывода сборки в консоли нет намеренно: он тонет в шуме и прячет ошибку.
 # Всё уходит в $LOG целиком, наружу вытаскивается grep по строкам ошибок.
@@ -103,18 +142,24 @@ say "Предпроверки"
 if [ -n "$NOTARY_PROFILE" ]; then
   command -v xcrun >/dev/null || fail "нет xcrun - нотаризовать нечем"
   xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >> "$LOG" 2>&1 \
-    || fail "профиль notarytool «$NOTARY_PROFILE» не отвечает: заведите его через xcrun notarytool store-credentials"
+    || fail "профиль notarytool «${NOTARY_PROFILE}» не отвечает: заведите его через xcrun notarytool store-credentials"
 fi
-security find-identity -v -p codesigning 2>/dev/null | grep -q "\"$IDENTITY\"" \
-  || fail "в связке ключей нет сертификата подписи «$IDENTITY»"
+if [ "$IDENTITY" != "-" ]; then
+  security find-identity -v -p codesigning 2>/dev/null | grep -F "\"$IDENTITY\"" >/dev/null \
+    || fail "в связке ключей нет сертификата подписи «${IDENTITY}»"
+fi
 command -v hdiutil >/dev/null || fail "нет hdiutil"
 command -v lipo    >/dev/null || fail "нет lipo"
 command -v vtool   >/dev/null || fail "нет vtool"
-command -v tiffutil >/dev/null || fail "нет tiffutil"
+if [ "$HEADLESS" -eq 0 ]; then
+  command -v tiffutil >/dev/null || fail "нет tiffutil"
+  command -v osascript >/dev/null || fail "нет osascript"
+  python3 -c 'import PIL' >/dev/null 2>&1 || fail "для оформления нужен Pillow; IRIZ_DMG_HEADLESS=1 собирает без него"
+fi
 printf 'версия      : %s (bundle %s)\n' "$VERSION" "$BUNDLE_VERSION"
 printf 'подпись     : %s\n' "$IDENTITY"
 printf 'права       : %s\n' "$ENTITLEMENTS"
-printf 'нотаризация : %s\n' "${NOTARY_PROFILE:-нет (самоподпись, получатель снимает карантин руками)}"
+printf 'нотаризация : %s\n' "${NOTARY_PROFILE:-нет}"
 printf 'сборка в    : %s\n' "$SCRATCH"
 printf 'лог сборки  : %s\n' "$LOG"
 
@@ -123,14 +168,14 @@ printf 'лог сборки  : %s\n' "$LOG"
 say "Иконка"
 run_logged "render_marks" bash scripts/render_marks.sh
 [ -f .build/AppIcon.icns ] || fail "render_marks.sh не сделал .build/AppIcon.icns"
-cp .build/AppIcon.icns "$SCRATCH/AppIcon.icns"
+cp .build/AppIcon.icns "$RUN_ROOT/AppIcon.icns"
 
 # ------------------------------------------------------------------ сборка
 
 # ВАЖНО: свой --scratch-path на каждый вариант. Общий каталог .build держит
 # другой процесс, а arm64-only и universal кладут продукт по одному и тому же
 # пути внутри своего scratch — смешивать их нельзя.
-build_binary() { # build_binary <вариант> <arch...> ; печатает путь к бинарю
+build_binary() { # build_binary <вариант> <arch...> ; результат в BUILT_BINARY
   local variant="$1"; shift
   local scratch="$SCRATCH/swiftpm-$variant"
   local -a flags=()
@@ -144,7 +189,7 @@ build_binary() { # build_binary <вариант> <arch...> ; печатает п
   bin_path=$(swift build -c release --product IrizApp --scratch-path "$scratch" "${flags[@]}" --show-bin-path 2>>"$LOG") \
     || fail "не удалось получить bin-path для $variant"
   [ -x "$bin_path/IrizApp" ] || fail "после сборки $variant нет бинаря $bin_path/IrizApp"
-  printf '%s\n' "$bin_path/IrizApp"
+  BUILT_BINARY="$bin_path/IrizApp"
 }
 
 check_archs() { # check_archs <бинарь> <ожидаемые архитектуры через пробел>
@@ -157,14 +202,14 @@ check_archs() { # check_archs <бинарь> <ожидаемые архитек�
   for arch in $expected; do
     case " $actual " in
       *" $arch "*) ;;
-      *) fail "в $binary нет архитектуры $arch (lipo -archs: «$actual»)" ;;
+      *) fail "в $binary нет архитектуры $arch (lipo -archs: «${actual}»)" ;;
     esac
   done
   local found
   for found in $actual; do
     case " $expected " in
       *" $found "*) ;;
-      *) fail "в $binary ЛИШНЯЯ архитектура $found (ожидали: «$expected»)" ;;
+      *) fail "в $binary ЛИШНЯЯ архитектура $found (ожидали: «${expected}»)" ;;
     esac
   done
 }
@@ -174,26 +219,23 @@ check_min_os() { # check_min_os <бинарь> — каждый срез обя�
   local report
   report=$(vtool -show-build-version "$binary" 2>&1) || fail "vtool не прочитал $binary"
   printf '%s\n' "$report" >> "$LOG"
-  local minos
-  for minos in $(printf '%s\n' "$report" | sed -n 's/.*minos \([0-9.]*\).*/\1/p'); do
-    # Сравнение по major: 14.0 годится, 15.x — нет (Intel-маки на 14 не запустят).
-    case "$minos" in
-      14|14.*) ;;
-      *) fail "$binary собран под minos $minos, а обещаем macOS $MIN_OS" ;;
-    esac
-  done
+  local architectures
+  architectures=$(lipo -archs "$binary") || fail "lipo не прочитал $binary"
+  python3 - "$MIN_OS" "$architectures" "$report" <<'PY' || fail "minOS/платформа не подтверждены для каждого среза $binary"
+import re, sys
+limit, arches, report = sys.argv[1:]
+versions = re.findall(r"\bminos\s+([0-9.]+)", report)
+platforms = re.findall(r"\bplatform\s+(\S+)", report)
+def version(value):
+    parts = [int(part) for part in value.split('.')]
+    return tuple((parts + [0, 0])[:3])
+if len(versions) != len(arches.split()) or len(platforms) != len(versions):
+    sys.exit(1)
+if any(p != "MACOS" for p in platforms) or any(version(v) > version(limit) for v in versions):
+    sys.exit(1)
+PY
   printf 'minos       : %s (%s)\n' "$(printf '%s\n' "$report" | sed -n 's/.*minos \([0-9.]*\).*/\1/p' | tr '\n' ' ')" "$(basename "$binary")"
 }
-
-say "Сборка arm64"
-BIN_ARM64=$(build_binary arm64 arm64)
-check_archs "$BIN_ARM64" arm64
-check_min_os "$BIN_ARM64"
-
-say "Сборка universal (arm64 + x86_64)"
-BIN_UNIVERSAL=$(build_binary universal arm64 x86_64)
-check_archs "$BIN_UNIVERSAL" arm64 x86_64
-check_min_os "$BIN_UNIVERSAL"
 
 # ------------------------------------------------------------------ бандл
 
@@ -212,7 +254,7 @@ write_info_plist() { # write_info_plist <путь к .app>
 <key>CFBundleShortVersionString</key><string>$VERSION</string>
 <key>CFBundleVersion</key><string>$BUNDLE_VERSION</string>
 <key>LSMinimumSystemVersion</key><string>$MIN_OS</string>
-<key>NSMicrophoneUsageDescription</key><string>Микрофон нужен, чтобы превращать вашу речь в текст.</string>
+<key>NSMicrophoneUsageDescription</key><string>Микрофон нужен, чтобы превращать твою речь в текст.</string>
 <key>LSUIElement</key><true/>
 </dict></plist>
 PLIST
@@ -220,12 +262,24 @@ PLIST
 
 make_bundle() { # make_bundle <бинарь> <путь к .app>
   local binary="$1" app="$2"
-  rm -rf "$app"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
   cp "$binary" "$app/Contents/MacOS/iriz"
-  cp "$SCRATCH/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
+  cp "$RUN_ROOT/AppIcon.icns" "$app/Contents/Resources/AppIcon.icns"
   printf 'APPL????' > "$app/Contents/PkgInfo"
   write_info_plist "$app"
+
+  local bin_dir bundle locale
+  bin_dir="$(dirname "$binary")"
+  [ -d "$bin_dir/IrizApp_IrizCore.bundle" ] || fail "нет ресурсного IrizApp_IrizCore.bundle рядом с $binary"
+  for bundle in "$bin_dir"/*.bundle; do
+    [ -d "$bundle" ] || continue
+    cp -R "$bundle" "$app/Contents/Resources/"
+  done
+  for locale in ru en zh-hans; do
+    find "$app/Contents/Resources/IrizApp_IrizCore.bundle" -type f \
+      -ipath "*/$locale.lproj/Localizable.strings" | grep . >/dev/null \
+      || fail "в бандле нет таблицы перевода $locale"
+  done
 
   # Движок распознавания приходит бинарным фреймворком SwiftPM, и в бандл он
   # сам не попадает: сборщик копирует только исполняемый файл.
@@ -236,12 +290,26 @@ make_bundle() { # make_bundle <бинарь> <путь к .app>
   # единого внятного сообщения. Владелец увидел это как «не устанавливается».
   # Починка в одном месте из двух - это не починка.
   local framework
-  framework="$(find "$SCRATCH" -maxdepth 6 -type d -name whisper.framework -path '*release*' | head -1)"
-  [ -n "$framework" ] || fail "whisper.framework не найден в $SCRATCH - приложение не запустится"
+  framework="$bin_dir/whisper.framework"
+  [ -d "$framework" ] || fail "whisper.framework не найден рядом с $binary"
   mkdir -p "$app/Contents/Frameworks"
-  rm -rf "$app/Contents/Frameworks/whisper.framework"
   cp -R "$framework" "$app/Contents/Frameworks/"
-  install_name_tool -add_rpath "@executable_path/../Frameworks" "$app/Contents/MacOS/iriz" 2>/dev/null || true
+  local framework_binary="$app/Contents/Frameworks/whisper.framework/whisper"
+  [ -f "$framework_binary" ] || fail "нет исполняемого файла whisper.framework/whisper"
+  local actual arch
+  actual=$(lipo -archs "$framework_binary") || fail "не удалось прочитать архитектуры whisper"
+  for arch in $(lipo -archs "$binary"); do
+    case " $actual " in *" $arch "*) ;; *) fail "в whisper.framework нет архитектуры $arch" ;; esac
+  done
+  check_min_os "$framework_binary"
+  local load_commands
+  load_commands=$(otool -l "$app/Contents/MacOS/iriz") || fail "не удалось прочитать rpath приложения"
+  if ! printf '%s\n' "$load_commands" | awk '$1 == "path" && $2 == "@executable_path/../Frameworks" { found=1 } END { exit !found }'; then
+    install_name_tool -add_rpath "@executable_path/../Frameworks" "$app/Contents/MacOS/iriz" >> "$LOG" 2>&1 \
+      || fail "не удалось добавить rpath фреймворков"
+  fi
+  otool -l "$app/Contents/MacOS/iriz" | awk '$1 == "path" && $2 == "@executable_path/../Frameworks" { found=1 } END { exit !found }' \
+    || fail "rpath фреймворков отсутствует после упаковки"
   # Фреймворк подписан вендором, и dyld отказывается грузить его в наш процесс:
   # «different Team IDs». --deep чужую подпись не перебивает, поэтому фреймворк
   # подписывается ОТДЕЛЬНО и до подписи бандла.
@@ -254,6 +322,9 @@ make_bundle() { # make_bundle <бинарь> <путь к .app>
     || fail "подпись $app не прошла (лог: $LOG)"
   codesign --verify --deep --strict "$app" >> "$LOG" 2>&1 \
     || fail "проверка подписи $app не прошла (лог: $LOG)"
+  if [[ "$IDENTITY" == "Developer ID Application: "* ]]; then
+    run_logged "проверить цепочку Apple" codesign --verify --strict '-R=anchor apple generic' "$app"
+  fi
 
   # Подпись обязана пережить lipo/копирование: срезы сверяем ПОСЛЕ подписи.
   plutil -lint "$app/Contents/Info.plist" >> "$LOG" 2>&1 || fail "Info.plist невалиден"
@@ -262,13 +333,14 @@ make_bundle() { # make_bundle <бинарь> <путь к .app>
   # стоит здесь, а не в прозе: собрать образ с приложением, которое не
   # стартует, дороже любой другой ошибки сборки - его увидит получатель, а не
   # мы. Именно так и вышло 04.09.2026.
-  local missing=0
+  local missing=0 dependencies
+  dependencies=$(otool -L "$app/Contents/MacOS/iriz") || fail "otool не прочитал зависимости приложения"
   while IFS= read -r dep; do
     local rel="${dep#@rpath/}"
     [ -e "$app/Contents/Frameworks/$rel" ] && continue
     echo "  нет в бандле: $rel" >&2
     missing=$((missing + 1))
-  done < <(otool -L "$app/Contents/MacOS/iriz" | awk '/@rpath\//{print $1}' | sort -u)
+  done < <(printf '%s\n' "$dependencies" | awk '/@rpath\//{print $1}' | sort -u)
   [ "$missing" -eq 0 ] || fail "в бандле не хватает $missing зависимостей - приложение не запустится"
 }
 
@@ -291,28 +363,38 @@ DMG_APP_Y=190
 DMG_ALIAS_X=490
 DMG_ALIAS_Y=190
 
-style_dmg_window() { # style_dmg_window <имя тома>
-  local volume="$1"
-  osascript >> "$LOG" 2>&1 <<APPLESCRIPT
+style_dmg_window() { # Только собственная точка монтирования, не disk с общим именем.
+  osascript - "$1" "$DMG_WINDOW_WIDTH" "$DMG_WINDOW_HEIGHT" "$DMG_ICON_SIZE" \
+    "$DMG_APP_X" "$DMG_APP_Y" "$DMG_ALIAS_X" "$DMG_ALIAS_Y" >> "$LOG" 2>&1 <<'APPLESCRIPT'
+on run args
+set mountPath to item 1 of args
+set windowWidth to (item 2 of args) as integer
+set windowHeight to (item 3 of args) as integer
+set iconSize to (item 4 of args) as integer
+set appX to (item 5 of args) as integer
+set appY to (item 6 of args) as integer
+set aliasX to (item 7 of args) as integer
+set aliasY to (item 8 of args) as integer
 tell application "Finder"
-  tell disk "$volume"
+  tell folder (POSIX file mountPath as alias)
     open
     set current view of container window to icon view
     set toolbar visible of container window to false
     set statusbar visible of container window to false
-    set the bounds of container window to {200, 140, $((200 + DMG_WINDOW_WIDTH)), $((140 + DMG_WINDOW_HEIGHT))}
+    set the bounds of container window to {200, 140, 200 + windowWidth, 140 + windowHeight}
     set options to the icon view options of container window
     set arrangement of options to not arranged
-    set icon size of options to $DMG_ICON_SIZE
+    set icon size of options to iconSize
     set text size of options to 13
-    set background picture of options to POSIX file "/Volumes/$volume/.background/background.tiff"
-    set position of item "iriz.app" of container window to {$DMG_APP_X, $DMG_APP_Y}
-    set position of item "Applications" of container window to {$DMG_ALIAS_X, $DMG_ALIAS_Y}
+    set background picture of options to POSIX file (mountPath & "/.background/background.tiff")
+    set position of item "iriz.app" of container window to {appX, appY}
+    set position of item "Applications" of container window to {aliasX, aliasY}
     update without registering applications
     delay 1
     close
   end tell
 end tell
+end run
 APPLESCRIPT
 }
 
@@ -332,7 +414,7 @@ notarize() { # notarize <путь к .app или .dmg> <человекочита
   # через ditto: он сохраняет символические ссылки и права, обычный zip - нет.
   case "$target" in
     *.app)
-      payload="$SCRATCH/notarize-$(basename "$target").zip"
+      payload="$RUN_ROOT/notarize-$(basename "$target").zip"
       rm -f "$payload"
       run_logged "архив для нотаризации ($label)" \
         ditto -c -k --keepParent "$target" "$payload"
@@ -344,72 +426,86 @@ notarize() { # notarize <путь к .app или .dmg> <человекочита
   run_logged "проверить билет ($label)" xcrun stapler validate "$target"
 }
 
-build_dmg() { # build_dmg <вариант> <бинарь> ; печатает путь к dmg
+attach_image() {
+  local image="$1"; shift
+  ACTIVE_MOUNT=$(mktemp -d "$RUN_ROOT/mount.XXXXXX")
+  local report
+  report=$(hdiutil attach "$image" -mountpoint "$ACTIVE_MOUNT" "$@" -noautoopen -plist 2>>"$LOG") \
+    || fail "не удалось смонтировать $image"
+  printf '%s\n' "$report" | python3 -c '
+import plistlib, sys
+data = plistlib.loads(sys.stdin.buffer.read())
+if not any(x.get("mount-point") == sys.argv[1] for x in data.get("system-entities", [])):
+    sys.exit(1)
+' "$ACTIVE_MOUNT" || fail "hdiutil не подтвердил собственную точку монтирования"
+}
+
+detach_image() {
+  hdiutil detach "$ACTIVE_MOUNT" -quiet >> "$LOG" 2>&1 \
+    || hdiutil detach "$ACTIVE_MOUNT" -force -quiet >> "$LOG" 2>&1 \
+    || fail "не удалось снять собственный том $ACTIVE_MOUNT"
+  rmdir "$ACTIVE_MOUNT" 2>/dev/null || true
+  ACTIVE_MOUNT=""
+}
+
+build_dmg() { # build_dmg <вариант> <бинарь>; без subshell, чтобы EXIT знал свой mount.
   local variant="$1" binary="$2"
-  local stage="$SCRATCH/stage-$variant"
-  local dmg="$DIST/iriz-$VERSION-$variant.dmg"
+  local stage="$RUN_ROOT/stage-$variant"
+  local dmg="$RUN_ROOT/dist/iriz-$VERSION-$variant.dmg"
   local volume="iriz"
 
-  rm -rf "$stage"; mkdir -p "$stage/.background"
+  mkdir -p "$stage"
   make_bundle "$binary" "$stage/iriz.app"
   # Билет вешается на приложение ДО сборки образа: после сборки внутрь уже
   # не залезть, а вытащенному в /Applications приложению билет нужен свой.
   notarize "$stage/iriz.app" "приложение $variant"
   ln -s /Applications "$stage/Applications"
 
-  # Фон в двух плотностях одним TIFF: на ретине однократный PNG размывается,
-  # а Finder умеет читать многослойный TIFF как HiDPI.
-  run_logged "фон образа" python3 scripts/render_dmg_background.py \
-    "$SCRATCH/bg-$variant.png" "$SCRATCH/bg-$variant@2x.png"
-  run_logged "tiffutil" tiffutil -cathidpicheck \
-    "$SCRATCH/bg-$variant.png" "$SCRATCH/bg-$variant@2x.png" \
-    -out "$stage/.background/background.tiff"
-
-  # Первый ход: образ, в который можно писать.
-  local rw="$SCRATCH/rw-$variant.dmg"
-  rm -f "$rw"
-  run_logged "hdiutil create rw ($variant)" \
-    hdiutil create -volname "$volume" -srcfolder "$stage" \
-      -fs HFS+ -format UDRW -ov -quiet "$rw"
-
-  # Том монтируется ВИДИМЫМ: Finder не умеет открывать окно тома, которого он
-  # не видит, а без окна не запишется ни вид, ни фон.
-  local mounted="/Volumes/$volume"
-  # Хвост прошлого прогона убирается сам: иначе система смонтирует том под
-  # именем «iriz 1», Finder будет наряжать не тот том, а проверка вида упадёт
-  # без единого намёка на причину.
-  if [ -d "$mounted" ]; then
-    hdiutil detach "$mounted" -force -quiet >> "$LOG" 2>&1 || true
+  if [ "$HEADLESS" -eq 1 ]; then
+    # ponytail: CI не требует Finder и Pillow; локальный выпуск сохраняет оформление.
+    run_logged "hdiutil create ($variant, headless)" \
+      hdiutil create -volname "$volume" -srcfolder "$stage" -fs HFS+ -format "$DMG_FORMAT" -quiet "$dmg"
+  else
+    mkdir -p "$stage/.background"
+    run_logged "фон образа" python3 scripts/render_dmg_background.py \
+      "$RUN_ROOT/bg-$variant.png" "$RUN_ROOT/bg-$variant@2x.png"
+    run_logged "tiffutil" tiffutil -cathidpicheck \
+      "$RUN_ROOT/bg-$variant.png" "$RUN_ROOT/bg-$variant@2x.png" \
+      -out "$stage/.background/background.tiff"
+    local rw="$RUN_ROOT/rw-$variant.dmg"
+    run_logged "hdiutil create rw ($variant)" \
+      hdiutil create -volname "$volume" -srcfolder "$stage" -fs HFS+ -format UDRW -quiet "$rw"
+    attach_image "$rw" -readwrite -noverify
+    style_dmg_window "$ACTIVE_MOUNT" || fail "Finder не настроил окно образа"
+    sync
+    detach_image
+    run_logged "hdiutil convert ($variant)" \
+      hdiutil convert "$rw" -format "$DMG_FORMAT" -o "$dmg" -quiet
+    rm -f "$rw"
   fi
-  run_logged "hdiutil attach rw ($variant)" \
-    hdiutil attach "$rw" -mountpoint "$mounted" -readwrite -noverify -noautoopen -quiet
-  [ -d "$mounted" ] || fail "том «$volume» не смонтировался"
-  style_dmg_window "$volume"
-  sync
-  hdiutil detach "$mounted" -quiet >> "$LOG" 2>&1 \
-    || hdiutil detach "$mounted" -force -quiet >> "$LOG" 2>&1
-
-  # Второй ход: сжатие в конечный формат.
-  rm -f "$dmg"
-  run_logged "hdiutil convert ($variant)" \
-    hdiutil convert "$rw" -format "$DMG_FORMAT" -o "$dmg" -ov -quiet
   [ -f "$dmg" ] || fail "hdiutil не создал $dmg"
-  rm -f "$rw"
+  if [[ "$IDENTITY" == "Developer ID Application: "* ]]; then
+    run_logged "подпись образа $variant" codesign --force --sign "$IDENTITY" --timestamp "$dmg"
+    run_logged "проверка подписи образа $variant" codesign --verify --strict '-R=anchor apple generic' "$dmg"
+  fi
   notarize "$dmg" "образ $variant"
+  run_logged "hdiutil verify ($variant)" hdiutil verify "$dmg"
 
   # Образ обязан монтироваться и содержать то, что мы туда клали, - иначе это
   # «собралось» без «работает». Проверка дешёвая, отказ дорогой.
-  local mount_point="$SCRATCH/mnt-$variant"
-  rm -rf "$mount_point"; mkdir -p "$mount_point"
-  run_logged "hdiutil attach ($variant)" \
-    hdiutil attach "$dmg" -mountpoint "$mount_point" -nobrowse -readonly -quiet
+  attach_image "$dmg" -nobrowse -readonly
+  local mount_point="$ACTIVE_MOUNT"
   local mounted_ok=1
   [ -x "$mount_point/iriz.app/Contents/MacOS/iriz" ] || mounted_ok=0
   [ -L "$mount_point/Applications" ] || mounted_ok=0
+  [ "$(readlink "$mount_point/Applications")" = /Applications ] || mounted_ok=0
+  [ -d "$mount_point/iriz.app/Contents/Resources/IrizApp_IrizCore.bundle" ] || mounted_ok=0
   # Вид окна записан - иначе получатель увидит список файлов вместо двух
   # значков со стрелкой, и «перетащи» превратится в «разбирайся сам».
-  [ -f "$mount_point/.DS_Store" ] || mounted_ok=0
-  [ -f "$mount_point/.background/background.tiff" ] || mounted_ok=0
+  if [ "$HEADLESS" -eq 0 ]; then
+    [ -f "$mount_point/.DS_Store" ] || mounted_ok=0
+    [ -f "$mount_point/.background/background.tiff" ] || mounted_ok=0
+  fi
   # Ничего лишнего на виду: образ показывает ровно два предмета.
   local visible
   visible=$(ls "$mount_point" | wc -l | tr -d ' ')
@@ -417,6 +513,11 @@ build_dmg() { # build_dmg <вариант> <бинарь> ; печатает п�
   local mounted_archs=""
   if [ "$mounted_ok" -eq 1 ]; then
     mounted_archs=$(lipo -archs "$mount_point/iriz.app/Contents/MacOS/iriz")
+    if [ "$variant" = universal ]; then
+      check_archs "$mount_point/iriz.app/Contents/MacOS/iriz" arm64 x86_64
+    else
+      check_archs "$mount_point/iriz.app/Contents/MacOS/iriz" arm64
+    fi
     codesign --verify --deep --strict "$mount_point/iriz.app" >> "$LOG" 2>&1 || mounted_ok=0
     # Вердикт выносит сама система, а не мы. Нотаризованный выпуск обязан
     # получить «accepted» у Gatekeeper - иначе получатель увидит отказ, а мы
@@ -428,34 +529,60 @@ build_dmg() { # build_dmg <вариант> <бинарь> ; печатает п�
         || { echo "  на приложении в образе нет билета нотаризации" >&2; mounted_ok=0; }
     fi
   fi
-  hdiutil detach "$mount_point" -quiet >> "$LOG" 2>&1 || hdiutil detach "$mount_point" -force -quiet >> "$LOG" 2>&1
-  rm -rf "$mount_point"
+  detach_image
   [ "$mounted_ok" -eq 1 ] || fail "смонтированный $dmg неполон или подпись в нём не проходит (лог: $LOG)"
   printf 'в образе %s: lipo -archs -> %s, подпись проходит\n' "$(basename "$dmg")" "$mounted_archs" >&2
 
-  printf '%s\n' "$dmg"
 }
 
-say "Образ arm64"
-DMG_ARM64=$(build_dmg arm64 "$BIN_ARM64")
-
-say "Образ universal"
-DMG_UNIVERSAL=$(build_dmg universal "$BIN_UNIVERSAL")
+for variant in $VARIANTS; do
+  say "Сборка и образ $variant"
+  if [ "$variant" = universal ]; then
+    build_binary "$variant" arm64 x86_64
+    check_archs "$BUILT_BINARY" arm64 x86_64
+  else
+    build_binary "$variant" arm64
+    check_archs "$BUILT_BINARY" arm64
+  fi
+  check_min_os "$BUILT_BINARY"
+  build_dmg "$variant" "$BUILT_BINARY"
+done
 
 # ------------------------------------------------------------------ итог
 
 say "Итог"
-: > "$DIST/SHA256SUMS.txt"
-for dmg in "$DMG_ARM64" "$DMG_UNIVERSAL"; do
-  bytes=$(stat -f %z "$dmg")
-  human=$(du -h "$dmg" | awk '{print $1}')
-  digest=$(shasum -a 256 "$dmg" | awk '{print $1}')
-  printf '%s  %s\n' "$digest" "$(basename "$dmg")" >> "$DIST/SHA256SUMS.txt"
-  printf '\n%s\n  размер   : %s (%s байт)\n  sha256   : %s\n' \
-    "$dmg" "$human" "$bytes" "$digest"
+cp "$RUN_ROOT/dist/iriz-$VERSION-arm64.dmg" "$RUN_ROOT/dist/iriz-macos-arm64.dmg"
+python3 - "$RUN_ROOT/dist" "$VERSION" "$BUNDLE_VERSION" "$SOURCE_SHA" "$SOURCE_DIRTY" "$IDENTITY" "$NOTARY_PROFILE" <<'PY'
+import hashlib, json, pathlib, sys
+directory, version, build, sha, dirty, identity, notary = sys.argv[1:]
+root = pathlib.Path(directory)
+artifacts = []
+for path in sorted(root.glob("*.dmg")):
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(chunk)
+    artifacts.append({"file": path.name, "sha256": digest.hexdigest(), "bytes": path.stat().st_size,
+                      "architectures": ["arm64", "x86_64"] if "-universal.dmg" in path.name else ["arm64"]})
+mode = "ad-hoc" if identity == "-" else "developer-id" if identity.startswith("Developer ID Application: ") else "self-signed"
+manifest = {"version": version, "build_version": build, "source_sha": sha, "source_dirty": dirty == "true",
+            "signing": {"identity": identity, "mode": mode, "targets": ["app", "dmg"] if mode == "developer-id" else ["app"]},
+            "notarized": bool(notary), "artifacts": artifacts}
+(root / "release-manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+checksums = [f"{item['sha256']}  {item['file']}" for item in artifacts]
+checksums.append(hashlib.sha256((root / "release-manifest.json").read_bytes()).hexdigest() + "  release-manifest.json")
+(root / "SHA256SUMS.txt").write_text("\n".join(checksums) + "\n", encoding="utf-8")
+PY
+# Старые артефакты не трогаются, пока все новые варианты не прошли проверки.
+mkdir -p "$DIST"
+for artifact in "$RUN_ROOT/dist"/*.dmg "$RUN_ROOT/dist/release-manifest.json" "$RUN_ROOT/dist/SHA256SUMS.txt"; do
+  mv -f "$artifact" "$DIST/"
 done
-printf '\n  контрольные суммы: %s\n' "$DIST/SHA256SUMS.txt"
-
-printf '\n  Нотаризации нет: Apple Developer ID отсутствует, подпись «%s» самодельная.\n' "$IDENTITY"
-printf '  Получатель снимает карантин руками: правый клик по приложению, «Открыть».\n'
-printf '  Модель распознавания приложение скачивает само при первом запуске.\n\n'
+(cd "$DIST" && shasum -a 256 -c SHA256SUMS.txt)
+printf '\nАртефакты: %s\nПриложения и лог: %s\n' "$DIST" "$RUN_ROOT"
+if [ -n "$NOTARY_PROFILE" ]; then
+  printf 'Developer ID; нотаризация приложения и образа проверена.\n'
+else
+  printf 'Без нотаризации. Gatekeeper получателя не проверен; подпись: %s.\n' "$IDENTITY"
+fi
+printf 'Модель распознавания скачивается только по кнопке в приложении.\n'

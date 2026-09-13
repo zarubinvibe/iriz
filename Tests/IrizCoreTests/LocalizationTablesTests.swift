@@ -11,6 +11,50 @@ import Testing
 
 @Suite("Таблицы перевода")
 struct LocalizationTablesTests {
+    @Test("перенесённое приложение читает английский и китайский из Contents/Resources")
+    func packagedAppReadsItsOwnLocalizationBundle() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("iriz-localization-" + UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let app = root.appendingPathComponent("relocated/iriz.app", isDirectory: true)
+        let contents = app.appendingPathComponent("Contents", isDirectory: true)
+        let resources = contents.appendingPathComponent("Resources", isDirectory: true)
+        try FileManager.default.createDirectory(at: resources, withIntermediateDirectories: true)
+        let info: [String: String] = ["CFBundleIdentifier": "test.iriz.localized",
+                                      "CFBundlePackageType": "APPL",
+                                      "CFBundleExecutable": "iriz"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+        let original = try #require(irizResourceBundle())
+        let copied = resources.appendingPathComponent("IrizApp_IrizCore.bundle", isDirectory: true)
+        try FileManager.default.copyItem(at: original.bundleURL, to: copied)
+        let host = try #require(Bundle(url: app))
+        let relocated = try #require(irizResourceBundle(in: host))
+        #expect(relocated.bundleURL.standardizedFileURL.path == copied.standardizedFileURL.path)
+        let key = "firstrun.welcome.title"
+        for language in [IrizLanguage.en, .zh] {
+            let expected = try #require(irizLocalizationBundle(for: language))
+                .localizedString(forKey: key, value: nil, table: nil)
+            #expect(expected != key)
+            let table = try #require(irizLocalizationBundle(for: language, resources: relocated))
+            #expect(table.localizedString(forKey: key, value: nil, table: nil) == expected)
+        }
+    }
+
+    @Test("отсутствующий ресурсный bundle возвращает nil без абсолютного build fallback")
+    func absentPackagedResourcesDoNotCrash() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("iriz-no-localization-" + UUID().uuidString, isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let contents = root.appendingPathComponent("iriz.app/Contents", isDirectory: true)
+        try FileManager.default.createDirectory(at: contents, withIntermediateDirectories: true)
+        let info = ["CFBundleIdentifier": "test.iriz.missing", "CFBundlePackageType": "APPL"]
+        try PropertyListSerialization.data(fromPropertyList: info, format: .xml, options: 0)
+            .write(to: contents.appendingPathComponent("Info.plist"))
+        let host = try #require(Bundle(url: contents.deletingLastPathComponent()))
+        #expect(irizResourceBundle(in: host) == nil)
+    }
+
     private func table(_ language: IrizLanguage) -> Bundle? {
         irizLocalizationBundle(for: language)
     }
