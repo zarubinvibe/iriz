@@ -1,16 +1,16 @@
-# Graph Report - zarubinvibe__iriz  (2026-09-13)
+# Graph Report - iriz-ci.qlilSt  (2026-09-13)
 
 ## Corpus Check
-- 242 files · ~1,687,229 words
+- 242 files · ~1,687,899 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 3514 nodes · 6682 edges · 233 communities (182 shown, 51 thin omitted)
+- 3514 nodes · 6682 edges · 231 communities (180 shown, 51 thin omitted)
 - Extraction: 82% EXTRACTED · 18% INFERRED · 0% AMBIGUOUS · INFERRED: 1178 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `30dae8b9`
+- Built from commit: `0165069a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -238,10 +238,8 @@
 - [[_COMMUNITY_Community 221|Community 221]]
 - [[_COMMUNITY_Community 222|Community 222]]
 - [[_COMMUNITY_Community 223|Community 223]]
-- [[_COMMUNITY_Community 224|Community 224]]
 - [[_COMMUNITY_Community 225|Community 225]]
-- [[_COMMUNITY_Community 227|Community 227]]
-- [[_COMMUNITY_Community 228|Community 228]]
+- [[_COMMUNITY_Community 226|Community 226]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `DictationHUDPanelSurface` - 75 edges
@@ -260,14 +258,14 @@
   Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUD.swift
 - `DictationHUDPresentationTests` --calls--> `dictationHUDPhaseSpeed()`  [INFERRED]
   Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUD.swift
+- `DictationHUDTextTests` --calls--> `dictationHUDTitle()`  [INFERRED]
+  Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUD.swift
 - `DictationHUDTextTests` --calls--> `dictationHUDHistoryHint()`  [INFERRED]
   Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUD.swift
 - `DictationHUDTextTests` --calls--> `DictationHUDStage`  [INFERRED]
   Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUD.swift
-- `DictationHUDPresenterTests` --calls--> `DictationHUDPresenter`  [INFERRED]
-  Tests/IrizDictateTests/DictationHUDTests.swift → Sources/IrizDictate/DictationHUDPresenter.swift
 
-## Communities (233 total, 51 thin omitted)
+## Communities (231 total, 51 thin omitted)
 
 ### Community 0 - "Community 0"
 Cohesion: 0.05
@@ -294,12 +292,12 @@ Cohesion: 0.06
 Nodes (41): dictationHUDNormalizedLevel(), dictationHUDPerceptualLevel(), DictationHUDGlassForm, done, listening, resting, thinking, transcript (+33 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.06
-Nodes (34): Equatable, DictationHousekeepingItem, DictationHUDLevelTrail, DictionaryImportOutcome, MeetingPipeline, MeetingResult, meetingSpeakerTurns(), MeetingProtocolDocument (+26 more)
-
-### Community 7 - "Community 7"
 Cohesion: 0.07
 Nodes (18): shouldPressEnterAfterVoiceOutput(), DictationReleaseShortcut, alternate, standard, HotkeyChoice, hotkeyIsModifierPrefix(), hotkeyModifierSymbols(), modifierHotkeyName() (+10 more)
+
+### Community 7 - "Community 7"
+Cohesion: 0.09
+Nodes (3): dictationHUDNeedsDisplayLink(), dictationHUDPhaseSpeed(), DictationHUDPanelSurface
 
 ### Community 8 - "Community 8"
 Cohesion: 0.07
@@ -310,16 +308,16 @@ Cohesion: 0.07
 Nodes (28): CappedOutputCapture, CodexPromptGenerator, CodexPromptGeneratorError, invalidExecutable, invalidPromptOutcome, invalidPromptSpec, invalidResultJSON, invalidTimeout (+20 more)
 
 ### Community 10 - "Community 10"
-Cohesion: 0.1
-Nodes (3): dictationHUDNeedsDisplayLink(), dictationHUDPhaseSpeed(), DictationHUDPanelSurface
+Cohesion: 0.06
+Nodes (34): Equatable, DictationHousekeepingItem, DictationHUDLevelTrail, DictionaryImportOutcome, MeetingProtocolDocument, SpeakerSpan, SpeechModelInstallPhase, compiling (+26 more)
 
 ### Community 11 - "Community 11"
 Cohesion: 0.05
 Nodes (33): Hashable, IrizMark, MarkAlarm, none, noPermission, MarkMode, dictating, fixing (+25 more)
 
 ### Community 12 - "Community 12"
-Cohesion: 0.15
-Nodes (4): CodexPromptGeneratorTests, PromptEnvelopeBuilder, PromptField, PromptSpec
+Cohesion: 0.08
+Nodes (40): dictationHUDClampedAxis(), dictationHUDClampedFrame(), dictationHUDDetail(), DictationHUDHalo, even, none, traveling, dictationHUDHasLatin() (+32 more)
 
 ### Community 13 - "Community 13"
 Cohesion: 0.09
@@ -327,167 +325,175 @@ Nodes (25): consumeProgress(), printProgress(), ProgressLine, refuse(), Transcri
 
 ### Community 14 - "Community 14"
 Cohesion: 0.06
-Nodes (37): CaseIterable, FirstRunPermission, accessibility, inputMonitoring, microphone, TextInsertionFailure, deliveryNotObservable, insertionFailed (+29 more)
+Nodes (39): CaseIterable, FirstRunPermission, accessibility, inputMonitoring, microphone, TextInsertionFailure, deliveryNotObservable, insertionFailed (+31 more)
 
 ### Community 15 - "Community 15"
 Cohesion: 0.06
-Nodes (30): Codable, IrizConnector, googleCalendar, zoom, IrizConnectorConsent, ConnectorsTests, ASRTimingBreakdown, allRanges() (+22 more)
+Nodes (38): Decodable, AmbiguityExpectation, blocking, nonBlocking, none, BaselineCase, BaselineCategory, additionToPreviousPrompt (+30 more)
 
 ### Community 16 - "Community 16"
+Cohesion: 0.15
+Nodes (3): CodexPromptGeneratorTests, displayPath(), PromptEnvelopeBuilder
+
+### Community 17 - "Community 17"
+Cohesion: 0.12
+Nodes (32): applyInputDevicePreference(), audioDeviceHasInputChannels(), AudioEngineStartRetry, AudioInputDevice, audioInputDeviceNominalSampleRate(), audioObjectStringProperty(), availableAudioInputDevices(), beginRecording() (+24 more)
+
+### Community 18 - "Community 18"
 Cohesion: 0.12
 Nodes (3): DictationHUDPresenter, DictationHUDSurface, dictationHUDTimer()
 
-### Community 17 - "Community 17"
+### Community 19 - "Community 19"
 Cohesion: 0.13
 Nodes (27): clampedHistorySelection(), dictationHistoryClearConfirmation(), dictationHistoryDirectories(), dictationHistoryEntries(), DictationHistoryEntry, dictationHistoryMatches(), dictationHistoryRemovalTarget(), filteredDictationHistory() (+19 more)
 
-### Community 18 - "Community 18"
-Cohesion: 0.13
-Nodes (29): applySettings(), finishTranscription(), handleAudioConfigurationChange(), handleCancel(), handlePress(), init(), NotificationObserver, observeSettings() (+21 more)
+### Community 20 - "Community 20"
+Cohesion: 0.14
+Nodes (6): PromptCoreV2Tests, RawBlockDeicticTests, PromptAmbiguity, PromptField, PromptOutcomeVerifier, PromptSpec
 
-### Community 19 - "Community 19"
+### Community 21 - "Community 21"
+Cohesion: 0.13
+Nodes (28): applySettings(), handleAudioConfigurationChange(), handleCancel(), handlePress(), init(), NotificationObserver, observeSettings(), prepareAfterModelInstallation() (+20 more)
+
+### Community 22 - "Community 22"
 Cohesion: 0.09
 Nodes (5): L(), Lf(), IrizSettingsView, snippets, SettingsFileTranscription
 
-### Community 20 - "Community 20"
-Cohesion: 0.14
-Nodes (26): applyInputDevicePreference(), audioDeviceHasInputChannels(), AudioEngineStartRetry, AudioInputDevice, audioInputDeviceNominalSampleRate(), audioObjectStringProperty(), availableAudioInputDevices(), beginRecording() (+18 more)
-
-### Community 21 - "Community 21"
-Cohesion: 0.12
-Nodes (29): dictationHUDClampedAxis(), dictationHUDClampedFrame(), dictationHUDDetail(), DictationHUDHalo, even, none, traveling, dictationHUDHasLatin() (+21 more)
-
-### Community 22 - "Community 22"
-Cohesion: 0.12
-Nodes (12): DictationHUDGlassShape, dictationHUDBarCount(), dictationHUDCollapsedSize(), DictationHUDPlateGeometry, dictationHUDVerdictPixelSize(), dictationHUDTranscriptLineCount(), dictationHUDTranscriptSize(), dictationHUDOnScreenFrame() (+4 more)
-
 ### Community 24 - "Community 24"
+Cohesion: 0.1
+Nodes (21): Codable, IrizConnector, googleCalendar, zoom, IrizConnectorConsent, ConnectorsTests, allRanges(), matches() (+13 more)
+
+### Community 25 - "Community 25"
 Cohesion: 0.08
 Nodes (23): Identifiable, AppMode, fixing, paused, shadow, DictationHint, fault, key (+15 more)
 
-### Community 25 - "Community 25"
+### Community 26 - "Community 26"
+Cohesion: 0.18
+Nodes (3): DictationHistoryPanel, DictationHistoryPresenter, dictationRescueRetryNotice()
+
+### Community 27 - "Community 27"
 Cohesion: 0.13
 Nodes (3): hotkeys, HotkeyBinding, SettingsModel
 
-### Community 26 - "Community 26"
+### Community 28 - "Community 28"
 Cohesion: 0.14
 Nodes (18): Encodable, normalizedTranscriptCorrections(), normalizedTranscriptCorrectionSource(), validatedTranscriptCorrection(), DictionaryTransfer, DictionaryTransferError, badCorrection, badSnippet (+10 more)
 
-### Community 27 - "Community 27"
-Cohesion: 0.08
-Nodes (24): BaselineCategory, additionToPreviousPrompt, agentic, blockingAmbiguity, coding, correctionOfPreviousPrompt, currentProject, currentVoiceFeature (+16 more)
-
 ### Community 29 - "Community 29"
-Cohesion: 0.09
-Nodes (10): FirstRunHero, LivePlate, MarkImage, MenuBarStrip, MenuPanelAnchor, IrizBackdropBlur, IrizFloatingPlate, IrizGlassSurface (+2 more)
-
-### Community 30 - "Community 30"
 Cohesion: 0.14
 Nodes (5): StatusReport, SupportPaths, InsertionStats, statusReportJSONData(), StatusCountersTests
 
-### Community 31 - "Community 31"
-Cohesion: 0.1
-Nodes (16): PromptAgentAdapter, PromptAgentCatalog, PromptAgentDelivery, argument, file, stdin, PromptAgentDestination, anthropic (+8 more)
+### Community 30 - "Community 30"
+Cohesion: 0.15
+Nodes (3): FirstRunAgent, FirstRunModel, firstRunPermissionGranted()
 
-### Community 32 - "Community 32"
+### Community 31 - "Community 31"
 Cohesion: 0.14
 Nodes (20): allRanges(), between(), linesForDeicticVerification(), parseSections(), promptSectionHeading(), quotedStrings(), RegexMatch, removingPaths() (+12 more)
 
-### Community 33 - "Community 33"
-Cohesion: 0.15
-Nodes (19): dictationHUDAccessibilityLabel(), dictationHUDAnimatesLevel(), dictationHUDAnimatesWaiting(), DictationHUDContent, dictationHUDFormShowsChip(), dictationHUDHaloRidge(), dictationHUDHaloRidgeGain(), dictationHUDHaloRidgeMean() (+11 more)
-
-### Community 34 - "Community 34"
+### Community 32 - "Community 32"
 Cohesion: 0.17
 Nodes (12): AsyncParsableCommand, Convert, Fix, HUDPresence, HUDSize, InstallModel, Iriz, Prompt (+4 more)
+
+### Community 34 - "Community 34"
+Cohesion: 0.16
+Nodes (11): MeetingPipeline, MeetingResult, meetingSpeakerTurns(), distance(), speakerForToken(), SpeakerNames, SpeakerTurn, speakerTurns() (+3 more)
 
 ### Community 35 - "Community 35"
 Cohesion: 0.17
 Nodes (21): gate(), luminance(), main(), measure(), measure_plate(), plate_gate(), Приговор по подложке окна. Остальные области - для разбора., Приёмка закреплённого вида: сегодняшнее окно как эталон на будущее. (+13 more)
 
+### Community 36 - "Community 36"
+Cohesion: 0.17
+Nodes (8): DictationHUDGlassShape, dictationHUDBarCount(), dictationHUDCollapsedSize(), dictationHUDVerdictPixelSize(), dictationHUDTranscriptLineCount(), dictationHUDTranscriptSize(), DictationHUDSizeGeometryTests, DictationHUDTranscriptLayoutTests
+
 ### Community 37 - "Community 37"
+Cohesion: 0.15
+Nodes (9): dictationHUDFrame(), DictationHUDLevelPump, DictationHUDFrameTests, DictationHUDLevelPumpTests, DictationHUDLevelTests, DictationHUDPresenterTests, DictationHUDTranscriptDismissTests, RecordingHUDSurface (+1 more)
+
+### Community 38 - "Community 38"
+Cohesion: 0.13
+Nodes (9): dictationHistoryDate(), dictationHistoryPreview(), dictationHistoryTimeLabel(), dictationHistoryShotEntries(), dictationHistoryShotView(), DictationHistoryView, DictationHistoryPreviewTests, IrizGlyphView (+1 more)
+
+### Community 39 - "Community 39"
 Cohesion: 0.13
 Nodes (9): irizCurrentLanguage(), irizLanguageChoice(), irizLocalizationBundle(), irizResolvedLanguage(), irizResourceBundle(), setIrizLanguageChoice(), LocalizationTablesTests, LocalizationFormatTests (+1 more)
 
-### Community 39 - "Community 39"
-Cohesion: 0.16
-Nodes (3): PromptCoreV2Tests, PromptAmbiguity, PromptOutcomeVerifier
-
 ### Community 40 - "Community 40"
-Cohesion: 0.16
-Nodes (9): DictationTextProcessingResult, Match, Outcome, pastedText(), processedDictationText(), removingFinalPeriod(), Rule, TranscriptCorrector (+1 more)
+Cohesion: 0.1
+Nodes (9): FirstRunHero, LivePlate, MarkImage, MenuBarStrip, IrizBackdropBlur, IrizFloatingPlate, IrizGlassSurface, IrizSearchFieldPlate (+1 more)
 
 ### Community 41 - "Community 41"
-Cohesion: 0.23
-Nodes (6): dictationHUDAnchoredFrame(), dictationHUDAnchoredSize(), dictationHUDAnchorZone(), dictationHUDNearestAnchor(), dictationHUDRestingSize(), DictationHUDAnchorTests
+Cohesion: 0.1
+Nodes (14): AnyObject, IrizResourceBundleMarker, DictationHUDContainerDelegate, DictationHUDDisplayLinkProxy, DictationHUDDisplayLinkStorage, DictationHUDFirstShowMetric, DictationHUDNotificationObserver, dictationHUDOnScreenFrame() (+6 more)
 
 ### Community 42 - "Community 42"
+Cohesion: 0.12
+Nodes (13): PromptAgentAdapter, PromptAgentCatalog, PromptAgentDelivery, argument, file, stdin, PromptAgentDestination, anthropic (+5 more)
+
+### Community 43 - "Community 43"
 Cohesion: 0.14
 Nodes (12): dictationTokenTimings(), FileSystemNodeType, directory, regularFile, LoadedSpeechEngine, parakeetV3, whisper, speechModelCacheDirectory() (+4 more)
 
-### Community 43 - "Community 43"
-Cohesion: 0.17
-Nodes (14): speechCleanupFillerIsRemovable(), speechCleanupFillers(), speechCleanupIsStutterRepeat(), speechCleanupLeadingNu(), speechCleanupLocal(), speechCleanupOpenText(), speechCleanupQuoteSegments(), speechCleanupRepeatedPreposition() (+6 more)
-
 ### Community 44 - "Community 44"
-Cohesion: 0.12
-Nodes (16): DictationHUDStage, buildingPrompt, inserted, listening, notDelivered, nothingRecognized, promptFailed, promptNotDelivered (+8 more)
+Cohesion: 0.17
+Nodes (10): DictationTextProcessingResult, pastedText(), processedDictationText(), ProcessedDictationTextTests, applyDefaults(), DefaultCorrectionsSyntheticCorpusTests, DefaultCorrectionsTrapTests, PunctuationMetrics (+2 more)
 
 ### Community 45 - "Community 45"
 Cohesion: 0.17
-Nodes (8): dictationHUDFrame(), DictationHUDLevelPump, DictationHUDFrameTests, DictationHUDLevelPumpTests, DictationHUDPresenterTests, DictationHUDTranscriptDismissTests, RecordingHUDSurface, SurfaceFactory
+Nodes (14): speechCleanupFillerIsRemovable(), speechCleanupFillers(), speechCleanupIsStutterRepeat(), speechCleanupLeadingNu(), speechCleanupLocal(), speechCleanupOpenText(), speechCleanupQuoteSegments(), speechCleanupRepeatedPreposition() (+6 more)
 
 ### Community 46 - "Community 46"
+Cohesion: 0.12
+Nodes (16): DictationHUDStage, buildingPrompt, inserted, listening, notDelivered, nothingRecognized, promptFailed, promptNotDelivered (+8 more)
+
+### Community 47 - "Community 47"
 Cohesion: 0.16
 Nodes (5): DictationHUDHintView, DictationHUDHintSizeTests, MeetingStoreTests, Attempts, SettingsFileTranscriptionTests
 
-### Community 47 - "Community 47"
+### Community 48 - "Community 48"
 Cohesion: 0.1
 Nodes (19): 目录, 第 1 步：按下你的那个键, 快速开始, 简单对比, 简单词汇, 安全与隐私, 局限, 第 2 步：说出来 (+11 more)
 
-### Community 48 - "Community 48"
+### Community 49 - "Community 49"
 Cohesion: 0.1
 Nodes (19): code:bash (git clone https://github.com/zarubinvibe/iriz.git ~/iriz), Contents, How It Works, iriz, License, Limits, Olympuz family, Quickstart (+11 more)
 
-### Community 49 - "Community 49"
+### Community 50 - "Community 50"
 Cohesion: 0.1
 Nodes (19): Оглавление, Шаг 1: Нажмите свою клавишу, Быстрый старт, Простое сравнение, Простые слова, Безопасность и приватность, Ограничения, Шаг 2: Скажите вслух (+11 more)
-
-### Community 51 - "Community 51"
-Cohesion: 0.22
-Nodes (11): PromptGenerationTests, PromptRendererV1BaselineCorpusTests, AdditionMarkerTests, FactSupportTests, InflationNormTests, LatestDictationTests, NegationSemanticsTests, PromptTests (+3 more)
 
 ### Community 52 - "Community 52"
 Cohesion: 0.12
 Nodes (3): firstRunShouldShow(), FirstRunNotificationCount, FirstRunTests
 
 ### Community 53 - "Community 53"
+Cohesion: 0.23
+Nodes (7): dictationHUDAnchoredFrame(), dictationHUDAnchoredSize(), dictationHUDAnchorZone(), dictationHUDNearestAnchor(), dictationHUDRestingSize(), DictationHUDAnchorTests, DictationHUDOnScreenTests
+
+### Community 54 - "Community 54"
 Cohesion: 0.25
 Nodes (7): ModelIntegrity, ModelIntegrityError, digestMismatch, invalidFileType, invalidManifestPath, missingFile, unexpectedFile
 
-### Community 54 - "Community 54"
+### Community 55 - "Community 55"
 Cohesion: 0.11
 Nodes (19): DictationLanguage, auto, belarusian, bosnian, bulgarian, croatian, czech, english (+11 more)
 
-### Community 55 - "Community 55"
-Cohesion: 0.15
-Nodes (7): dictationHistoryDate(), dictationHistoryPreview(), dictationHistoryTimeLabel(), DictationHistoryView, DictationHistoryPreviewTests, IrizGlyphView, irizWriteGlyphSheet()
-
 ### Community 56 - "Community 56"
+Cohesion: 0.19
+Nodes (16): dictationHUDAccessibilityLabel(), dictationHUDAnimatesLevel(), dictationHUDAnimatesWaiting(), DictationHUDContent, dictationHUDFormShowsChip(), dictationHUDHaloRidge(), dictationHUDHaloRidgeGain(), dictationHUDHaloRidgeMean() (+8 more)
+
+### Community 57 - "Community 57"
 Cohesion: 0.15
 Nodes (13): DictationHistoryKeyAction, close, copySelected, insertSelected, moveSelection, passThrough, DictationRescueKeyOutcome, close (+5 more)
 
-### Community 57 - "Community 57"
+### Community 58 - "Community 58"
 Cohesion: 0.14
 Nodes (11): docFirstRunShots(), SpeechModelDownloadProgress, speechModelDownloadURL(), SpeechModelInstaller, speechModelInstallFailureMessage(), SpeechModelInstallRefusal, alreadyInstalled, alreadyRunning (+3 more)
 
-### Community 58 - "Community 58"
-Cohesion: 0.16
-Nodes (12): displayPath(), matches(), numberMatches(), PromptMarkup, PromptMode, addition, correction, prompt (+4 more)
-
 ### Community 59 - "Community 59"
-Cohesion: 0.12
-Nodes (11): AnyObject, IrizResourceBundleMarker, DictationHUDContainerDelegate, DictationHUDDisplayLinkProxy, DictationHUDDisplayLinkStorage, DictationHUDFirstShowMetric, DictationHUDNotificationObserver, PanelLayout (+3 more)
+Cohesion: 0.22
+Nodes (10): PromptGenerationTests, PromptRendererV1BaselineCorpusTests, AdditionMarkerTests, FactSupportTests, InflationNormTests, LatestDictationTests, NegationSemanticsTests, PromptTests (+2 more)
 
 ### Community 60 - "Community 60"
 Cohesion: 0.2
@@ -498,20 +504,20 @@ Cohesion: 0.19
 Nodes (11): AudioBatchPlanError, destinationCollision, destinationExists, destinationOverwritesSource, directoryHasNoAudio, outputFileForManySources, pathNotFound, pathNotReadable (+3 more)
 
 ### Community 62 - "Community 62"
+Cohesion: 0.13
+Nodes (8): AnchorView, MenuPanelAnchor, MenuPanelChrome, MenuPanelKey, activate, down, escape, up
+
+### Community 63 - "Community 63"
 Cohesion: 0.16
 Nodes (13): AgentRow, FirstRunAgentConnect, FirstRunKeyTrial, KeyCap, LevelBar, FirstRunModelInstall, FirstRunTranslateTrial, KeyCapLabel (+5 more)
 
-### Community 63 - "Community 63"
-Cohesion: 0.12
-Nodes (17): Error, DictationSnippetDefect, bodyTooLong, emptyBody, emptyTrigger, forbiddenCharacter, triggerTooLong, triggerWithoutLetterOrDigit (+9 more)
-
 ### Community 64 - "Community 64"
-Cohesion: 0.14
-Nodes (10): ButtonStyle, Animation, IrizPressStyle, IrizSegments, IrizSelection, View, Kind, capsLock (+2 more)
-
-### Community 65 - "Community 65"
 Cohesion: 0.16
 Nodes (6): Coordinator, FirstRunDictationField, FirstRunFieldBox, FirstRunTextView, NSTextView, NSTextViewDelegate
+
+### Community 65 - "Community 65"
+Cohesion: 0.14
+Nodes (10): ButtonStyle, Animation, IrizPressStyle, IrizSegments, IrizSelection, View, Kind, capsLock (+2 more)
 
 ### Community 66 - "Community 66"
 Cohesion: 0.2
@@ -521,141 +527,133 @@ Nodes (8): DictationFeedbackSound, done, error, TextInsertionVerdict, delivered,
 Cohesion: 0.18
 Nodes (11): Int, exportUISurfaceShots(), renderUISurface(), uiShotMenuStates(), uiShotOnOpaqueBackdrop(), UISurfaceShot, uiSurfaceShots(), Kind (+3 more)
 
-### Community 68 - "Community 68"
-Cohesion: 0.18
-Nodes (6): DictationHUDSurface, DictationHUDOpenStateTests, OpenStateSurface, DictationHUDExitTests, ExitSurface, LearningToastTests
-
 ### Community 69 - "Community 69"
-Cohesion: 0.15
-Nodes (14): Decodable, AmbiguityExpectation, blocking, nonBlocking, none, BaselineCase, BaselineExpected, FailureStage (+6 more)
+Cohesion: 0.23
+Nodes (9): DictationHUDSurface, DictationHUDAction, dictationHUDActions(), dictationHUDLanguageBadge(), dictationHUDNextLanguage(), dictationHUDStripActions(), DictationHUDActionsTests, DictationHUDOpenStateTests (+1 more)
 
 ### Community 70 - "Community 70"
-Cohesion: 0.2
-Nodes (12): dictationHistoryShotEntries(), dictationHistoryShotView(), DictationRecoveryPresentation, rescueWindow, stayQuiet, DictationRescue, dictationRescueExplanation(), dictationRescueRetryNotice() (+4 more)
-
-### Community 71 - "Community 71"
-Cohesion: 0.14
-Nodes (7): AnchorView, MenuPanelChrome, MenuPanelKey, activate, down, escape, up
-
-### Community 73 - "Community 73"
-Cohesion: 0.21
-Nodes (8): DictationHUDAction, dictationHUDActions(), dictationHUDLanguageBadge(), dictationHUDNextLanguage(), dictationHUDStripActions(), DictationHUDPanel, DictationHUDActionsTests, NSPanel
-
-### Community 74 - "Community 74"
 Cohesion: 0.18
 Nodes (7): DictationHUDExportFrame, dictationHUDExportFrames(), dictationHUDExportNaturalPixelSize(), dictationHUDExportPixelScale(), dictationHUDTimelineFrames(), exportDictationHUDAnimationFrames(), DictationHUDExportScaleTests
 
-### Community 75 - "Community 75"
+### Community 71 - "Community 71"
 Cohesion: 0.21
 Nodes (11): DictationHousekeepingEntry, dictationHousekeepingPlan(), dictationHousekeepingRun(), dictationHousekeepingSnapshot(), dictationHousekeepingSummary(), diskUsageBytesForHousekeeping(), Kind, agedDictation (+3 more)
 
-### Community 76 - "Community 76"
+### Community 72 - "Community 72"
 Cohesion: 0.23
 Nodes (7): PromptAppProfileMapTests, normalizedPromptAppProfileEntries(), PromptAppProfileEntry, promptAppProfileLookupKey(), PromptAppProfileMap, validatedPromptAppProfileBundleID(), appProfiles
 
-### Community 77 - "Community 77"
+### Community 73 - "Community 73"
 Cohesion: 0.17
 Nodes (9): audioDurationSeconds(), SpeakerDiarizationFailure, audioUnreadable, engineFailed, modelsMissing, tooShort, SpeakerDiarizer, speakerSpans() (+1 more)
 
-### Community 78 - "Community 78"
+### Community 74 - "Community 74"
+Cohesion: 0.13
+Nodes (15): Error, MeetingPipelineFailure, audioUnreadable, nothingRecognized, storeFailed, transcriptionFailed, MeetingRecorderFailure, alreadyRecording (+7 more)
+
+### Community 75 - "Community 75"
 Cohesion: 0.14
 Nodes (7): AudioPowerLifecycle, AudioEngineStartRetryTests, AudioGraphRecoveryFailureTests, AudioPowerLifecycleTests, SyntheticAudioStartError, first, second
 
-### Community 79 - "Community 79"
+### Community 76 - "Community 76"
 Cohesion: 0.13
 Nodes (14): Происхождение кода, Сверка 06.09.2026, Сверка 06.09.2026, Перенесенные файлы (13), Проверка изменений апстрима, Что взято, Что осознанно НЕ взято, 1. RuSwitcher - переключение раскладки (+6 more)
 
-### Community 80 - "Community 80"
+### Community 77 - "Community 77"
 Cohesion: 0.13
 Nodes (14): 上手引导, 界面长什么样, 浮窗, 菜单栏, 设置, 口述记录, 没能粘贴上的文字, 开始使用 (+6 more)
 
-### Community 81 - "Community 81"
-Cohesion: 0.19
-Nodes (3): DictationHUDCloseRing, DictationHUDCopyPill, dictationHUDMeasuredTranscriptLines()
-
-### Community 82 - "Community 82"
+### Community 78 - "Community 78"
 Cohesion: 0.14
 Nodes (14): IrizGlyph, dictation, dictionary, disk, files, history, keys, language (+6 more)
 
-### Community 83 - "Community 83"
-Cohesion: 0.24
-Nodes (7): dictationHUDStripButtonSide(), dictationHUDStripLayout(), dictationHUDStripSize(), DictationHUDStripView, dictationHUDHitTarget(), DictationHUDStripLayoutTests, DictationHUDHitDispatchTests
+### Community 79 - "Community 79"
+Cohesion: 0.2
+Nodes (5): DictationHUDPlateGeometry, DictationHUDExitTests, DictationHUDPlateGeometryTests, ExitSurface, LearningToastTests
 
-### Community 84 - "Community 84"
+### Community 80 - "Community 80"
 Cohesion: 0.2
 Nodes (6): DictationHUDControls, DictationHUDMenuTarget, dictationLanguageMenuTitle(), makeDictationHUDMenu(), Box, DictationHUDControlsTests
 
-### Community 85 - "Community 85"
+### Community 81 - "Community 81"
 Cohesion: 0.19
 Nodes (7): dictationHUDAnimationDuration(), DictationHUDHoverLayers, dictationHUDLevelIsStale(), DictationHUDRevealLayers, dictationHUDSmoothedLevel(), dictationHUDSmootherstep(), DictationHUDAnimationModelTests
 
-### Community 88 - "Community 88"
+### Community 84 - "Community 84"
 Cohesion: 0.19
 Nodes (11): Color, familyAccentColor(), familyAccentComponents(), FamilyAccentRole, flow, personal, FamilyPalette, FamilySurface (+3 more)
 
-### Community 89 - "Community 89"
-Cohesion: 0.15
-Nodes (7): FirstRunTrialButtonStyle, FirstRunTrialButton, FirstRunProminentButton, IrizGlassPill, GlassButton, GlassProminentButton, ViewModifier
-
-### Community 90 - "Community 90"
+### Community 85 - "Community 85"
 Cohesion: 0.14
 Nodes (13): Знакомство, Как это выглядит, Плашка, Меню строки меню, Настройки, История надиктовок, Текст, который не вставился, Знакомство (+5 more)
 
-### Community 92 - "Community 92"
+### Community 86 - "Community 86"
 Cohesion: 0.22
 Nodes (8): DictationStartRefusal, alreadyRecording, modelNotReady, secureInputActive, transcriptionInFlight, DictationStartRefusalTests, PromptFocusTests, WarmUpDoesNotBlockRecordingTests
 
-### Community 93 - "Community 93"
+### Community 88 - "Community 88"
 Cohesion: 0.22
 Nodes (13): cleanedExternally(), generateAndDeliverPrompt(), handleRelease(), offerRecovery(), PromptPipelineError, artifactAlreadyExists, codexUnavailable, verificationFailed (+5 more)
 
-### Community 95 - "Community 95"
+### Community 89 - "Community 89"
 Cohesion: 0.28
 Nodes (4): publishSpeechModelCache(), removeSuiteFile(), ModelPreparationProbe, SpeechModelRecoveryTests
 
-### Community 96 - "Community 96"
+### Community 90 - "Community 90"
 Cohesion: 0.24
 Nodes (4): speechModelInstallFraction(), ModelFileDigest, ModelIntegrityTests, SpeechModelInstallTests
 
-### Community 97 - "Community 97"
+### Community 92 - "Community 92"
+Cohesion: 0.24
+Nodes (6): Match, Outcome, removingFinalPeriod(), Rule, SpeechModelTextRepair, TranscriptCorrector
+
+### Community 93 - "Community 93"
 Cohesion: 0.28
 Nodes (7): DictationSnippet, normalizedDictationSnippets(), normalizedDictationSnippetTrigger(), validatedDictationSnippet(), DictationSnippetNormalizationTests, DictationSnippetStorageTests, DictationSnippetSubstitutionTests
 
-### Community 98 - "Community 98"
+### Community 94 - "Community 94"
 Cohesion: 0.15
 Nodes (13): DictationHUDAnchor, bottomCenter, bottomLeading, bottomTrailing, leftBottom, leftCenter, leftTop, rightBottom (+5 more)
 
-### Community 100 - "Community 100"
+### Community 96 - "Community 96"
 Cohesion: 0.26
 Nodes (6): PromptGuidancePresetsTests, PromptUserGuidanceTests, normalizedPromptUserGuidance(), PromptUserExample, PromptUserGuidance, promptUserGuidanceBlock()
 
-### Community 101 - "Community 101"
+### Community 97 - "Community 97"
 Cohesion: 0.15
 Nodes (13): SettingsPage, dictation, dictionary, disk, files, history, keys, language (+5 more)
 
-### Community 102 - "Community 102"
+### Community 98 - "Community 98"
 Cohesion: 0.15
 Nodes (12): code:bash (git clone https://github.com/zarubinvibe/iriz.git ~/iriz), code:bash (bash install.sh --build), Dictation history, Getting started, If this helped, Keeping it current, Onboarding, Settings (+4 more)
 
-### Community 103 - "Community 103"
+### Community 100 - "Community 100"
+Cohesion: 0.21
+Nodes (3): DictationHUDCloseRing, DictationHUDCopyPill, dictationHUDMeasuredTranscriptLines()
+
+### Community 102 - "Community 102"
 Cohesion: 0.23
 Nodes (7): resolvedTranscriptionTimeout(), scheduleTranscriptionWatchdog(), simulateHungTranscriptionForTesting(), transcriptionTimedOut(), transcriptionTimeoutForTesting(), transcriptionTimeoutSeconds(), TranscriptionTimeoutTests
 
+### Community 103 - "Community 103"
+Cohesion: 0.3
+Nodes (6): dictationHUDStripButtonSide(), dictationHUDStripLayout(), dictationHUDStripSize(), DictationHUDStripView, DictationHUDStripLayoutTests, DictationHUDHitDispatchTests
+
 ### Community 104 - "Community 104"
-Cohesion: 0.24
-Nodes (7): distance(), has_numeral(), main(), measure(), Числительное в ЭТАЛОНЕ - цифрой или словом., words(), NumeralFilterTests
-
-### Community 105 - "Community 105"
-Cohesion: 0.21
-Nodes (7): AudioConverterInputProvider, channelRMSValues(), handleTap(), preparedConverterInputBuffer(), selectedMonoMixChannelIndices(), writeMonoMix(), MonoMixTests
-
-### Community 106 - "Community 106"
 Cohesion: 0.35
 Nodes (10): dictationHUDExportError(), captureDictationHUDPlateScenes(), dictationHUDCapturePlate(), dictationHUDCaptureRegion(), dictationHUDCaptureScreen(), dictationHUDPlateBackdrop(), DictationHUDPlateScene, dictationHUDProbeBackdrop() (+2 more)
 
-### Community 107 - "Community 107"
+### Community 105 - "Community 105"
 Cohesion: 0.17
 Nodes (12): FirstRunStep, accessibility, agent, inputMonitoring, microphone, model, plate, translate (+4 more)
+
+### Community 106 - "Community 106"
+Cohesion: 0.27
+Nodes (9): DictationRecoveryPresentation, rescueWindow, stayQuiet, DictationRescue, dictationRescueExplanation(), DictationRecoveryPresentationTests, DictationRescueModelTests, DictationRescueSettingTests (+1 more)
+
+### Community 107 - "Community 107"
+Cohesion: 0.18
+Nodes (6): FirstRunTrialButtonStyle, FirstRunTrialButton, FirstRunProminentButton, GlassButton, GlassProminentButton, ViewModifier
 
 ### Community 108 - "Community 108"
 Cohesion: 0.2
@@ -670,72 +668,76 @@ Cohesion: 0.31
 Nodes (5): DictationTimings, DictationTokenTiming, DictationTimingsShapeTests, DictationTimingsStoreTests, withTimingsRoot()
 
 ### Community 111 - "Community 111"
-Cohesion: 0.33
-Nodes (4): leaks(), main(), terms(), LeakGateTests
+Cohesion: 0.27
+Nodes (7): distance(), has_numeral(), main(), measure(), Числительное в ЭТАЛОНЕ - цифрой или словом., words(), NumeralFilterTests
 
 ### Community 112 - "Community 112"
-Cohesion: 0.29
-Nodes (9): alpha(), alphaMatrix(), bandMax(), bandMean(), inkHeight(), makeContext(), makePlainContext(), renderMark() (+1 more)
+Cohesion: 0.33
+Nodes (4): leaks(), main(), terms(), LeakGateTests
 
 ### Community 113 - "Community 113"
 Cohesion: 0.27
 Nodes (6): formattedOSStatus(), formattedOSStatusCode(), fourCharacterCodeString(), millisecondsLabel(), normalizedAudioLevel(), AudioLevelTests
 
 ### Community 114 - "Community 114"
-Cohesion: 0.24
-Nodes (8): applyShutdownPolicyAfterRecording(), AudioSampleAccumulator, CapturedAudioSegments, CapturedRecording, endRecording(), idleStopFired(), policyDrivenStop(), scheduleIdleStop()
+Cohesion: 0.29
+Nodes (9): alpha(), alphaMatrix(), bandMax(), bandMean(), inkHeight(), makeContext(), makePlainContext(), renderMark() (+1 more)
 
 ### Community 115 - "Community 115"
 Cohesion: 0.31
 Nodes (3): Counters, Day, File
 
 ### Community 116 - "Community 116"
-Cohesion: 0.24
-Nodes (5): firstRunCanAdvance(), firstRunNextStep(), firstRunPermissionGranted(), firstRunPreviousStep(), irizAnimation()
-
-### Community 117 - "Community 117"
 Cohesion: 0.33
 Nodes (7): AudioDecodingError, noAudioTrack, silentOrEmpty, tooShort, unreadable, AudioFileDecoder, DecodedAudio
+
+### Community 117 - "Community 117"
+Cohesion: 0.27
+Nodes (5): dictationLearningDemoToast(), DictationLearningToastClose, DictationLearningToastPresenter, DictationLearningToastView, IrizGlassPill
 
 ### Community 118 - "Community 118"
 Cohesion: 0.27
 Nodes (4): DictationHUDDropMarksView, DictationHUDDropZoneView, makeDictationHUDDropZoneWindow(), NSView
 
 ### Community 119 - "Community 119"
+Cohesion: 0.29
+Nodes (9): beginMeetingProcessing(), finishMeetingRecording(), finishTranscription(), processMeetingRecording(), runMeetingAlert(), saveMeetingRecording(), MeetingRecording, meetingRecordingScratchURL() (+1 more)
+
+### Community 120 - "Community 120"
 Cohesion: 0.22
 Nodes (4): IrizGlyphShape, main(), wer(), Shape
 
-### Community 123 - "Community 123"
-Cohesion: 0.33
-Nodes (8): captureDocPlateShots(), captureDocShots(), docMenuState(), docSettingsPages(), DocShot, docShots(), makeDocWindow(), makeIrizSettingsWindow()
+### Community 122 - "Community 122"
+Cohesion: 0.27
+Nodes (4): firstRunCanAdvance(), firstRunNextStep(), firstRunPreviousStep(), irizAnimation()
 
 ### Community 124 - "Community 124"
 Cohesion: 0.33
 Nodes (3): MenuState, MenuStateHeroTests, MenuStatePromiseTests
 
 ### Community 125 - "Community 125"
+Cohesion: 0.33
+Nodes (8): captureDocPlateShots(), captureDocShots(), docMenuState(), docSettingsPages(), DocShot, docShots(), makeDocWindow(), IrizGlassBackdrop
+
+### Community 126 - "Community 126"
 Cohesion: 0.24
 Nodes (6): WhisperEngine, WhisperEngineError, contextFailed, modelMissing, transcribeFailed, LocalizedError
 
-### Community 126 - "Community 126"
+### Community 127 - "Community 127"
 Cohesion: 0.18
-Nodes (10): DictationRescueRetryOutcome, focusDidNotReturn, notDelivered, unknownTarget, PromptModule, actionBoundaries, finalCheck, grounding (+2 more)
+Nodes (10): DictationRecoverySilence, delivered, mayHaveBeenInserted, nothingToShow, turnedOff, verdictNotFinal, DictationRescueRetryOutcome, focusDidNotReturn (+2 more)
 
-### Community 128 - "Community 128"
+### Community 129 - "Community 129"
 Cohesion: 0.2
 Nodes (9): SettingsSectionSpec, appearance, behavior, corrections, layout, promptGuidance, promptMode, snippets (+1 more)
 
-### Community 129 - "Community 129"
+### Community 130 - "Community 130"
 Cohesion: 0.24
 Nodes (4): Dict, iz_dereva(), selftest(), sobrat()
 
-### Community 130 - "Community 130"
+### Community 131 - "Community 131"
 Cohesion: 0.24
 Nodes (5): LayoutDetector, LayoutVerdict, keep, switchToConverted, undecided
-
-### Community 131 - "Community 131"
-Cohesion: 0.2
-Nodes (10): FocusTarget, dictation, history, layout, meeting, mode, permissions, quit (+2 more)
 
 ### Community 132 - "Community 132"
 Cohesion: 0.31
@@ -743,19 +745,23 @@ Nodes (3): MenuActionRow, MenuBarLabelView, MenuContentView
 
 ### Community 133 - "Community 133"
 Cohesion: 0.2
+Nodes (10): FocusTarget, dictation, history, layout, meeting, mode, permissions, quit (+2 more)
+
+### Community 134 - "Community 134"
+Cohesion: 0.2
 Nodes (9): 安全, 这些是怎么被验证的，而不是被口头保证的, 如果你发现了漏洞, 这个项目不承诺什么, 为什么这条界线画在这里, 出问题时会发生什么, 你可以自己检查什么, 这里真正值钱的是什么 (+1 more)
 
 ### Community 136 - "Community 136"
-Cohesion: 0.33
-Nodes (8): beginMeetingProcessing(), finishMeetingRecording(), processMeetingRecording(), runMeetingAlert(), saveMeetingRecording(), MeetingRecording, meetingRecordingScratchURL(), writeMeetingWAV()
-
-### Community 137 - "Community 137"
 Cohesion: 0.28
 Nodes (7): DictationRecordingPurpose, dictation, meeting, prompt, translation, promptInsertionAllowed(), textInsertionTargetAllowsPosting()
 
-### Community 138 - "Community 138"
+### Community 137 - "Community 137"
 Cohesion: 0.33
 Nodes (3): migratePrivateRootIfNeeded(), IrizSupportDirectoryMigrationTests, IrizSupportDirectoryStrayTests
+
+### Community 138 - "Community 138"
+Cohesion: 0.22
+Nodes (9): PromptOutcomeIssue, blockingChoiceMissingQuestion, discoverableBlocks, emptyPrompt, excessiveLength, missingAmbiguity, missingExplicitField, notActionable (+1 more)
 
 ### Community 139 - "Community 139"
 Cohesion: 0.33
@@ -763,15 +769,15 @@ Nodes (8): koefficienty(), obrezat_polya(), proverit_ekran(), Коэффицие
 
 ### Community 142 - "Community 142"
 Cohesion: 0.39
-Nodes (7): captureBareGlass(), captureOverBackdrop(), captureSettingsWindowLive(), captureWindowLive(), makeBackdropWindow(), probeSettingsGlass(), IrizGlassBackdrop
+Nodes (7): makeIrizSettingsWindow(), captureBareGlass(), captureOverBackdrop(), captureSettingsWindowLive(), captureWindowLive(), makeBackdropWindow(), probeSettingsGlass()
 
 ### Community 144 - "Community 144"
-Cohesion: 0.31
-Nodes (4): RecordingReleaseAction, discardTooShort, transcribe, RecordingReleaseActionTests
-
-### Community 145 - "Community 145"
 Cohesion: 0.36
 Nodes (6): DictionaryTransferDocument, DictionaryTemplateTests, DictionaryTransferMergeTests, DictionaryTransferRefusalTests, DictionaryTransferRoundTripTests, json()
+
+### Community 145 - "Community 145"
+Cohesion: 0.31
+Nodes (4): RecordingReleaseAction, discardTooShort, transcribe, RecordingReleaseActionTests
 
 ### Community 147 - "Community 147"
 Cohesion: 0.25
@@ -790,70 +796,66 @@ Cohesion: 0.25
 Nodes (7): AppProfileAddOutcome, added, invalidBundleID, listFull, updated, LayoutHotkeyConfig, LayoutHotkeySettingsAccess
 
 ### Community 151 - "Community 151"
-Cohesion: 0.36
-Nodes (4): dictationLearningDemoToast(), DictationLearningToastClose, DictationLearningToastPresenter, DictationLearningToastView
-
-### Community 152 - "Community 152"
 Cohesion: 0.22
 Nodes (8): 参与进来, 提交之前, 这里的代码怎么写, 一次改动的路线, 现在最缺的是什么, 你需要什么, code:bash (git clone https://github.com/zarubinvibe/iriz.git ~/iriz), code:bash (swift test)
 
-### Community 153 - "Community 153"
+### Community 152 - "Community 152"
 Cohesion: 0.22
 Nodes (8): Before you send a change, code:bash (git clone https://github.com/zarubinvibe/iriz.git ~/iriz), code:bash (swift test), Contributing, How code is written here, The path of a change, What is needed most right now, What you need
 
-### Community 154 - "Community 154"
+### Community 153 - "Community 153"
 Cohesion: 0.22
 Nodes (8): Как помочь, Прежде чем присылать правку, Как тут пишут, Путь правки, Что сейчас нужнее всего, Что нужно на машине, code:bash (git clone https://github.com/zarubinvibe/iriz.git ~/iriz), code:bash (swift test)
 
-### Community 155 - "Community 155"
+### Community 154 - "Community 154"
 Cohesion: 0.22
 Nodes (8): Build a macOS release, Build and check locally, code:bash (swift test --no-parallel), code:bash (SMLTLK_SIGN_IDENTITY='Developer ID Application: YOUR NAME (T), Developer ID and notarization, GitHub Actions, One version, two file names, Patterns used here
 
-### Community 157 - "Community 157"
+### Community 156 - "Community 156"
 Cohesion: 0.39
 Nodes (5): promptAgentRefused(), promptFailureKind(), safePromptFailureLogLabel(), PromptFailureKindTests, PromptAgentRefusalTests
 
-### Community 158 - "Community 158"
+### Community 157 - "Community 157"
 Cohesion: 0.32
 Nodes (4): irizApplicationSupportDirectoryURL(), diskUsageBytes(), diskUsageEntries(), DiskUsageEntry
+
+### Community 159 - "Community 159"
+Cohesion: 0.32
+Nodes (5): applyShutdownPolicyAfterRecording(), AudioSampleAccumulator, CapturedAudioSegments, CapturedRecording, endRecording()
 
 ### Community 160 - "Community 160"
 Cohesion: 0.46
 Nodes (5): DictationLanguage, whisperCoreMLEncoderURL(), whisperModelCacheDirectory(), whisperModelURL(), WhisperEngineTests
 
 ### Community 161 - "Community 161"
-Cohesion: 0.43
-Nodes (6): applyDefaults(), DefaultCorrectionsSyntheticCorpusTests, DefaultCorrectionsTrapTests, PunctuationMetrics, SyntheticCorrectionCorpus, SyntheticPunctuationGuardTests
-
-### Community 162 - "Community 162"
 Cohesion: 0.25
 Nodes (8): DictationHUDActionID, collapse, history, language, modePrompt, modeTranslation, record, settings
 
-### Community 163 - "Community 163"
+### Community 162 - "Community 162"
 Cohesion: 0.39
 Nodes (8): dictationHUDDismissDelay(), dictationHUDPresenceReport(), DictationHUDPresentation, hidden, visible, dictationHUDStageIsTerminal(), DictationHUDDismissTests, DictationHUDPresentationTests
 
-### Community 164 - "Community 164"
+### Community 163 - "Community 163"
 Cohesion: 0.25
 Nodes (8): DictationHUDForm, ellipsis, exclamation, historyLine, line, processing, slash, waveform
 
-### Community 165 - "Community 165"
+### Community 164 - "Community 164"
 Cohesion: 0.25
 Nodes (7): Правила проекта, Контекст уходит в модель сжатым, Ворота приемки, Конвейер Гелиоза в этом доме, Knowledge graph, Каждая задача делается по /ponytail, Поправки в сам прибор - `queue/UPSTREAM.md`
 
-### Community 166 - "Community 166"
+### Community 165 - "Community 165"
 Cohesion: 0.25
 Nodes (7): 首次安装时的对话, 第 1 步：先看看你在什么机器上运行, 第 2 步：把源码拿下来, 第 3 步：构建应用, 第 4 步：下载模型并授予权限, 第 5 步：验证这一切是不是诚实的, code:bash (bash scripts/verify.sh && bash scripts/offline_binary_gate.s)
 
-### Community 167 - "Community 167"
+### Community 166 - "Community 166"
 Cohesion: 0.25
 Nodes (7): code:bash (bash scripts/verify.sh && bash scripts/offline_binary_gate.s), Step 1: look at what you are running, Step 2: bring the sources in, Step 3: build the app, Step 4: download the model and grant permissions, Step 5: check that it is all honest, The conversation at the first install
 
-### Community 168 - "Community 168"
+### Community 167 - "Community 167"
 Cohesion: 0.25
 Nodes (7): Разговор при первой установке, Шаг 1: смотрим, на чем ты запускаешь, Шаг 2: приносим исходники, Шаг 3: собираем приложение, Шаг 4: скачиваем модель и выдаем разрешения, Шаг 5: проверяем, что все честно, code:bash (bash scripts/verify.sh && bash scripts/offline_binary_gate.s)
 
-### Community 170 - "Community 170"
+### Community 169 - "Community 169"
 Cohesion: 0.29
 Nodes (7): State, generatingPrompt, ready, recording, transcribing, unavailable, warmingUp
 
@@ -879,11 +881,11 @@ Nodes (7): PromptFailureKind, agentRefused, artifactConflict, executableConfigur
 
 ### Community 177 - "Community 177"
 Cohesion: 0.43
-Nodes (3): dictationHUDShowsDragHint(), DictationHUDHintModelTests, DictationHUDSettingsModelTests
+Nodes (3): LayoutSettingsAccess, AppProfilesFixture, SettingsAppProfilesTests
 
 ### Community 178 - "Community 178"
-Cohesion: 0.43
-Nodes (3): LayoutSettingsAccess, AppProfilesFixture, SettingsAppProfilesTests
+Cohesion: 0.29
+Nodes (7): DictationSnippetDefect, bodyTooLong, emptyBody, emptyTrigger, forbiddenCharacter, triggerTooLong, triggerWithoutLetterOrDigit
 
 ### Community 180 - "Community 180"
 Cohesion: 0.29
@@ -905,17 +907,13 @@ Nodes (6): 首次启动, 遇到问题, 更新与回退, 核对下载文件, code
 Cohesion: 0.29
 Nodes (6): code:bash (shasum -a 256 ~/Downloads/iriz-macos-arm64.dmg), First launch, If something stops, Install iriz on macOS, Update or go back, Verify the download
 
-### Community 187 - "Community 187"
+### Community 188 - "Community 188"
 Cohesion: 0.47
 Nodes (5): bar_rects(), olympus_profile(), Верхний обвод Олимпа с референса: гора красная, небо бледное, вода синяя., Прямоугольники столбиков волны. Одна геометрия и на свет, и на сами     стержни:, render()
 
-### Community 189 - "Community 189"
+### Community 190 - "Community 190"
 Cohesion: 0.73
 Nodes (3): SettingsDictionaryTransferTests, SettingsSnippetsTests, TransferFixture
-
-### Community 190 - "Community 190"
-Cohesion: 0.33
-Nodes (6): DictationRecoverySilence, delivered, mayHaveBeenInserted, nothingToShow, turnedOff, verdictNotFinal
 
 ### Community 191 - "Community 191"
 Cohesion: 0.33
@@ -935,43 +933,35 @@ Nodes (5): IrizBackdrop, black, gradient, stripes, white
 
 ### Community 200 - "Community 200"
 Cohesion: 0.4
-Nodes (5): DictationHUDAnchorEdge, bottom, left, right, top
+Nodes (4): SpeechCleanupMode, external, local, off
 
 ### Community 201 - "Community 201"
 Cohesion: 0.4
-Nodes (5): IrizLanguage, auto, en, ru, zh
+Nodes (4): SpeechModelProfile, multilingualV3, whisperLargeV3, whisperTurbo
 
 ### Community 202 - "Community 202"
 Cohesion: 0.4
-Nodes (4): SpeechCleanupMode, external, local, off
+Nodes (5): DictationHUDAnchorEdge, bottom, left, right, top
 
-### Community 204 - "Community 204"
+### Community 203 - "Community 203"
 Cohesion: 0.4
-Nodes (5): MeetingPipelineFailure, audioUnreadable, nothingRecognized, storeFailed, transcriptionFailed
+Nodes (5): IrizLanguage, auto, en, ru, zh
 
 ### Community 206 - "Community 206"
 Cohesion: 0.4
 Nodes (4): Русский, 简体中文, English, iriz 0.2.1
 
-### Community 212 - "Community 212"
+### Community 213 - "Community 213"
 Cohesion: 0.5
 Nodes (4): EngineShutdownPolicy, idleTimeout, immediate, keepWarm
 
-### Community 213 - "Community 213"
+### Community 214 - "Community 214"
 Cohesion: 0.5
 Nodes (4): AudioPowerAction, none, resumeListening, suspendRuntime
 
 ### Community 218 - "Community 218"
 Cohesion: 0.67
 Nodes (3): AudioPowerEvent, didWake, willSleep
-
-### Community 219 - "Community 219"
-Cohesion: 0.67
-Nodes (3): DictationHUDWaveFlow, forward, symmetric
-
-### Community 220 - "Community 220"
-Cohesion: 0.67
-Nodes (3): DictationHUDMark, chevron, none
 
 ## Knowledge Gaps
 - **678 isolated node(s):** `first`, `second`, `SyntheticCorrectionCorpus`, `shortCommand`, `fragmentedSpeech` (+673 more)
@@ -981,11 +971,11 @@ Nodes (3): DictationHUDMark, chevron, none
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `DictationSettings` connect `Community 23` to `Community 161`, `Community 97`, `Community 195`, `Community 227`, `Community 5`, `Community 70`, `Community 6`, `Community 72`, `Community 141`, `Community 209`, `Community 177`, `Community 52`, `Community 25`, `Community 121`, `Community 57`, `Community 222`, `Community 95`?**
+- **Why does `DictationSettings` connect `Community 23` to `Community 225`, `Community 194`, `Community 68`, `Community 5`, `Community 27`, `Community 10`, `Community 106`, `Community 12`, `Community 44`, `Community 141`, `Community 209`, `Community 52`, `Community 89`, `Community 58`, `Community 123`, `Community 220`, `Community 93`?**
   _High betweenness centrality (0.044) - this node is a cross-community bridge._
-- **Why does `DictationHUDPanelSurface` connect `Community 10` to `Community 2`, `Community 68`, `Community 5`, `Community 73`, `Community 41`, `Community 106`, `Community 18`, `Community 22`, `Community 122`, `Community 59`?**
+- **Why does `DictationHUDPanelSurface` connect `Community 7` to `Community 2`, `Community 5`, `Community 69`, `Community 104`, `Community 41`, `Community 53`, `Community 21`, `Community 91`?**
   _High betweenness centrality (0.039) - this node is a cross-community bridge._
-- **Why does `L()` connect `Community 19` to `Community 36`, `Community 37`, `Community 70`, `Community 136`, `Community 73`, `Community 106`, `Community 60`, `Community 81`, `Community 86`, `Community 55`, `Community 57`, `Community 28`?**
+- **Why does `L()` connect `Community 22` to `Community 26`, `Community 101`, `Community 38`, `Community 7`, `Community 39`, `Community 104`, `Community 106`, `Community 82`, `Community 119`, `Community 58`, `Community 60`, `Community 30`?**
   _High betweenness centrality (0.035) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `DictationHUDPanelSurface` (e.g. with `wireHUD()` and `captureDictationHUDPlateScenes()`) actually correct?**
   _`DictationHUDPanelSurface` has 4 INFERRED edges - model-reasoned connections that need verification._

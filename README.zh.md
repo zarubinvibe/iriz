@@ -146,7 +146,7 @@ Apple Silicon · macOS 14+ · 语音模型需另行下载，约 500 MB
 
 打开 iriz，在引导中点击「下载并安装 Parakeet」（约 500 MB），然后按后续步骤授予权限。等模型就绪，将光标放入文本框，再试用听写快捷键。
 
-[安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建另需 Xcode 和 Swift 6，命令及其他安装方式见下方。
+[安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建另需 Xcode 26 或更新版本（含 macOS 26 SDK 和 Swift 6），命令及其他安装方式见下方。
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz

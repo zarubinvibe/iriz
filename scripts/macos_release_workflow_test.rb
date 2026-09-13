@@ -14,18 +14,50 @@ end
 events = workflow['on'] || workflow[true] # Ruby's bundled YAML 1.1 treats "on" as true.
 check(events.keys.sort == %w[push workflow_dispatch], 'Only manual and tag triggers are allowed')
 check(events['push'] == { 'tags' => ['v*'] }, 'Push must be limited to version tags')
+build_only = events.fetch('workflow_dispatch').fetch('inputs').fetch('build_only')
+check(build_only['type'] == 'boolean' && build_only['default'] == false, 'build_only must be a boolean defaulting to false')
+check(build_only['description'].is_a?(String) && !build_only['description'].empty?, 'build_only must explain its purpose')
 check(workflow['permissions'] == { 'contents' => 'read' }, 'Default token must be read-only')
 build, draft = workflow.fetch('jobs').values_at('build', 'draft')
 guard = "github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'"
-[build, draft].each { |job| check(job['if'] == guard, 'Private repositories and forks must be skipped') }
+draft_guard = "#{guard} && !(github.event_name == 'workflow_dispatch' && inputs.build_only)"
+check(build['if'] == guard, 'Private repositories and forks must be skipped without disabling build_only builds')
+check(draft['if'] == draft_guard, 'Only manual build_only runs may skip the draft in the public source repository')
+[
+  ['manual draft', 'zarubinvibe/iriz', 'public', 'workflow_dispatch', false, true, true],
+  ['manual artifacts only', 'zarubinvibe/iriz', 'public', 'workflow_dispatch', true, true, false],
+  ['tag draft', 'zarubinvibe/iriz', 'public', 'push', nil, true, true],
+  ['tag ignores manual input', 'zarubinvibe/iriz', 'public', 'push', true, true, true],
+  ['private manual skip', 'zarubinvibe/iriz', 'private', 'workflow_dispatch', false, false, false],
+  ['private build-only skip', 'zarubinvibe/iriz', 'private', 'workflow_dispatch', true, false, false],
+  ['fork manual skip', 'fixture/iriz', 'public', 'workflow_dispatch', false, false, false],
+  ['fork tag skip', 'fixture/iriz', 'public', 'push', nil, false, false]
+].each do |name, repository, visibility, event, input, expected_build, expected_draft|
+  values = { 'github.repository' => repository, 'github.event.repository.visibility' => visibility,
+             'github.event_name' => event, 'inputs.build_only' => input }
+  # Expressions are fixed by the equality checks above; evaluate only literal substitutions.
+  actual = [build, draft].map do |job|
+    expression = job['if'].gsub(/github\.event\.repository\.visibility|github\.repository|github\.event_name|inputs\.build_only/) do |key|
+      values.fetch(key).inspect
+    end
+    eval(expression) # Ruby and GitHub share ==, && and ! for these literals.
+  end
+  check(actual == [expected_build, expected_draft], "#{name}: unexpected job conditions #{actual.inspect}")
+  puts "PASS #{name}"
+end
 check(build['permissions'] == { 'contents' => 'read' }, 'Build must not receive a write token')
 check(draft['permissions'] == { 'contents' => 'write' } && draft['needs'] == 'build', 'Draft must depend on the read-only build')
 check(build['runs-on'] == 'macos-15' && build['env']['SMLTLK_SIGN_IDENTITY'] == '-', 'Build must use standard ARM64 and ad-hoc signing')
+check(build['env']['DEVELOPER_DIR'] == '/Applications/Xcode_26.3.app/Contents/Developer', 'Pin the available Xcode 26.3 toolchain')
 check(build['env']['IRIZ_NOTARY_PROFILE'] == '' && build['env']['IRIZ_DMG_HEADLESS'] == '1', 'No Apple credentials or Finder in CI')
 check(build['steps'].any? { |step| step['run'] == 'swift test --no-parallel --jobs 2' }, 'Serial tests must precede packaging')
 test_index = build['steps'].index { |step| step['run'] == 'swift test --no-parallel --jobs 2' }
 package_index = build['steps'].index { |step| step['run'] == 'bash scripts/make_release.sh' }
 check(package_index && test_index < package_index, 'Packaging must follow successful tests')
+check(build['steps'].none? { |step| step.key?('if') }, 'build_only must retain every build, test, verification and upload step')
+check(build['steps'].any? { |step| step['name'] == 'Verify the exact release files' }, 'Build must verify its release files')
+upload = build['steps'].find { |step| step['id'] == 'upload' }
+check(upload && upload.fetch('with')['overwrite'] == false, 'Build artifacts must upload without overwriting another run')
 check(draft['steps'].none? { |step| step['uses'].to_s.start_with?('actions/checkout@') }, 'No checkout in the write job')
 workflow['jobs'].each_value do |job|
   job['steps'].each do |step|
@@ -42,25 +74,45 @@ puts 'PASS workflow triggers, permissions, pins and Bash syntax'
 sha = 'a' * 40
 version_script = build['steps'].find { |step| step['id'] == 'version' }.fetch('run')
 toolchain = <<'BASH'
-uname() { printf '%s\n' "$MOCK_ARCH"; }
-xcodebuild() { printf 'Xcode 16.4 (synthetic)\n'; }
-xcrun() { printf '%s\n' "$MOCK_SWIFT"; }
-git() { printf '%s\n' "$SOURCE_SHA"; }
+uname() { [[ "$*" == '-m' ]] || return 99; printf '%s\n' "$MOCK_ARCH"; }
+xcodebuild() { [[ "$*" == '-version' ]] || return 99; printf '%s\n' "$MOCK_XCODE"; }
+xcrun() {
+  case "$*" in
+    'swift --version') printf '%s\n' "$MOCK_SWIFT" ;;
+    '--sdk macosx --show-sdk-version')
+      if [[ "$MOCK_SDK_EXIT" != 0 ]]; then printf 'Synthetic SDK lookup failure\n' >&2; return "$MOCK_SDK_EXIT"; fi
+      printf '%s\n' "$MOCK_SDK"
+      ;;
+    *) printf 'Unexpected xcrun arguments\n' >&2; return 99 ;;
+  esac
+}
+git() { [[ "$*" == 'rev-parse HEAD' ]] || return 99; printf '%s\n' "$SOURCE_SHA"; }
 BASH
 Dir.mktmpdir('iriz-workflow-test-') do |fixture|
+  defaults = { version: '0.2.1', ref_type: 'branch', ref_name: 'main', arch: 'arm64',
+               swift: 'Swift version 6.2.3', xcode: "Xcode 26.3\nBuild version 17C529", sdk: '26.2' }
   [
-    ['manual version', '0.2.1', 'branch', 'main', 'arm64', 'Swift version 6.1.2', true],
-    ['matching version tag', '0.2.1', 'tag', 'v0.2.1', 'arm64', 'Swift version 6.1.2', true],
-    ['mismatched version tag', '0.2.1', 'tag', 'v0.2.2', 'arm64', 'Swift version 6.1.2', false],
-    ['invalid version', '../bad', 'branch', 'main', 'arm64', 'Swift version 6.1.2', false],
-    ['Intel runner', '0.2.1', 'branch', 'main', 'x86_64', 'Swift version 6.1.2', false],
-    ['old Swift', '0.2.1', 'branch', 'main', 'arm64', 'Swift version 5.10', false]
-  ].each do |name, version, ref_type, ref_name, arch, swift, expected|
-    File.write(File.join(fixture, 'RELEASE_VERSION'), version + "\n")
-    env = { 'SOURCE_SHA' => sha, 'GITHUB_OUTPUT' => File::NULL, 'GITHUB_REF_TYPE' => ref_type,
-            'GITHUB_REF_NAME' => ref_name, 'MOCK_ARCH' => arch, 'MOCK_SWIFT' => swift }
+    ['manual version', {}, nil],
+    ['matching version tag', { ref_type: 'tag', ref_name: 'v0.2.1' }, nil],
+    ['newer SDK', { sdk: '27.0' }, nil],
+    ['SDK major only', { sdk: '26' }, nil],
+    ['mismatched version tag', { ref_type: 'tag', ref_name: 'v0.2.2' }, 'The tag must match RELEASE_VERSION.'],
+    ['invalid version', { version: '../bad' }, 'Invalid RELEASE_VERSION'],
+    ['Intel runner', { arch: 'x86_64' }, 'An ARM64 runner is required.'],
+    ['old Xcode', { xcode: 'Xcode 16.4' }, 'Xcode 26 is required.'],
+    ['old Swift', { swift: 'Swift version 5.10' }, 'Swift 6 is required.'],
+    ['old SDK', { sdk: '15.5' }, 'macOS SDK 26 or newer is required.'],
+    ['empty SDK', { sdk: '' }, 'macOS SDK 26 or newer is required.'],
+    ['malformed SDK', { sdk: '26.2-beta' }, 'macOS SDK 26 or newer is required.'],
+    ['SDK lookup failure', { sdk_exit: 42 }, 'Synthetic SDK lookup failure']
+  ].each do |name, overrides, error|
+    values = defaults.merge(overrides)
+    File.write(File.join(fixture, 'RELEASE_VERSION'), values[:version] + "\n")
+    env = { 'SOURCE_SHA' => sha, 'GITHUB_OUTPUT' => File::NULL, 'GITHUB_REF_TYPE' => values[:ref_type],
+            'GITHUB_REF_NAME' => values[:ref_name], 'MOCK_ARCH' => values[:arch], 'MOCK_SWIFT' => values[:swift],
+            'MOCK_XCODE' => values[:xcode], 'MOCK_SDK' => values[:sdk], 'MOCK_SDK_EXIT' => values.fetch(:sdk_exit, 0).to_s }
     output, status = Open3.capture2e(env, 'bash', '-c', toolchain + version_script, chdir: fixture)
-    check(status.success? == expected, "#{name}: #{output}")
+    check(error ? status.exitstatus == values.fetch(:sdk_exit, 1) && output.lines.map(&:strip).include?(error) : status.success?, "#{name}: #{output}")
     puts "PASS #{name}"
   end
 end

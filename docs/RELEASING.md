@@ -19,7 +19,7 @@ The two images are byte-identical. GitHub supports [a latest-release asset URL](
 
 ## Build and check locally
 
-Use macOS with Xcode and Swift 6. Dependencies come from `Package.resolved`. For a build without a signing certificate or Finder automation:
+Use macOS with Xcode 26, a macOS 26 SDK and Swift 6. The app still targets macOS 14+, but compiling its availability-guarded macOS 26 interface requires the newer SDK. Dependencies come from `Package.resolved`. For a build without a signing certificate or Finder automation:
 
 ```bash
 swift test --no-parallel
@@ -43,7 +43,9 @@ For an experimental universal build, set `IRIZ_RELEASE_VARIANTS='arm64 universal
 
 The **macOS release draft** workflow runs manually or on a `v*` tag in this public repository. It is inactive in forks and the private working repository. The tag, when present, must match `RELEASE_VERSION`.
 
-The ARM64 runner runs the tests, builds the headless ad-hoc image and uploads exactly four files. A separate job verifies their checksums, version and source commit, then creates a **draft** release. It does not execute repository code with a write token. Existing releases and assets are never overwritten. A draft does not change the download button.
+The standard ARM64 `macos-15` runner uses Xcode 26.3, listed in [GitHub's runner image manifest](https://github.com/actions/runner-images/blob/f95c0c791f690fa64eaf9788bea06643a4176db5/images/macos/macos-15-arm64-Readme.md#xcode). The preflight checks the selected Xcode, Swift and macOS SDK before compiling. The runner runs the tests, builds the headless ad-hoc image and uploads exactly four files. A separate job verifies their checksums, version and source commit, then creates a **draft** release. It does not execute repository code with a write token. Existing releases and assets are never overwritten. A draft does not change the download button.
+
+To verify the full build for a version that is already published, use **Run workflow → build_only: true**. This runs the tests, builds and verifies the DMG, and uploads the four files as an Actions artifact. The entire release-writing job is skipped: no draft, tag, asset or Latest change. With the default `false`, an existing release makes the draft job fail without changing it.
 
 A maintainer reviews the draft, the release notes and a clean-machine install, runs the publication checks, then publishes it. Publishing is a separate action. No Apple credentials are required by this workflow and no background updater is installed in the app.
 

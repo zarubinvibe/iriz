@@ -17,7 +17,7 @@ You download the speech model over the network by pressing a button.
 
 ## Step 1: look at what you are running
 
-**What I do:** check the macOS version, the processor, and whether Xcode with Swift 6 is here.
+**What I do:** check the macOS version, the processor, and, for building from source, Xcode 26 or newer with the macOS 26 SDK and Swift 6.
 
 **Why:** iriz lives on macOS 14 and newer. The glass plate and real Liquid Glass are macOS 26;
 on 14 and 15 the app works, but the plate is drawn the old way. Better to know that now than

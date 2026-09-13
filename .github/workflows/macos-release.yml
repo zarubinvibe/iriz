@@ -2,6 +2,11 @@ name: macOS release draft
 
 on:
   workflow_dispatch:
+    inputs:
+      build_only:
+        description: Build, test and upload artifacts without creating a release draft
+        type: boolean
+        default: false
   push:
     tags:
       - 'v*'
@@ -28,7 +33,8 @@ jobs:
     permissions:
       contents: read
     env:
-      DEVELOPER_DIR: /Applications/Xcode_16.4.app/Contents/Developer
+      # macOS 26 APIs need the newer SDK even with a macOS 14 deployment target.
+      DEVELOPER_DIR: /Applications/Xcode_26.3.app/Contents/Developer
       SMLTLK_SIGN_IDENTITY: '-'
       IRIZ_NOTARY_PROFILE: ''
       IRIZ_DMG_HEADLESS: '1'
@@ -43,7 +49,7 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Validate version and Swift 6 toolchain
+      - name: Validate version, Xcode 26 and macOS SDK
         id: version
         run: |
           set -euo pipefail
@@ -54,10 +60,16 @@ jobs:
             exit 1
           fi
           [[ "$(uname -m)" == arm64 ]] || { echo 'An ARM64 runner is required.'; exit 1; }
-          xcodebuild -version
+          xcode_version=$(xcodebuild -version)
+          printf '%s\n' "$xcode_version"
+          [[ "$xcode_version" == 'Xcode 26.'* ]] || { echo 'Xcode 26 is required.'; exit 1; }
           swift_version=$(xcrun swift --version)
           printf '%s\n' "$swift_version"
           [[ "$swift_version" == *'Swift version 6.'* ]] || { echo 'Swift 6 is required.'; exit 1; }
+          sdk_version=$(xcrun --sdk macosx --show-sdk-version)
+          printf 'macOS SDK: %s\n' "$sdk_version"
+          [[ "$sdk_version" =~ ^([0-9]+)(\.[0-9]+){0,2}$ ]] && (( 10#${BASH_REMATCH[1]} >= 26 )) \
+            || { echo 'macOS SDK 26 or newer is required.'; exit 1; }
           printf 'version=%s\n' "$version" >> "$GITHUB_OUTPUT"
           printf 'source_sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
@@ -104,7 +116,7 @@ jobs:
 
   draft:
     needs: build
-    if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'
+    if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public' && !(github.event_name == 'workflow_dispatch' && inputs.build_only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     # No checkout or repository scripts run with this write token.
