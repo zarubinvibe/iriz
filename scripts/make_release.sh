@@ -260,6 +260,24 @@ write_info_plist() { # write_info_plist <путь к .app>
 PLIST
 }
 
+check_meeting_resources() {
+  local bundle="$1/Contents/Resources/IrizApp_IrizDictate.bundle"
+  local package="$bundle/MeetingMinutes" links file digest
+  [ -d "$package" ] || fail "пакет протокола MeetingMinutes не найден в $bundle"
+  links=$(find "$bundle" -type l -print) || fail "пакет протокола не удалось проверить"
+  [ -z "$links" ] || fail "симлинк в пакете протокола: $links"
+  for file in template.docx fields.json data.schema.json manifest.json README.md template.md \
+    docs/formatting.md docs/filling-rules.md docs/filler-usage.md docs/owner-changes.md docs/verification.md \
+    scripts/fill_template.py scripts/verify_package.py tests/test_fill_template.py \
+    examples/data.example.json examples/filled.example.docx \
+    fonts/PT_Serif-Web-Regular.ttf fonts/PT_Serif-Web-Bold.ttf fonts/OFL.txt; do
+    [ -f "$package/$file" ] && [ -s "$package/$file" ] || fail "пакет протокола: отсутствует или пуст $file"
+  done
+  digest=$(shasum -a 256 "$package/template.docx") || fail "SHA-256 шаблона протокола не удалось прочитать"
+  [ "${digest%% *}" = 8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff ] \
+    || fail "SHA-256 шаблона протокола не совпадает с эталоном"
+}
+
 make_bundle() { # make_bundle <бинарь> <путь к .app>
   local binary="$1" app="$2"
   mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
@@ -275,6 +293,7 @@ make_bundle() { # make_bundle <бинарь> <путь к .app>
     [ -d "$bundle" ] || continue
     cp -R "$bundle" "$app/Contents/Resources/"
   done
+  check_meeting_resources "$app"
   for locale in ru en zh-hans; do
     find "$app/Contents/Resources/IrizApp_IrizCore.bundle" -type f \
       -ipath "*/$locale.lproj/Localizable.strings" | grep . >/dev/null \
@@ -500,6 +519,7 @@ build_dmg() { # build_dmg <вариант> <бинарь>; без subshell, чт
   [ -L "$mount_point/Applications" ] || mounted_ok=0
   [ "$(readlink "$mount_point/Applications")" = /Applications ] || mounted_ok=0
   [ -d "$mount_point/iriz.app/Contents/Resources/IrizApp_IrizCore.bundle" ] || mounted_ok=0
+  check_meeting_resources "$mount_point/iriz.app"
   # Вид окна записан - иначе получатель увидит список файлов вместо двух
   # значков со стрелкой, и «перетащи» превратится в «разбирайся сам».
   if [ "$HEADLESS" -eq 0 ]; then

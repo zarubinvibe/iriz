@@ -6,6 +6,23 @@ cd "$(dirname "$0")/.."
 VERSION=$(tr -d '\n' < RELEASE_VERSION)
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "build_app: неверная RELEASE_VERSION" >&2; exit 1; }
 fail() { printf 'build_app: %s\n' "$*" >&2; exit 1; }
+check_meeting_resources() {
+    local bundle="$1/Contents/Resources/IrizApp_IrizDictate.bundle"
+    local package="$bundle/MeetingMinutes" links file digest
+    [ -d "$package" ] || fail "пакет протокола MeetingMinutes не найден в $bundle"
+    links=$(find "$bundle" -type l -print) || fail "пакет протокола не удалось проверить"
+    [ -z "$links" ] || fail "симлинк в пакете протокола: $links"
+    for file in template.docx fields.json data.schema.json manifest.json README.md template.md \
+        docs/formatting.md docs/filling-rules.md docs/filler-usage.md docs/owner-changes.md docs/verification.md \
+        scripts/fill_template.py scripts/verify_package.py tests/test_fill_template.py \
+        examples/data.example.json examples/filled.example.docx \
+        fonts/PT_Serif-Web-Regular.ttf fonts/PT_Serif-Web-Bold.ttf fonts/OFL.txt; do
+        [ -f "$package/$file" ] && [ -s "$package/$file" ] || fail "пакет протокола: отсутствует или пуст $file"
+    done
+    digest=$(shasum -a 256 "$package/template.docx") || fail "SHA-256 шаблона протокола не удалось прочитать"
+    [ "${digest%% *}" = 8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff ] \
+        || fail "SHA-256 шаблона протокола не совпадает с эталоном"
+}
 swift build -c release --arch arm64
 # Иконка: тот же IrizMark.iconImage → iconset → .build/AppIcon.icns (render_marks.sh).
 bash scripts/render_marks.sh
@@ -60,6 +77,8 @@ cp .build/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 for bundle in .build/release/*.bundle; do
     cp -R "$bundle" "$APP/Contents/Resources/"
 done
+# Комплект — обычный ресурс приложения; вложенные Python-скрипты не исполняются.
+check_meeting_resources "$APP"
 
 # Движок кандидата приходит бинарным фреймворком SwiftPM (whisper.cpp собран
 # заранее, исходников у него в пакете нет). В бандл он сам не попадает: сборщик
@@ -134,6 +153,7 @@ fi
 NEW_INSTALL_STARTED=1
 mv "$APP" "$INSTALL_APP" || fail "не удалось установить подготовленное приложение"
 codesign --verify --deep --strict "$INSTALL_APP" || fail "проверка установленной подписи не прошла"
+check_meeting_resources "$INSTALL_APP"
 INSTALLING=0
 printf 'build_app: установлено %s; резервный каталог: %s\n' "$VERSION" "$BACKUP_DIR"
 

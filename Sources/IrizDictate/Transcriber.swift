@@ -600,7 +600,8 @@ actor TranscriptionWorker {
 
     func transcribe(samples: [Float],
                     language: DictationLanguage = .auto,
-                    requestedAt: TimeInterval) async throws -> TranscriptionWorkerResult {
+                    requestedAt: TimeInterval,
+                    captureTokenTimings: Bool = false) async throws -> TranscriptionWorkerResult {
         let workerEnteredAt = ProcessInfo.processInfo.systemUptime
         guard let engine else {
             throw NSError(domain: "smltlk.Dictation", code: -2,
@@ -635,13 +636,14 @@ actor TranscriptionWorker {
             )
         case .whisper(let whisper):
             let callStartedAt = ProcessInfo.processInfo.systemUptime
-            let text = try whisper.transcribe(samples: samples, language: language)
+            let result = try whisper.transcribeWithDetails(samples: samples, language: language,
+                                                           captureTokenTimings: captureTokenTimings)
             let callSeconds = ProcessInfo.processInfo.systemUptime - callStartedAt
             return TranscriptionWorkerResult(
-                text: text,
-                // whisper.cpp отдает время по СЕГМЕНТАМ, а не по токенам. Выдумывать
-                // потокенную разметку из сегментной нельзя - лента рисует по ней.
-                tokenTimings: [],
+                text: result.text,
+                // Настоящие token timestamps запрашиваются только файловым
+                // opt-in. Сегментные границы здесь не выдают за потокенные.
+                tokenTimings: result.tokenTimings,
                 audioSeconds: Double(samples.count) / SAMPLE_RATE,
                 workerQueueSeconds: workerEnteredAt - requestedAt,
                 // Отдельной стадии подготовки декодера у whisper нет: ноль здесь -

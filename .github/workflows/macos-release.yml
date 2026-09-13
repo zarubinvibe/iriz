@@ -161,24 +161,69 @@ jobs:
           sha256sum --check --strict SHA256SUMS.txt
           cmp "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg
 
-      - name: Create a new draft only
+      - name: Create a new draft or leave the published release unchanged
         working-directory: release-files
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: zarubinvibe/iriz
         run: |
           set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
           tag="v$RELEASE_VERSION"
           # List all pages, including drafts. Any API failure stops the job.
           releases=$(gh api --paginate --slurp "repos/$GH_REPO/releases?per_page=100")
-          release_exists=$(jq -r --arg tag "$tag" 'any(.[][]; .tag_name == $tag)' <<< "$releases")
-          if [[ "$release_exists" != false ]]; then
-            echo "Release $tag already exists; no release or asset was changed."
-            exit 1
-          fi
+          matching=$(jq -cse --arg tag "$tag" '
+            if length == 1 then .[0] else error("Expected one JSON document") end |
+            if type == "array" and length > 0 and all(.[];
+              type == "array" and all(.[]; type == "object" and
+                (.tag_name | type == "string") and (.draft | type == "boolean")))
+            then [.[][] | select(.tag_name == $tag)] else error("Invalid releases response") end
+          ' <<< "$releases")
+          release_count=$(jq -r 'length' <<< "$matching")
+          case "$release_count" in
+            0) ;;
+            1)
+              jq -e '.[0].draft == false' <<< "$matching" > /dev/null \
+                || { echo "Release $tag is a draft; nothing was changed."; exit 1; }
+              # target_commitish is not proof: resolve the exact real Git ref.
+              reference=$(gh api --method GET "repos/$GH_REPO/git/ref/tags/$tag")
+              object=$(jq -cse --arg ref "refs/tags/$tag" '
+                if length == 1 then .[0] else error("Expected one JSON document") end |
+                if type == "object" and .ref == $ref then .object
+                else error("Invalid tag reference") end
+              ' <<< "$reference")
+              # Annotated tags may point to other tags. Bound the walk, including cycles.
+              for ((depth = 0; depth < 16; depth++)); do
+                object_type=$(jq -er '.type | select(. == "commit" or . == "tag")' <<< "$object")
+                tagged_sha=$(jq -er '.sha | select(type == "string" and length == 40 and test("^[0-9a-f]{40}$"))' <<< "$object")
+                [[ "$object_type" != commit ]] || break
+                annotation=$(gh api --method GET "repos/$GH_REPO/git/tags/$tagged_sha")
+                object=$(jq -cse --arg sha "$tagged_sha" '
+                  if length == 1 then .[0] else error("Expected one JSON document") end |
+                  if type == "object" and .sha == $sha then .object
+                  else error("Invalid annotated tag") end
+                ' <<< "$annotation")
+              done
+              [[ "$object_type" == commit && "$tagged_sha" == "$SOURCE_SHA" ]] \
+                || { echo "Tag $tag does not resolve to the expected source commit; nothing was changed."; exit 1; }
+              printf 'Release %s already published, left unchanged. Existing assets were not verified by this no-op.\n' "$tag" \
+                | tee -a "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+            *) echo 'Ambiguous releases response; nothing was changed.'; exit 1 ;;
+          esac
           # An existing tag must identify the commit that produced these files.
           tags=$(gh api --paginate --slurp "repos/$GH_REPO/tags?per_page=100")
-          tagged_sha=$(jq -r --arg tag "$tag" '.[][] | select(.name == $tag) | .commit.sha' <<< "$tags")
+          tagged_sha=$(jq -ers --arg tag "$tag" '
+            if length == 1 then .[0] else error("Expected one JSON document") end |
+            if type == "array" and length > 0 and all(.[];
+              type == "array" and all(.[]; type == "object" and
+                (.name | type == "string") and (.commit.sha | type == "string" and length == 40 and test("^[0-9a-f]{40}$"))))
+            then [.[][] | select(.name == $tag) | .commit.sha]
+              | if length == 0 then "" elif length == 1 then .[0] else error("Duplicate tag") end
+            else error("Invalid tags response") end
+          ' <<< "$tags")
           if [[ -n "$tagged_sha" && "$tagged_sha" != "$SOURCE_SHA" ]]; then
             echo "Tag $tag points to a different commit; nothing was changed."
             exit 1

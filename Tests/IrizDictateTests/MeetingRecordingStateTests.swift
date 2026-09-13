@@ -13,6 +13,24 @@ import Testing
 
 @Suite("Состояние записи встречи")
 struct MeetingRecordingStateTests {
+    @Test("Escape встречи подключён к сохранению звука без запуска разбора")
+    func escapeMeetingSaveWiring() throws {
+        // Статическая регрессия маршрута; не имитирует микрофон или нажатие
+        // Escape. Сам WAV writer отдельно проверяется синтетическими отсчётами.
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .deletingLastPathComponent().deletingLastPathComponent()
+        let code = try String(contentsOf: root.appendingPathComponent("Sources/IrizDictate/DictationController.swift"), encoding: .utf8)
+        let start = try #require(code.range(of: "private func handleCancel()")?.upperBound)
+        let end = try #require(code.range(of: "private func scheduleMaxDurationAutoRelease()", range: start..<code.endIndex)?.lowerBound)
+        let cancel = String(code[start..<end])
+        #expect(cancel.contains("let purpose = recordingPurpose"))
+        #expect(cancel.contains("let captured = audio.endRecording()"))
+        #expect(cancel.contains("if purpose == .meeting"))
+        #expect(cancel.contains("finishMeetingRecording(samples: captured.samples, process: false)"))
+        #expect(!cancel.contains("pipeline.run"))
+        #expect(!cancel.contains("fillMinutes("))
+    }
+
     @Test("встреча записывается до трёх часов, диктовка — до двадцати минут")
     func отдельныйПределВстречи() {
         #expect(DictationController.recordingLimitSeconds(for: .meeting) == 3 * 60 * 60)

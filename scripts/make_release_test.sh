@@ -5,11 +5,19 @@ set -euo pipefail
 case "${1:-}" in ""|--selftest) ;; *) echo "usage: make_release_test.sh [--selftest]" >&2; exit 2 ;; esac
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd -P)"
-mkdir -p "$repo_root/.build"
-test_root="$(mktemp -d "$repo_root/.build/make-release-test.XXXXXX")"
+test_root="$(mktemp -d "${TMPDIR:-/tmp}/make-release-test.XXXXXX")"
+test_root="$(cd "$test_root" && pwd -P)"
 trap 'rm -rf -- "$test_root"' EXIT
 real_python="$(command -v python3)"
 mkdir -p "$test_root/bin"
+cp -R "$repo_root/Sources/IrizDictate/Resources/MeetingMinutes" "$test_root/MeetingMinutes"
+minutes_sha=8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff
+[ "$(shasum -a 256 "$test_root/MeetingMinutes/template.docx" | awk '{print $1}')" = "$minutes_sha" ]
+minutes_files=(template.docx data.schema.json fields.json manifest.json README.md template.md
+  scripts/fill_template.py scripts/verify_package.py
+  fonts/PT_Serif-Web-Regular.ttf fonts/PT_Serif-Web-Bold.ttf fonts/OFL.txt
+  docs/formatting.md docs/filling-rules.md docs/filler-usage.md docs/owner-changes.md docs/verification.md
+  examples/data.example.json examples/filled.example.docx tests/test_fill_template.py)
 
 # ponytail: один диспетчер вместо библиотеки моков; настоящий DMG проверяет macOS CI.
 cat > "$test_root/bin/stub" <<'STUB'
@@ -52,6 +60,21 @@ case "$name" in
         printf '"hello" = "fixture";\n' > "$resource/Localizable.strings"
       done
     fi
+    if [ "${TEST_FAULT:-}" != minutes-bundle ]; then
+      minutes="$bin/IrizApp_IrizDictate.bundle/MeetingMinutes"
+      mkdir -p "$(dirname "$minutes")"
+      cp -R "$TEST_MINUTES_FIXTURE" "$minutes"
+      case "${TEST_FAULT:-}" in
+        minutes-file) rm "$minutes/${TEST_MISSING_FILE:?}" ;;
+        minutes-digest) printf 'changed template\n' >> "$minutes/template.docx" ;;
+        minutes-symlink)
+          mv "$minutes/template.docx" "$minutes/original-template.docx"
+          ln -s original-template.docx "$minutes/template.docx"
+          ;;
+        minutes-extra-symlink) ln -s scripts "$minutes/unlisted-link" ;;
+      esac
+    fi
+    case "${TEST_FAULT:-}" in minutes-*) : > "$TEST_CASE_ROOT/injected-fault" ;; esac
     ;;
   lipo)
     [ "$1" = -archs ] || deny "$@"
@@ -104,6 +127,11 @@ case "$name" in
           [ -f "$source/iriz.app/Contents/Resources/IrizApp_IrizCore.bundle/$locale.lproj/Localizable.strings" ] \
             || deny "resource was not copied: $locale"
         done
+        minutes="$source/iriz.app/Contents/Resources/IrizApp_IrizDictate.bundle/MeetingMinutes"
+        diff -r "$TEST_MINUTES_FIXTURE" "$minutes" >/dev/null || deny 'MeetingMinutes tree changed before DMG creation'
+        [ "$(shasum -a 256 "$minutes/template.docx" | awk '{print $1}')" = "$TEST_MINUTES_SHA" ] \
+          || deny 'MeetingMinutes template SHA before DMG creation'
+        printf '%s\n' "$minutes" >> "$TEST_CASE_ROOT/checked-minutes-apps"
         printf '%s\n' "$source" > "$output"
         ;;
       convert)
@@ -128,6 +156,11 @@ case "$name" in
         mkdir -p "$mount"
         cp -R "$(sed -n '1p' "$dmg")/." "$mount/"
         printf '%s\n' "$mount" > "$TEST_CASE_ROOT/owned-mount"
+        printf '%s\n' "$mount" >> "$TEST_CASE_ROOT/checked-minutes-mounts"
+        if [ "${TEST_FAULT:-}" = mounted-minutes-file ]; then
+          rm "$mount/iriz.app/Contents/Resources/IrizApp_IrizDictate.bundle/MeetingMinutes/template.docx"
+          : > "$TEST_CASE_ROOT/injected-fault"
+        fi
         printf '<?xml version="1.0"?><plist version="1.0"><dict><key>system-entities</key><array><dict><key>dev-entry</key><string>/dev/disk99</string><key>mount-point</key><string>%s</string></dict></array></dict></plist>\n' "$mount"
         ;;
       detach)
@@ -196,6 +229,7 @@ case "$name" in
     ;;
   python3)
     case "$*" in *render_dmg_background*|*PIL*) deny 'Pillow in headless build' ;; esac
+    case "$*" in *MeetingMinutes/*.py*) deny 'bundled reference Python must not execute' ;; esac
     exec "$TEST_REAL_PYTHON" "$@"
     ;;
   cp|mv|rm|mkdir|touch|ln)
@@ -215,7 +249,7 @@ esac
 STUB
 chmod +x "$test_root/bin/stub"
 for command in swift lipo vtool otool hdiutil codesign install_name_tool plutil git python3 \
-  security xcrun osascript tiffutil curl wget open killall pkill kill ditto spctl \
+  security xcrun osascript tiffutil curl wget open killall pkill kill ditto spctl python \
   cp mv rm mkdir touch ln; do
   ln -s stub "$test_root/bin/$command"
 done
@@ -248,12 +282,13 @@ STUB
 
 run_release() {
   status=0
-  env -i PATH="$test_root/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+  (cd "$case_root" && env -i PATH="$test_root/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
     TMPDIR="$case_root" LANG=en_US.UTF-8 \
     BASH_ENV="$test_root/no-kill.sh" TEST_CASE_ROOT="$case_root" \
     TEST_TRACE="$case_root/trace" TEST_REAL_PYTHON="$real_python" \
+    TEST_MINUTES_FIXTURE="$test_root/MeetingMinutes" TEST_MINUTES_SHA="$minutes_sha" \
     SMLTLK_SIGN_IDENTITY=- IRIZ_DMG_HEADLESS=1 "$@" \
-    /bin/bash "$case_root/scripts/make_release.sh" > "$case_root/output" 2>&1 || status=$?
+    /bin/bash "$case_root/scripts/make_release.sh") > "$case_root/output" 2>&1 || status=$?
 }
 
 fail() {
@@ -291,6 +326,17 @@ expect_pass() {
     fail 'ad-hoc вызвал связку ключей или нотаризацию'
   fi
   [ -f "$case_root/source-sentinel" ] || fail 'повреждён исходник'
+  [ -s "$case_root/checked-minutes-apps" ] || fail 'не проверен пакет протокола перед созданием DMG'
+  while IFS= read -r minutes; do
+    diff -r "$test_root/MeetingMinutes" "$minutes" >/dev/null || fail 'в .app изменилось дерево пакета протокола'
+  done < "$case_root/checked-minutes-apps"
+  [ -s "$case_root/checked-minutes-mounts" ] || fail 'не проверен пакет протокола в DMG'
+  while IFS= read -r mount; do
+    minutes="$mount/iriz.app/Contents/Resources/IrizApp_IrizDictate.bundle/MeetingMinutes"
+    diff -r "$test_root/MeetingMinutes" "$minutes" >/dev/null || fail 'в DMG изменилось дерево пакета протокола'
+    [ "$(shasum -a 256 "$minutes/template.docx" | awk '{print $1}')" = "$minutes_sha" ] \
+      || fail 'в DMG изменился SHA-256 шаблона протокола'
+  done < "$case_root/checked-minutes-mounts"
   checks=$((checks + 1))
 }
 
@@ -324,6 +370,24 @@ expect_fail 'resource bundle' 'нет ресурсного IrizApp_IrizCore[.]bu
 new_case
 expect_fail 'localization resources' 'в бандле нет таблицы перевода zh-hans' TEST_FAULT=missing-locale
 
+for fault in minutes-bundle minutes-digest minutes-symlink minutes-extra-symlink; do
+  new_case
+  reason='пакет протокола MeetingMinutes не найден'
+  case "$fault" in
+    minutes-digest) reason='SHA-256 шаблона протокола не совпадает с эталоном$' ;;
+    *symlink) reason='симлинк в пакете протокола:' ;;
+  esac
+  expect_fail "$fault" "$reason" "TEST_FAULT=$fault"
+  [ -f "$case_root/injected-fault" ] || fail "$fault: сбой пакета не был внедрён"
+done
+for minutes_file in "${minutes_files[@]}"; do
+  new_case
+  expect_fail "missing $minutes_file" 'пакет протокола' TEST_FAULT=minutes-file "TEST_MISSING_FILE=$minutes_file"
+  grep -Fxq "make_release: пакет протокола: отсутствует или пуст $minutes_file" "$case_root/output" \
+    || fail 'неверная причина отказа или не назван отсутствующий файл пакета'
+  [ -f "$case_root/injected-fault" ] || fail 'пропажа файла пакета не была внедрена'
+done
+
 new_case
 expect_fail 'arm64 framework' 'в whisper[.]framework нет архитектуры arm64' TEST_FAULT=framework-arm64
 
@@ -354,10 +418,11 @@ done
 new_case
 expect_fail 'DMG verify' 'шаг «hdiutil verify [(]arm64[)]» упал[.]' TEST_FAULT=dmg-verify
 
-for fault in mounted-signature mounted-arch; do
+for fault in mounted-signature mounted-arch mounted-minutes-file; do
   new_case
   reason='смонтированный .* неполон или подпись в нём не проходит'
   if [ "$fault" = mounted-arch ]; then reason='в .*/mount[.].*/iriz[.]app/Contents/MacOS/iriz нет архитектуры arm64'; fi
+  if [ "$fault" = mounted-minutes-file ]; then reason='пакет протокола: отсутствует или пуст template[.]docx$'; fi
   expect_fail "$fault" "$reason" "TEST_FAULT=$fault"
   [ -f "$case_root/injected-fault" ] || fail "$fault: отказ не был внедрён в смонтированный образ"
   cmp -s "$case_root/owned-mount" "$case_root/detached-mount" || fail "$fault: собственный том остался подключён"

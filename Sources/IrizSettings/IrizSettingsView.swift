@@ -42,10 +42,26 @@ public struct IrizSettingsView: View {
     @State private var meetingQueue: [IrizDropItem] = []
     @State private var meetingBusy = false
     @State private var meetingStopping = false
+    @State private var meetingBatchRunning = false
+    @State private var meetingFillTask: Task<Void, Never>?
+    @State private var meetingFillCancelling = false
     @State private var meetingResults: [MeetingArtifacts] = []
     @State private var meetingProgress: String?
+    @State private var meetingProgressID: UUID?
     @State private var meetingReport: String?
     @State private var meetingFailed = false
+    @State private var meetingIssues: [URL: String] = [:]
+    @State private var meetingUnknownSpeakers: Set<URL> = []
+    @State private var meetingArchiveError: String?
+    @State private var speakerModelsInstalled = false
+    @State private var speakerModelChecking = false
+    @State private var speakerModelInstalling = false
+    @State private var speakerModelCancelling = false
+    @State private var speakerModelFraction: Double = 0
+    @State private var speakerModelTask: Task<Void, Never>?
+    @State private var speakerModelProgressID: UUID?
+    @State private var speakerModelMessage: String?
+    @State private var speakerModelFailed = false
     @State private var diskEntries: [DiskUsageEntry] = []
     @State private var diskCounting = false
     @StateObject private var historyModel: DictationHistoryModel
@@ -861,7 +877,7 @@ public struct IrizSettingsView: View {
                 Text(profile.shortName).tag(profile)
             }
         }
-        .disabled(files.busy || meetingBusy)
+        .disabled(files.busy || meetingBusy || speakerModelInstalling)
         .accessibilityLabel(L("settings.kakoyDvizhokRaspoznavaniyaRechi", "Какой движок распознавания речи использовать"))
         VStack(alignment: .leading, spacing: 8) {
             Label(model.speechModelInstalled
@@ -881,7 +897,7 @@ public struct IrizSettingsView: View {
                     model.speechEngine = .multilingualV3
                 }
                 .modifier(GlassButton())
-                .disabled(files.busy || meetingBusy)
+                .disabled(files.busy || meetingBusy || speakerModelInstalling)
             } else {
                 Button(model.speechModelInstalled
                        ? L("settings.speechModelSetup", "Настроить распознавание…")
@@ -889,7 +905,7 @@ public struct IrizSettingsView: View {
                     openSpeechModelSetup?()
                 }
                 .modifier(GlassButton())
-                .disabled(isPreview || openSpeechModelSetup == nil || files.busy || meetingBusy)
+                .disabled(isPreview || openSpeechModelSetup == nil || files.busy || meetingBusy || speakerModelInstalling)
             }
         }
     }
@@ -1324,11 +1340,11 @@ public struct IrizSettingsView: View {
             if !files.queue.isEmpty {
                 Button(files.errors.isEmpty ? L("files.start", "Расшифровать записи")
                        : L("files.retry", "Повторить оставшиеся")) {
-                    guard !meetingBusy, !isPreview, model.speechModelInstalled else { return }
+                    guard !meetingBusy, !speakerModelInstalling, !isPreview, model.speechModelInstalled else { return }
                     files.start(engine: model.speechEngine, language: fileLanguage)
                 }
                 .modifier(GlassProminentButton())
-                .disabled(files.busy || meetingBusy || isPreview || !model.speechModelInstalled)
+                .disabled(files.busy || meetingBusy || speakerModelInstalling || isPreview || !model.speechModelInstalled)
             }
             if let progress = files.progress {
                 if let fraction = files.fraction {
@@ -1460,8 +1476,18 @@ public struct IrizSettingsView: View {
     private var meetingsSection: some View {
         Section {
             speechRecognitionControls
+            speakerModelControls
+            Text(L("meetings.processingHelp", "Сначала iriz сохраняет звук и полную расшифровку на этом Маке. Заполнение протокола агентом — отдельный шаг с отдельным согласием; исходник не меняется."))
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+            Button(L("meetings.agentSettings", "Настроить агента для протокола…")) {
+                navigation.page = .prompt
+            }
+            .modifier(GlassButton())
+            .disabled(meetingBusy)
+            .accessibilityLabel(L("meetings.agentSettings.a11y", "Открыть настройки агента для заполнения протокола встречи"))
             IrizDropZone(title: L("settings.perenesiteZapisVstrechi", "Перенесите запись встречи"),
-                         subtitle: L("meetings.storage", "Запись на русском языке. Звук и протокол сохранятся в архиве iriz; готовые файлы можно открыть отсюда."),
+                         subtitle: L("meetings.storage", "Запись на русском языке. Аудио, расшифровка, DOCX и JSON сохранятся в архиве iriz; готовые файлы можно открыть отсюда."),
                          extensions: AudioFileBatch.supportedExtensions.sorted()) { urls in
                 enqueue(urls, into: $meetingQueue)
             }
@@ -1475,7 +1501,7 @@ public struct IrizSettingsView: View {
                 Button(meetingFailed ? L("files.retry", "Повторить оставшиеся")
                        : L("settings.razobratZapisi", "Разобрать записи")) { runMeetings() }
                     .modifier(GlassProminentButton())
-                    .disabled(meetingBusy || files.busy || isPreview || !model.speechModelInstalled)
+                    .disabled(meetingBusy || files.busy || speakerModelInstalling || isPreview || !model.speechModelInstalled)
                     .accessibilityLabel(L("settings.razobratZapisiVstrech", "Разобрать записи встреч"))
             }
 
@@ -1485,12 +1511,27 @@ public struct IrizSettingsView: View {
                 // что именно сейчас происходит.
                 ProgressView { Text(meetingProgress) }
                     .controlSize(.small)
-                Button(meetingStopping ? L("files.stopping", "Останавливаю после текущей записи…")
-                       : L("files.stopAfterCurrent", "Остановить после текущей записи")) {
-                    meetingStopping = true
+                    .accessibilityLabel(meetingProgress)
+                if meetingBatchRunning {
+                    Button(meetingStopping ? L("files.stopping", "Останавливаю после текущей записи…")
+                           : L("files.stopAfterCurrent", "Остановить после текущей записи")) {
+                        meetingStopping = true
+                    }
+                    .modifier(GlassButton())
+                    .disabled(meetingStopping)
+                } else if meetingFillTask != nil {
+                    Button(meetingFillCancelling ? L("meetings.cancellingFill", "Отменяю заполнение…")
+                           : L("meetings.cancelFill", "Отменить заполнение")) {
+                        meetingFillCancelling = true
+                        meetingProgressID = nil
+                        self.meetingProgress = L("meetings.cancellingFill", "Отменяю заполнение…")
+                        meetingFillTask?.cancel()
+                    }
+                    .modifier(GlassButton())
+                    .disabled(meetingFillCancelling)
+                    .keyboardShortcut(.cancelAction)
+                    .accessibilityHint(L("meetings.cancelFill.a11y", "Остановить заполнение, сохранив исходную расшифровку и прежние документы"))
                 }
-                .modifier(GlassButton())
-                .disabled(meetingStopping)
             }
 
             if let meetingReport {
@@ -1501,18 +1542,21 @@ public struct IrizSettingsView: View {
                     .textSelection(.enabled)
             }
 
-            ForEach(meetingResults, id: \.directory) { artifacts in
-                VStack(alignment: .leading, spacing: 6) {
-                    Label(artifacts.directory.lastPathComponent, systemImage: "checkmark.circle")
-                        .textSelection(.enabled)
-                    HStack {
-                        Button(L("meetings.openProtocol", "Открыть протокол")) { openFileResult(artifacts.transcript) }
-                            .modifier(GlassButton())
-                        Button(L("meetings.showFolder", "Показать папку встречи")) {
-                            NSWorkspace.shared.activateFileViewerSelecting([artifacts.directory])
-                        }
-                        .modifier(GlassButton())
-                    }
+            if let meetingArchiveError {
+                Label(meetingArchiveError, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .textSelection(.enabled)
+                Button(L("meetings.reloadArchive", "Повторить загрузку архива")) { loadMeetings() }
+                    .modifier(GlassButton())
+                    .disabled(meetingBusy || isPreview)
+            }
+
+            if !meetingResults.isEmpty {
+                Text(L("meetings.recentArchive", "Последние встречи на этом Маке"))
+                    .font(.headline)
+                ForEach(meetingResults, id: \.directory) { artifacts in
+                    meetingResultRow(artifacts)
                 }
             }
 
@@ -1527,6 +1571,231 @@ public struct IrizSettingsView: View {
         } header: {
             Text(L("settings.vstrechi", "Встречи"))
         }
+        .onAppear { loadMeetings() }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            if page == .meetings {
+                loadMeetings()
+                Task { await refreshSpeakerModelStatus() }
+            }
+        }
+    }
+
+    private var speakerModelControls: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if speakerModelChecking {
+                ProgressView(L("meetings.speakerModels.checking", "Проверяю модели голосов на диске…"))
+                    .controlSize(.small)
+            } else {
+                Label(speakerModelsInstalled
+                      ? L("meetings.speakerModels.installed", "Модели голосов установлены и проверены")
+                      : L("meetings.speakerModels.missing", "Модели голосов не установлены или требуют восстановления"),
+                      systemImage: speakerModelsInstalled ? "checkmark.circle" : "arrow.down.circle")
+            }
+            Text(L("meetings.speakerModels.source", "Источник: Hugging Face · FluidInference/speaker-diarization-coreml. После установки разделение голосов работает офлайн. При загрузке аудио и текст не отправляются."))
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+                .textSelection(.enabled)
+            if !speakerModelsInstalled {
+                Text(L("meetings.speakerModels.optional", "Можно продолжить без загрузки: расшифровка сохранится, но говорящие останутся неопределёнными."))
+                    .font(.footnote)
+                    .foregroundStyle(IRIZ_SUBTLE)
+                if speakerModelInstalling {
+                    ProgressView(value: speakerModelFraction) {
+                        Text(speakerModelCancelling
+                             ? L("meetings.speakerModels.cancelling", "Отменяю загрузку моделей голосов…")
+                             : Lf("meetings.speakerModels.progress", "Модели голосов: %d %%", Int(speakerModelFraction * 100)))
+                    }
+                    .accessibilityLabel(L("meetings.speakerModels.progressLabel", "Загрузка моделей голосов"))
+                    .accessibilityValue(Lf("meetings.speakerModels.percent", "%d процентов", Int(speakerModelFraction * 100)))
+                    Button(L("meetings.speakerModels.cancel", "Отменить загрузку")) {
+                        speakerModelCancelling = true
+                        speakerModelProgressID = nil
+                        speakerModelTask?.cancel()
+                    }
+                    .modifier(GlassButton())
+                    .disabled(speakerModelCancelling)
+                    .keyboardShortcut(.cancelAction)
+                } else {
+                    Button(speakerModelFailed
+                           ? Lf("meetings.speakerModels.retry", "Повторить загрузку моделей голосов · %d МБ", Int((speakerModelDownloadBytes + 999_999) / 1_000_000))
+                           : Lf("meetings.speakerModels.download", "Скачать модели голосов · %d МБ", Int((speakerModelDownloadBytes + 999_999) / 1_000_000))) {
+                        startSpeakerModelDownload()
+                    }
+                    .modifier(GlassButton())
+                    .disabled(isPreview || speakerModelChecking || speakerModelInstalling || meetingBusy || files.busy)
+                    .accessibilityHint(L("meetings.speakerModels.downloadHint", "Скачать только модели с Hugging Face; записи встреч и их текст не передаются"))
+                }
+            }
+            if let speakerModelMessage {
+                Label(speakerModelMessage, systemImage: speakerModelFailed ? "exclamationmark.triangle" : "info.circle")
+                    .font(.footnote)
+                    .foregroundStyle(speakerModelFailed ? Color.orange : IRIZ_SUBTLE)
+                    .textSelection(.enabled)
+            }
+        }
+        .task { await refreshSpeakerModelStatus() }
+    }
+
+    private func refreshSpeakerModelStatus() async {
+        guard !isPreview, !speakerModelChecking, !speakerModelInstalling else { return }
+        speakerModelChecking = true
+        defer { speakerModelChecking = false }
+        let installed = await SpeakerModelInstaller.shared.isInstalled()
+        guard !Task.isCancelled else { return }
+        speakerModelsInstalled = installed
+    }
+
+    private func startSpeakerModelDownload() {
+        guard !isPreview, !speakerModelChecking, !speakerModelInstalling,
+              !meetingBusy, !files.busy else { return }
+        speakerModelInstalling = true
+        speakerModelCancelling = false
+        speakerModelFailed = false
+        speakerModelMessage = nil
+        speakerModelFraction = 0
+        let progressID = UUID()
+        speakerModelProgressID = progressID
+        speakerModelTask = Task { @MainActor in
+            defer {
+                speakerModelTask = nil
+                speakerModelInstalling = false
+                speakerModelCancelling = false
+                speakerModelProgressID = nil
+            }
+            do {
+                try await SpeakerModelInstaller.shared.install { fraction in
+                    Task { @MainActor in
+                        guard speakerModelProgressID == progressID, fraction.isFinite else { return }
+                        speakerModelFraction = min(1, max(0, fraction))
+                    }
+                }
+                // install возвращается только после проверки и атомарного сохранения.
+                speakerModelsInstalled = true
+                speakerModelFraction = 1
+                speakerModelMessage = L("meetings.speakerModels.finished", "Модели голосов установлены. Новые встречи можно разделять по говорящим без сети.")
+            } catch is CancellationError {
+                speakerModelFailed = false
+                speakerModelMessage = L("meetings.speakerModels.cancelled", "Загрузка отменена. Её можно повторить позже; встречи доступны и без разделения говорящих.")
+            } catch {
+                speakerModelFailed = true
+                switch error as? SpeakerModelInstallFailure {
+                case .alreadyRunning:
+                    speakerModelMessage = L("meetings.speakerModels.alreadyRunning", "Загрузка моделей уже идёт. Дождись её завершения и открой этот раздел снова.")
+                case .invalidManifest:
+                    speakerModelMessage = L("meetings.speakerModels.invalidManifest", "Список моделей не прошёл проверку. Обнови iriz; автоматически загружать другие файлы приложение не будет.")
+                case .invalidResponse, .integrityFailed:
+                    speakerModelMessage = L("meetings.speakerModels.invalidDownload", "Скачанные модели не прошли проверку. Прежние файлы сохранены; повтори загрузку.")
+                case .unsafeCache:
+                    speakerModelMessage = L("meetings.speakerModels.unsafeCache", "Папка моделей недоступна или небезопасна. Проверь права доступа; прежние файлы не изменены.")
+                case nil:
+                    switch (error as? URLError)?.code {
+                    case .notConnectedToInternet, .networkConnectionLost, .timedOut:
+                        speakerModelMessage = speechModelInstallFailureMessage(for: error)
+                    default:
+                        speakerModelMessage = L("meetings.speakerModels.failed", "Не удалось установить модели голосов. Проверь интернет, свободное место и права на папку моделей, затем повтори загрузку.")
+                    }
+                }
+            }
+        }
+    }
+
+    private func meetingResultRow(_ artifacts: MeetingArtifacts) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(artifacts.directory.lastPathComponent, systemImage: "folder")
+                .textSelection(.enabled)
+            Text(meetingResultStatus(artifacts))
+                .font(.footnote)
+                .foregroundStyle(IRIZ_SUBTLE)
+            if meetingUnknownSpeakers.contains(artifacts.directory) {
+                Label(L("meetings.checkSpeakers", "Не все говорящие определены. Проверь неизвестные реплики в исходнике; метки говорящих не подтверждают личности людей."),
+                      systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+            }
+            if let issue = meetingIssues[artifacts.directory] {
+                Label(issue, systemImage: "exclamationmark.triangle")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .textSelection(.enabled)
+            }
+            HStack {
+                if let minutes = artifacts.minutes {
+                    meetingFileButton(L("meetings.openDOCX", "Протокол DOCX"), url: minutes)
+                }
+                if let data = artifacts.data {
+                    meetingFileButton(L("meetings.openJSON", "Данные JSON"), url: data)
+                }
+                meetingFileButton(L("meetings.openRawMD", "Исходник MD"), url: artifacts.transcript)
+            }
+            HStack {
+                if let clarifications = artifacts.clarifications {
+                    meetingFileButton(L("meetings.openClarifications", "Что уточнить"), url: clarifications)
+                }
+                Button(L("meetings.showFolder", "Показать папку встречи")) {
+                    NSWorkspace.shared.activateFileViewerSelecting([artifacts.directory])
+                }
+                .modifier(GlassButton())
+                .disabled(isPreview)
+                .accessibilityLabel(Lf("meetings.showFolder.a11y", "Показать в Finder встречу %@", artifacts.directory.lastPathComponent))
+            }
+            if artifacts.source != nil {
+                Button(artifacts.minutesFilled
+                       ? L("meetings.refillMinutes", "Заполнить заново без изменения прежних файлов…")
+                       : L("meetings.fillMinutes", "Заполнить протокол…")) {
+                    fillMeetingMinutes(artifacts)
+                }
+                .modifier(GlassButton())
+                .disabled(meetingBusy || files.busy || speakerModelInstalling || isPreview)
+                .accessibilityLabel(Lf("meetings.fillMinutes.a11y", "Заполнить протокол встречи %@ без повторного распознавания звука", artifacts.directory.lastPathComponent))
+            }
+        }
+    }
+
+    private func meetingResultStatus(_ artifacts: MeetingArtifacts) -> String {
+        if artifacts.source == nil {
+            return L("meetings.legacyArchive", "Архивная расшифровка MD. Для DOCX и JSON импортируй запись снова.")
+        }
+        if artifacts.minutes == nil {
+            return L("meetings.docxMissing", "Исходник сохранён, но DOCX не создан. Проверь место на диске и повтори заполнение протокола.")
+        }
+        return artifacts.minutesFilled
+            ? L("meetings.filledDraft", "Черновик протокола заполнен агентом. Проверь его по исходной записи и списку уточнений.")
+            : L("meetings.localDraft", "Исходник сохранён. Протокол не заполнен; его можно заполнить позже без повторного распознавания.")
+    }
+
+    private func meetingFileButton(_ title: String, url: URL) -> some View {
+        Button(title) {
+            if !NSWorkspace.shared.open(url) {
+                meetingFailed = true
+                meetingReport = Lf("meetings.openFailed", "Не удалось открыть %@. Нажми «Показать папку встречи» и проверь файл в Finder.", url.lastPathComponent)
+            }
+        }
+        .modifier(GlassButton())
+        .disabled(isPreview)
+        .accessibilityLabel(Lf("meetings.openFile.a11y", "%@: %@", title, url.lastPathComponent))
+    }
+
+    private func loadMeetings() {
+        guard !isPreview, !meetingBusy else { return }
+        do {
+            var directories: Set<URL> = []
+            meetingResults = try MeetingStore.recent().filter {
+                directories.insert($0.directory.standardizedFileURL).inserted
+            }
+            meetingArchiveError = nil
+        } catch {
+            meetingArchiveError = L("meetings.archiveFailed", "Не удалось прочитать архив встреч. Проверь доступ к папке архива и повтори загрузку; текущие результаты остаются ниже.")
+        }
+    }
+
+    private func rememberMeeting(_ artifacts: MeetingArtifacts) {
+        meetingResults.removeAll { $0.directory.standardizedFileURL == artifacts.directory.standardizedFileURL }
+        meetingResults.insert(artifacts, at: 0)
+    }
+
+    private func meetingConsent() -> MeetingProcessingChoice {
+        MeetingAgentConsent.request(adapter: model.agentAdapter, model: model.agentModel,
+                                    executableURL: model.detectedAgentPath.map { URL(fileURLWithPath: $0) })
     }
 
     /// Прогон очереди встреч.
@@ -1538,20 +1807,40 @@ public struct IrizSettingsView: View {
     /// Отказ на одной записи не отменяет остальные: владелец принёс папку, и
     /// одна битая запись не должна стоить ему разбора всех.
     private func runMeetings() {
-        guard !meetingBusy, !files.busy, !meetingQueue.isEmpty, !isPreview, model.speechModelInstalled else { return }
+        guard !meetingBusy, !files.busy, !speakerModelInstalling, !meetingQueue.isEmpty, !isPreview, model.speechModelInstalled else { return }
         meetingBusy = true
+        let choice = meetingConsent()
+        let generator: CodexPromptGenerator?
+        switch choice {
+        case .cancel:
+            meetingBusy = false
+            return
+        case .localOnly: generator = nil
+        case .fill(let selected): generator = selected
+        }
         meetingStopping = false
+        meetingBatchRunning = true
         let items = meetingQueue
         let engine = model.speechEngine
         meetingReport = nil
         meetingFailed = false
         Task { @MainActor in
-            let pipeline = MeetingPipeline(transcriber: AudioFileTranscriber(engine: engine))
+            defer {
+                meetingProgress = nil
+                meetingProgressID = nil
+                meetingBusy = false
+                meetingBatchRunning = false
+            }
+            let pipeline = MeetingPipeline(transcriber: AudioFileTranscriber(engine: engine,
+                                                                             captureTokenTimings: true))
             var done = 0
+            var filled = 0
             var failures: [String] = []
             for item in items {
                 guard !meetingStopping else { break }
                 let name = item.url.deletingPathExtension().lastPathComponent
+                let progressID = UUID()
+                meetingProgressID = progressID
                 meetingProgress = "\(name): \(L("files.reading", "читаю запись"))"
                 do {
                     let result = try await pipeline.run(
@@ -1559,31 +1848,98 @@ public struct IrizSettingsView: View {
                         title: name,
                         progress: { step in
                             Task { @MainActor in
-                                guard meetingBusy else { return }
+                                guard meetingBusy, meetingProgressID == progressID else { return }
                                 meetingProgress = "\(name): \(step.lowercased())"
                             }
                         }
                     )
                     done += 1
                     meetingQueue.removeAll { $0.id == item.id }
-                    meetingResults.append(result.artifacts)
+                    rememberMeeting(result.artifacts)
                     if !result.speakersResolved {
-                        // Владелец должен отличить монолог от неудавшегося
-                        // разделения: в первом случае имена расставлять не
-                        // нужно, во втором нужно.
-                        failures.append(Lf("meetings.speakersUnresolved", "%@: говорящие не разделены. Текст сохранён одной репликой; проверьте протокол.", name))
+                        meetingUnknownSpeakers.insert(result.artifacts.directory)
+                    }
+                    if let generator {
+                        meetingProgress = "\(name): \(L("meetings.filling", "заполняю протокол"))"
+                        do {
+                            let completed = try await pipeline.fillMinutes(for: result.artifacts, using: generator) { step in
+                                Task { @MainActor in
+                                    guard meetingBusy, meetingProgressID == progressID else { return }
+                                    meetingProgress = "\(name): \(step.lowercased())"
+                                }
+                            }
+                            rememberMeeting(completed)
+                            if completed.minutesFilled { filled += 1 }
+                        } catch {
+                            let message = L("meetings.fillFailed", "Не удалось заполнить протокол; исходная расшифровка сохранена. Проверь настройки агента и нажми «Заполнить протокол» — звук повторно распознаваться не будет.")
+                            meetingIssues[result.artifacts.directory] = message
+                            failures.append("\(name): \(message)")
+                        }
                     }
                 } catch {
-                    let reason = (error as? MeetingPipelineFailure)?.rawValue ?? error.localizedDescription
-                    failures.append("\(name): \(reason)")
+                    let reason = (error as? MeetingPipelineFailure)?.rawValue
+                        ?? L("meetings.localFailed", "Локальный разбор не завершён")
+                    failures.append("\(name): \(reason). " + L("meetings.retryImportHelp", "Файл остался в очереди. Проверь запись и повтори оставшиеся файлы."))
                 }
             }
-            meetingProgress = nil
-            meetingBusy = false
             meetingFailed = !failures.isEmpty
-            let base = Lf("files.finished", "Готово: %d из %d.", done, items.count)
+            let base = Lf("meetings.localFinished", "Исходники сохранены: %d из %d.", done, items.count)
+                + " " + (generator == nil
+                          ? L("meetings.localOnlyFinished", "Протоколы не заполнены. Это можно сделать позже из архива.")
+                          : Lf("meetings.filledCount", "Черновики протоколов заполнены: %d. Проверь их по записи.", filled))
                 + (meetingStopping ? " " + L("files.stopped", "Очередь остановлена. Оставшиеся файлы можно запустить снова.") : "")
             meetingReport = failures.isEmpty ? base : base + "\n" + failures.joined(separator: "\n")
+        }
+    }
+
+    private func fillMeetingMinutes(_ artifacts: MeetingArtifacts) {
+        guard !meetingBusy, !files.busy, !speakerModelInstalling, !isPreview, artifacts.source != nil else { return }
+        meetingBusy = true
+        let choice = meetingConsent()
+        guard case .fill(let generator) = choice else {
+            meetingBusy = false
+            if case .localOnly = choice {
+                meetingFailed = false
+                meetingReport = L("meetings.fillDeclined", "Агент не запускался. Сохранённые файлы не изменены; к заполнению можно вернуться позже.")
+            }
+            return
+        }
+        let name = artifacts.directory.lastPathComponent
+        let progressID = UUID()
+        meetingProgressID = progressID
+        meetingProgress = "\(name): \(L("meetings.filling", "заполняю протокол"))"
+        meetingReport = nil
+        meetingFailed = false
+        meetingFillCancelling = false
+        meetingFillTask = Task { @MainActor in
+            defer {
+                meetingFillTask = nil
+                meetingFillCancelling = false
+                meetingProgress = nil
+                meetingProgressID = nil
+                meetingBusy = false
+            }
+            do {
+                let completed = try await MeetingPipeline().fillMinutes(for: artifacts, using: generator) { step in
+                    Task { @MainActor in
+                        guard meetingBusy, meetingProgressID == progressID else { return }
+                        meetingProgress = "\(name): \(step.lowercased())"
+                    }
+                }
+                // Возврат означает атомарно сохранённую версию; поздняя отмена её не отменяет.
+                rememberMeeting(completed)
+                meetingIssues.removeValue(forKey: artifacts.directory)
+                meetingReport = meetingResultStatus(completed)
+            } catch is CancellationError {
+                meetingFailed = false
+                meetingIssues.removeValue(forKey: artifacts.directory)
+                meetingReport = L("meetings.fillCancelled", "Заполнение отменено. Исходная расшифровка и прежние документы сохранены. Можно вернуться к заполнению позже.")
+            } catch {
+                meetingFailed = true
+                let message = L("meetings.fillRetryFailed", "Не удалось заполнить протокол; исходная расшифровка и прежние файлы сохранены. Проверь настройки агента и повтори заполнение без нового распознавания.")
+                meetingIssues[artifacts.directory] = message
+                meetingReport = "\(name): \(message)"
+            }
         }
     }
 

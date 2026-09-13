@@ -46,8 +46,8 @@ struct MeetingPipelineTests {
                                                   tokenTimings: tokens)
             let resolved = meetingSpeakerTurns(transcript: transcript, spans: spans)
             #expect(!resolved.speakersResolved)
-            #expect(resolved.turns == [SpeakerTurn(speaker: "Запись", text: transcript.text,
-                                                  start: 0, end: 12)])
+            #expect(resolved.turns == [SpeakerTurn(speaker: "", text: transcript.text)])
+            #expect(!resolved.turns[0].hasKnownTiming)
             let document = MeetingProtocolDocument(title: "Встреча", recordedAt: Date(),
                                                    audioSeconds: 12, turns: resolved.turns)
             #expect(document.text().contains(transcript.text))
@@ -68,7 +68,7 @@ struct MeetingPipelineTests {
             names: SpeakerNames(names: ["one": "Анна", "two": "Борис"]))
         #expect(resolved.speakersResolved)
         #expect(resolved.turns.map(\.speaker) == ["Анна", "Борис"])
-        #expect(resolved.turns.map(\.text) == ["Да.", "Нет."])
+        #expect(resolved.turns.map(\.text).joined() == transcript.text)
     }
 
     @Test("отказы названы поимённо")

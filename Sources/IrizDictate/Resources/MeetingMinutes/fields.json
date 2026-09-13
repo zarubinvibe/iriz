@@ -1,0 +1,527 @@
+{
+  "version": 1,
+  "fields": [
+    {
+      "name": "meeting_id",
+      "label": "Номер / идентификатор",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_title",
+      "label": "Название и тема",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "project",
+      "label": "Организация / проект",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_goal",
+      "label": "Цель встречи",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "start_date",
+      "label": "Дата начала",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "start_time",
+      "label": "Время начала",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "end_date",
+      "label": "Дата окончания",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "end_time",
+      "label": "Время окончания",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "timezone",
+      "label": "Часовой пояс",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_format",
+      "label": "Формат — очно / онлайн / смешанный",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "location",
+      "label": "Место — город, адрес, помещение",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_link",
+      "label": "Платформа и ссылка на онлайн-встречу",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "facilitator",
+      "label": "Ведущий",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "minutes_author",
+      "label": "Составитель протокола",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "version",
+      "label": "Версия и статус протокола",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "approval_status",
+      "label": "Версия и статус протокола",
+      "section": "1. Сведения о встрече",
+      "group": "fields"
+    },
+    {
+      "name": "participant_id",
+      "label": "Идентификатор участника",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "participant_name",
+      "label": "ФИО / известное имя",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "participant_organization_role",
+      "label": "Организация, должность",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "participant_meeting_role",
+      "label": "Роль во встрече",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "attendance",
+      "label": "Участие — присутствовал / частично / отсутствовал / не подтверждено",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "participation_mode",
+      "label": "Способ участия — очно / онлайн",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "participation_period",
+      "label": "Период участия, если известен",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "speaker_label",
+      "label": "Обозначение в расшифровке, если есть",
+      "section": "2. Участники",
+      "group": "participants"
+    },
+    {
+      "name": "topic_id",
+      "label": "Номер вопроса",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "topic_title",
+      "label": "Вопрос",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "topic_speaker",
+      "label": "Докладчик / инициатор",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "topic_status",
+      "label": "Статус — обсужден / перенесен / снят / не рассмотрен",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "discussion_summary",
+      "label": "Суть обсуждения",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "proposals",
+      "label": "Предложенные варианты",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "disagreements",
+      "label": "Возражения, разногласия и их авторы",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "related_decision_action_ids",
+      "label": "Связанные решения и поручения",
+      "section": "3. Повестка и обсуждение",
+      "group": "topics"
+    },
+    {
+      "name": "decision_id",
+      "label": "Номер решения",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_topic_id",
+      "label": "Номер вопроса повестки",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_text",
+      "label": "Формулировка принятого решения",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_conditions",
+      "label": "Условия и ограничения",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_approved_by",
+      "label": "Кто принял / согласовал",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_reason",
+      "label": "Основание выбора, если озвучено",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "decision_source",
+      "label": "Источник подтверждения — файл и таймкод / абзац",
+      "section": "4. Принятые решения",
+      "group": "decisions"
+    },
+    {
+      "name": "action_id",
+      "label": "Номер поручения",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_related_id",
+      "label": "Связанный вопрос / решение",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_text",
+      "label": "Что сделать",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_deliverable",
+      "label": "Результат и критерий готовности",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_owner_id_name",
+      "label": "Ответственный",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_helpers",
+      "label": "Соисполнители, если назначены",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_due",
+      "label": "Срок — дата, при наличии время и часовой пояс",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_due_original",
+      "label": "Исходная формулировка срока",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_dependencies",
+      "label": "Зависимости / необходимые материалы",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_reviewer",
+      "label": "Кому передать результат / кто принимает",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_status",
+      "label": "Статус на дату протокола",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "action_source",
+      "label": "Источник подтверждения — файл и таймкод / абзац",
+      "section": "5. Поручения",
+      "group": "actions"
+    },
+    {
+      "name": "open_issue",
+      "label": "Вопрос / риск",
+      "section": "6. Открытые вопросы и риски",
+      "group": "open_issues"
+    },
+    {
+      "name": "clarification_needed",
+      "label": "Что осталось неясным и что требуется для решения",
+      "section": "6. Открытые вопросы и риски",
+      "group": "open_issues"
+    },
+    {
+      "name": "clarification_owner",
+      "label": "Кто уточняет, если назначен",
+      "section": "6. Открытые вопросы и риски",
+      "group": "open_issues"
+    },
+    {
+      "name": "clarification_due",
+      "label": "Срок уточнения, если установлен",
+      "section": "6. Открытые вопросы и риски",
+      "group": "open_issues"
+    },
+    {
+      "name": "meeting_summary",
+      "label": "Краткий итог — 3–5 предложений",
+      "section": "7. Итог и следующая встреча",
+      "group": "fields"
+    },
+    {
+      "name": "next_meeting_at",
+      "label": "Следующая встреча — дата, время, часовой пояс",
+      "section": "7. Итог и следующая встреча",
+      "group": "fields"
+    },
+    {
+      "name": "next_meeting_location",
+      "label": "Место / ссылка",
+      "section": "7. Итог и следующая встреча",
+      "group": "fields"
+    },
+    {
+      "name": "next_meeting_topic",
+      "label": "Тема следующей встречи",
+      "section": "7. Итог и следующая встреча",
+      "group": "fields"
+    },
+    {
+      "name": "next_meeting_preparation",
+      "label": "Что подготовить к ней",
+      "section": "7. Итог и следующая встреча",
+      "group": "fields"
+    },
+    {
+      "name": "source_materials",
+      "label": "Основание протокола — заметки / расшифровка / запись / приглашение",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "attachments",
+      "label": "Приложения — названия и ссылки",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "prepared_date",
+      "label": "Дата составления",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "recipients",
+      "label": "Кому направить протокол",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "approved_by_at",
+      "label": "Кто проверил / согласовал и когда",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "approval_comments",
+      "label": "Замечания к протоколу",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "signatures",
+      "label": "Подписи, если предусмотрены порядком встречи",
+      "section": "8. Материалы и согласование",
+      "group": "fields"
+    },
+    {
+      "name": "recording_sources",
+      "label": "Исходные файлы / ссылки на запись",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "recording_order",
+      "label": "Порядок файлов, если запись состоит из нескольких частей",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "recording_durations",
+      "label": "Продолжительность каждого файла",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "transcribed_intervals",
+      "label": "Охваченные интервалы записи",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "transcript_coverage",
+      "label": "Полнота — вся доступная запись / частичная расшифровка",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_recording_coverage",
+      "label": "Охват самой встречи — полностью / запись фрагментарна / неизвестно",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "transcript_gaps",
+      "label": "Пропуски записи или расшифровки — интервалы и причины",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "meeting_languages",
+      "label": "Язык / языки встречи",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "transcript_checked_by_at",
+      "label": "Кто сверил расшифровку с записью и когда",
+      "section": "9. Сведения о записи и полноте расшифровки",
+      "group": "fields"
+    },
+    {
+      "name": "transcript_speaker_label",
+      "label": "Обозначение на записи",
+      "section": "10. Обозначения говорящих",
+      "group": "transcript_speakers"
+    },
+    {
+      "name": "transcript_participant_id",
+      "label": "Связанный идентификатор участника",
+      "section": "10. Обозначения говорящих",
+      "group": "transcript_speakers"
+    },
+    {
+      "name": "transcript_speaker_name",
+      "label": "Имя, если установлено",
+      "section": "10. Обозначения говорящих",
+      "group": "transcript_speakers"
+    },
+    {
+      "name": "speaker_identification_basis",
+      "label": "На чем основано установление личности / что требует уточнения",
+      "section": "10. Обозначения говорящих",
+      "group": "transcript_speakers"
+    },
+    {
+      "name": "utterance_id",
+      "label": "Реплика",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "utterance_recording_file",
+      "label": "Файл записи",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "utterance_start",
+      "label": "Таймкод от начала файла — ЧЧ:ММ:СС–ЧЧ:ММ:СС",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "utterance_end",
+      "label": "Таймкод от начала файла — ЧЧ:ММ:СС–ЧЧ:ММ:СС",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "utterance_speaker",
+      "label": "Говорящий",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "utterance_text",
+      "label": "Дословный текст реплики",
+      "section": "11. Дословный текст встречи",
+      "group": "transcript_utterances"
+    },
+    {
+      "name": "transcript_end_status",
+      "label": "Отметка завершения — конец доступной записи / расшифровка не завершена",
+      "section": "11. Дословный текст встречи",
+      "group": "fields"
+    }
+  ]
+}

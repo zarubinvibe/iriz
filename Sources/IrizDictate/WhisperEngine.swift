@@ -63,6 +63,68 @@ enum WhisperEngineError: LocalizedError {
     }
 }
 
+struct WhisperTranscription {
+    let text: String
+    let tokenTimings: [DictationTokenTiming]
+}
+
+/// Обычная диктовка оставляет таймкоды выключенными. Только файл встречи
+/// явно включает дополнительную работу декодера.
+func whisperTranscriptionParameters(captureTokenTimings: Bool = false) -> whisper_full_params {
+    var params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
+    params.print_progress = false
+    params.print_realtime = false
+    params.print_timestamps = false
+    params.print_special = false
+    params.no_timestamps = !captureTokenTimings
+    params.token_timestamps = captureTokenTimings
+    params.translate = false
+    params.n_threads = Int32(max(4, ProcessInfo.processInfo.activeProcessorCount - 2))
+    return params
+}
+
+/// whisper.cpp отдаёт byte-BPE: отдельный token не обязан быть валидным UTF-8.
+struct WhisperTimingPiece {
+    let bytes: Data
+    let startCentiseconds: Int64
+    let endCentiseconds: Int64
+    let confidence: Float
+}
+
+/// Сохраняем реальные границы движка. Отказ привязки не меняет rawText;
+/// пустой результат приведёт к явному unknown timing в MeetingTranscript.
+func whisperTokenTimings(from pieces: [WhisperTimingPiece], matching rawText: String,
+                         audioSeconds: Double) -> [DictationTokenTiming] {
+    guard audioSeconds.isFinite, audioSeconds > 0 else { return [] }
+    var allBytes = Data()
+    var pending = Data()
+    var pendingStart: Int64 = 0
+    var pendingConfidence: Float = 1
+    var previousStart: Int64 = 0
+    var previousEnd: Int64 = 0
+    var timings: [DictationTokenTiming] = []
+    for piece in pieces {
+        guard !piece.bytes.isEmpty, piece.startCentiseconds >= previousStart,
+              piece.endCentiseconds >= piece.startCentiseconds,
+              piece.endCentiseconds >= previousEnd,
+              Double(piece.endCentiseconds) / 100 <= audioSeconds,
+              piece.confidence.isFinite, (0...1).contains(piece.confidence) else { return [] }
+        previousStart = piece.startCentiseconds
+        previousEnd = piece.endCentiseconds
+        if pending.isEmpty { pendingStart = piece.startCentiseconds; pendingConfidence = 1 }
+        pendingConfidence = min(pendingConfidence, piece.confidence)
+        pending.append(piece.bytes)
+        allBytes.append(piece.bytes)
+        guard let text = String(data: pending, encoding: .utf8) else { continue }
+        timings.append(DictationTokenTiming(token: text, start: Double(pendingStart) / 100,
+                                            end: Double(piece.endCentiseconds) / 100,
+                                            confidence: Double(pendingConfidence)))
+        pending.removeAll(keepingCapacity: true)
+    }
+    guard pending.isEmpty, allBytes == Data(rawText.utf8) else { return [] }
+    return timings
+}
+
 /// Обертка над контекстом whisper.cpp. Не Sendable намеренно: контекст живет
 /// внутри актора TranscriptionWorker и границу изоляции не пересекает.
 final class WhisperEngine {
@@ -89,14 +151,12 @@ final class WhisperEngine {
 
     /// Отсчеты - моно 16 кГц в диапазоне [-1, 1], как у остальных движков проекта.
     func transcribe(samples: [Float], language: DictationLanguage) throws -> String {
-        var params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
-        params.print_progress = false
-        params.print_realtime = false
-        params.print_timestamps = false
-        params.print_special = false
-        params.no_timestamps = true
-        params.translate = false
-        params.n_threads = Int32(max(4, ProcessInfo.processInfo.activeProcessorCount - 2))
+        try transcribeWithDetails(samples: samples, language: language).text
+    }
+
+    func transcribeWithDetails(samples: [Float], language: DictationLanguage,
+                               captureTokenTimings: Bool = false) throws -> WhisperTranscription {
+        var params = whisperTranscriptionParameters(captureTokenTimings: captureTokenTimings)
 
         // strdup держит строки живыми на весь вызов whisper_full: параметры хранят
         // сырые указатели, и временный буфер Swift здесь освободился бы раньше.
@@ -112,12 +172,30 @@ final class WhisperEngine {
         guard code == 0 else { throw WhisperEngineError.transcribeFailed(code) }
 
         var text = ""
+        var pieces: [WhisperTimingPiece] = []
         for segment in 0..<whisper_full_n_segments(ctx) {
             if let chunk = whisper_full_get_segment_text(ctx, segment) {
                 text += String(cString: chunk)
             }
+            if captureTokenTimings {
+                for token in 0..<whisper_full_n_tokens(ctx, segment) {
+                    guard whisper_full_get_token_id(ctx, segment, token) < whisper_token_eot(ctx),
+                          let bytes = whisper_full_get_token_text(ctx, segment, token) else { continue }
+                    pieces.append(WhisperTimingPiece(
+                        bytes: Data(bytes: bytes, count: strlen(bytes)),
+                        startCentiseconds: whisper_full_get_token_t0(ctx, segment, token),
+                        endCentiseconds: whisper_full_get_token_t1(ctx, segment, token),
+                        confidence: whisper_full_get_token_p(ctx, segment, token)))
+                }
+            }
         }
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
+        if captureTokenTimings {
+            // В файловом режиме rawText равен точной склейке segment_text.
+            return WhisperTranscription(text: text, tokenTimings: whisperTokenTimings(
+                from: pieces, matching: text, audioSeconds: Double(samples.count) / SAMPLE_RATE))
+        }
+        return WhisperTranscription(text: text.trimmingCharacters(in: .whitespacesAndNewlines),
+                                     tokenTimings: [])
     }
 }
 

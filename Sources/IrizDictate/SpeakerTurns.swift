@@ -18,7 +18,7 @@
 import Foundation
 
 /// Отрезок речи одного говорящего, как его видит диаризатор.
-public struct SpeakerSpan: Equatable, Sendable {
+public struct SpeakerSpan: Codable, Equatable, Sendable {
     /// Метка диаризатора: «спикер 1», «спикер 2». Имя человека подставляется
     /// отдельно и хранится отдельно.
     public let speaker: String
@@ -33,17 +33,59 @@ public struct SpeakerSpan: Equatable, Sendable {
 }
 
 /// Реплика: кто, что и когда.
-public struct SpeakerTurn: Equatable, Sendable {
+public struct SpeakerTurn: Codable, Equatable, Sendable {
     public let speaker: String
     public let text: String
     public let start: Double
     public let end: Double
+    /// При false start/end не являются таймкодами и не выводятся в документ.
+    /// Нули сохраняют совместимость прежнего Swift API; в JSON их нет.
+    public let hasKnownTiming: Bool
 
-    public init(speaker: String, text: String, start: Double, end: Double) {
+    public init(speaker: String, text: String, start: Double, end: Double,
+                hasKnownTiming: Bool = true) {
         self.speaker = speaker
         self.text = text
         self.start = start
         self.end = end
+        self.hasKnownTiming = hasKnownTiming
+    }
+
+    public init(speaker: String, text: String) {
+        self.init(speaker: speaker, text: text, start: 0, end: 0, hasKnownTiming: false)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case speaker, text, start, end, hasKnownTiming
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        speaker = try values.decode(String.self, forKey: .speaker)
+        text = try values.decode(String.self, forKey: .text)
+        hasKnownTiming = try values.decode(Bool.self, forKey: .hasKnownTiming)
+        if hasKnownTiming {
+            start = try values.decode(Double.self, forKey: .start)
+            end = try values.decode(Double.self, forKey: .end)
+            guard start.isFinite, end.isFinite, start >= 0, end >= start else {
+                throw DecodingError.dataCorruptedError(forKey: .start, in: values,
+                                                       debugDescription: "Invalid speaker turn timing")
+            }
+        } else {
+            start = 0
+            end = 0
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(speaker, forKey: .speaker)
+        try values.encode(text, forKey: .text)
+        try values.encode(hasKnownTiming, forKey: .hasKnownTiming)
+        if hasKnownTiming {
+            try values.encode(start, forKey: .start)
+            try values.encode(end, forKey: .end)
+        }
     }
 }
 
@@ -144,6 +186,7 @@ public struct SpeakerNames: Codable, Equatable, Sendable {
 public func speakerTurnsNamed(_ turns: [SpeakerTurn], names: SpeakerNames) -> [SpeakerTurn] {
     turns.map {
         SpeakerTurn(speaker: names.display($0.speaker),
-                    text: $0.text, start: $0.start, end: $0.end)
+                    text: $0.text, start: $0.start, end: $0.end,
+                    hasKnownTiming: $0.hasKnownTiming)
     }
 }

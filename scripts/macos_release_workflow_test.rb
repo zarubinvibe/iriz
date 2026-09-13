@@ -186,15 +186,22 @@ Dir.mktmpdir('iriz-workflow-test-') do |fixture|
   end
 end
 
-draft_script = draft['steps'].find { |step| step['name'] == 'Create a new draft only' }.fetch('run')
+draft_script = draft['steps'].find { |step| step['name'] == 'Create a new draft or leave the published release unchanged' }.fetch('run')
 github = <<'BASH'
 gh() {
-  if [[ "$1" == api && "$4" == *'/releases?'* ]]; then
-    [[ "$FAIL_API" != releases ]] || return 42
+  printf '%s\n' "$*" >> "$GH_CALL_LOG"
+  if [[ "$*" == "api --paginate --slurp repos/$GH_REPO/releases?per_page=100" ]]; then
+    [[ "$FAIL_API" != releases ]] || return "$API_EXIT"
     printf '%s\n' "$RELEASES_JSON"
-  elif [[ "$1" == api && "$4" == *'/tags?'* ]]; then
-    [[ "$FAIL_API" != tags ]] || return 43
+  elif [[ "$*" == "api --paginate --slurp repos/$GH_REPO/tags?per_page=100" ]]; then
+    [[ "$FAIL_API" != tags ]] || return "$API_EXIT"
     printf '%s\n' "$TAGS_JSON"
+  elif [[ "$*" == "api --method GET repos/$GH_REPO/git/ref/tags/v0.2.1" ]]; then
+    [[ "$FAIL_API" != ref ]] || return "$API_EXIT"
+    printf '%s\n' "$REF_JSON"
+  elif [[ "$#" == 4 && "$1 $2 $3" == 'api --method GET' && "$4" == "repos/$GH_REPO/git/tags/"* ]]; then
+    [[ "$FAIL_API" != annotation ]] || return "$API_EXIT"
+    jq -er --arg sha "${4##*/}" '.[$sha] // error("Missing fixture annotation")' <<< "$TAG_OBJECTS_JSON"
   elif [[ "$1" == release && "$2" == create ]]; then
     printf 'CREATE_ARG:%s\n' "$@"
   else
@@ -203,26 +210,111 @@ gh() {
   fi
 }
 BASH
-[
-  ['new draft', '[[]]', '[[]]', '', true],
-  ['existing draft', [[{ 'tag_name' => 'v0.2.1', 'draft' => true }]].to_json, '[[]]', '', false],
-  ['existing public release', [[{ 'tag_name' => 'v0.2.1', 'draft' => false }]].to_json, '[[]]', '', false],
-  ['matching tag commit', '[[]]', [[{ 'name' => 'v0.2.1', 'commit' => { 'sha' => sha } }]].to_json, '', true],
-  ['different tag commit', '[[]]', [[{ 'name' => 'v0.2.1', 'commit' => { 'sha' => 'b' * 40 } }]].to_json, '', false],
-  ['release API failure', '[[]]', '[[]]', 'releases', false],
-  ['tags API failure', '[[]]', '[[]]', 'tags', false],
-  ['malformed release response', 'invalid JSON', '[[]]', '', false]
-].each do |name, releases, tags, failure, expected|
-  env = { 'RELEASE_VERSION' => '0.2.1', 'SOURCE_SHA' => sha, 'GH_REPO' => 'zarubinvibe/iriz',
-          'GH_TOKEN' => 'synthetic-unused', 'GITHUB_STEP_SUMMARY' => File::NULL,
-          'RELEASES_JSON' => releases, 'TAGS_JSON' => tags, 'FAIL_API' => failure }
-  output, status = Open3.capture2e(env, 'bash', '-c', github + draft_script)
-  check(status.success? == expected && output.include?('CREATE_ARG:') == expected, "#{name}: #{output}")
-  if expected
-    %w[--draft --latest=false iriz-0.2.1-arm64.dmg iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json].each do |arg|
-      check(output.include?("CREATE_ARG:#{arg}\n"), "Missing create argument: #{arg}")
-    end
-    check(!output.include?('--clobber'), 'Asset overwrite is forbidden')
+tag = 'v0.2.1'
+annotation_sha = 'b' * 40
+nested_sha = 'c' * 40
+published = { 'tag_name' => tag, 'draft' => false, 'target_commitish' => 'not-proof-of-source' }
+commit_object = { 'type' => 'commit', 'sha' => sha }
+reference = { 'ref' => "refs/tags/#{tag}", 'object' => commit_object }
+tag_entry = { 'name' => tag, 'commit' => { 'sha' => sha } }
+annotation = { 'sha' => annotation_sha, 'object' => commit_object }
+defaults = { 'RELEASES_JSON' => [[published]].to_json, 'TAGS_JSON' => '[[]]', 'REF_JSON' => reference.to_json,
+             'TAG_OBJECTS_JSON' => { annotation_sha => annotation }.to_json, 'FAIL_API' => '', 'API_EXIT' => '42' }
+fixtures = [
+  ['new draft', { 'RELEASES_JSON' => '[[]]' }, :create],
+  ['matching tag commit creates draft', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => [[tag_entry]].to_json }, :create],
+  ['different tag commit refuses draft', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => [[tag_entry.merge('commit' => { 'sha' => annotation_sha })]].to_json }, :fail],
+  ['matching published release is unchanged', {}, :noop],
+  ['matching published release on later page', { 'RELEASES_JSON' => [[], [published]].to_json }, :noop],
+  ['matching annotated published tag', { 'REF_JSON' => reference.merge('object' => { 'type' => 'tag', 'sha' => annotation_sha }).to_json }, :noop],
+  ['nested annotated published tag', { 'REF_JSON' => reference.merge('object' => { 'type' => 'tag', 'sha' => annotation_sha }).to_json,
+     'TAG_OBJECTS_JSON' => { annotation_sha => annotation.merge('object' => { 'type' => 'tag', 'sha' => nested_sha }),
+                             nested_sha => { 'sha' => nested_sha, 'object' => commit_object } }.to_json }, :noop],
+  ['existing draft refuses writes', { 'RELEASES_JSON' => [[published.merge('draft' => true)]].to_json }, :fail],
+  ['duplicate releases refuse writes', { 'RELEASES_JSON' => [[published, published]].to_json }, :fail],
+  ['published tag points elsewhere despite commitish', { 'RELEASES_JSON' => [[published.merge('target_commitish' => sha)]].to_json,
+     'REF_JSON' => reference.merge('object' => commit_object.merge('sha' => annotation_sha)).to_json }, :fail],
+  ['different tag ref', { 'REF_JSON' => reference.merge('ref' => 'refs/tags/v0.2.2').to_json }, :fail],
+  ['branch is not tag ref', { 'REF_JSON' => reference.merge('ref' => "refs/heads/#{tag}").to_json }, :fail],
+  ['missing tag ref', { 'REF_JSON' => { 'object' => commit_object }.to_json }, :fail],
+  ['invalid tag object type', { 'REF_JSON' => reference.merge('object' => commit_object.merge('type' => 'tree')).to_json }, :fail],
+  ['missing tag object', { 'REF_JSON' => reference.merge('object' => nil).to_json }, :fail],
+  ['missing tag SHA', { 'REF_JSON' => reference.merge('object' => { 'type' => 'commit' }).to_json }, :fail],
+  ['tag SHA prefix cannot match', { 'REF_JSON' => reference.merge('object' => commit_object.merge('sha' => sha[0, 12])).to_json }, :fail],
+  ['tag SHA substring cannot match', { 'REF_JSON' => reference.merge('object' => commit_object.merge('sha' => "0#{sha}")).to_json }, :fail],
+  ['tag SHA must be hex', { 'REF_JSON' => reference.merge('object' => commit_object.merge('sha' => 'z' * 40)).to_json }, :fail],
+  ['tag SHA trailing newline is not normalized', { 'REF_JSON' => reference.merge('object' => commit_object.merge('sha' => "#{sha}\n")).to_json }, :fail],
+  ['listed tag SHA trailing newline is invalid', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => [[tag_entry.merge('commit' => { 'sha' => "#{sha}\n" })]].to_json }, :fail],
+  ['tag API failure', { 'RELEASES_JSON' => '[[]]', 'FAIL_API' => 'tags' }, :fail],
+  ['malformed tags response', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => '{}' }, :fail],
+  ['concatenated tag documents refuse draft', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => "[[]]\n[[]]" }, :fail],
+  ['concatenated release documents', { 'RELEASES_JSON' => "[[]]\n[[]]" }, :fail],
+  ['concatenated ref documents cannot discard invalid object', { 'REF_JSON' => reference.to_json + "\n" + reference.merge('object' => {}).to_json }, :fail],
+  ['duplicate tags refuse draft', { 'RELEASES_JSON' => '[[]]', 'TAGS_JSON' => [[tag_entry, tag_entry]].to_json }, :fail]
+]
+[nil, 'false', 0].each do |value|
+  fixtures << ["invalid draft value #{value.inspect}", { 'RELEASES_JSON' => [[published.merge('draft' => value)]].to_json }, :fail]
+end
+%w[draft tag_name].each do |key|
+  fixtures << ["missing release #{key}", { 'RELEASES_JSON' => [[published.reject { |field, _| field == key }]].to_json }, :fail]
+end
+[nil, false, 42].each do |value|
+  fixtures << ["invalid release tag #{value.inspect}", { 'RELEASES_JSON' => [[published.merge('tag_name' => value)]].to_json }, :fail]
+end
+['', 'invalid JSON', '{', '{}', 'null', '[]', '[{}]', '[[false]]'].each do |value|
+  fixtures << ["malformed release response #{value.inspect}", { 'RELEASES_JSON' => value }, :fail]
+end
+['', 'invalid JSON', '[]', 'null'].each do |value|
+  fixtures << ["malformed ref response #{value.inspect}", { 'REF_JSON' => value }, :fail]
+end
+%w[401 403 404 500].each do |http_status|
+  %w[releases ref].each do |api|
+    # gh reports HTTP failures as a nonzero command status, not a successful JSON body.
+    fixtures << ["#{api} API HTTP #{http_status}", { 'FAIL_API' => api, 'API_EXIT' => '1' }, :fail]
   end
-  puts "PASS #{name}"
+end
+[
+  ['different annotated commit', annotation.merge('object' => commit_object.merge('sha' => nested_sha))],
+  ['wrong annotation SHA', annotation.merge('sha' => nested_sha)],
+  ['missing annotation object', annotation.reject { |key, _| key == 'object' }],
+  ['invalid annotation object type', annotation.merge('object' => commit_object.merge('type' => 'tree'))],
+  ['cyclic annotation is bounded', annotation.merge('object' => { 'type' => 'tag', 'sha' => annotation_sha })],
+  ['malformed annotation JSON', 'invalid JSON'],
+  ['concatenated annotation documents cannot discard invalid object', annotation.to_json + "\n" + annotation.merge('object' => {}).to_json]
+].each do |name, value|
+  fixtures << [name, { 'REF_JSON' => reference.merge('object' => { 'type' => 'tag', 'sha' => annotation_sha }).to_json,
+                       'TAG_OBJECTS_JSON' => { annotation_sha => value }.to_json }, :fail]
+end
+fixtures << ['annotation API failure', { 'REF_JSON' => reference.merge('object' => { 'type' => 'tag', 'sha' => annotation_sha }).to_json,
+                                         'FAIL_API' => 'annotation' }, :fail]
+Dir.mktmpdir('iriz-release-write-test-') do |fixture|
+  fixtures.each do |name, overrides, expected|
+    log_path = File.join(fixture, 'gh-calls.txt')
+    File.write(log_path, '')
+    env = { 'RELEASE_VERSION' => '0.2.1', 'SOURCE_SHA' => sha, 'GH_REPO' => 'zarubinvibe/iriz',
+            'GH_TOKEN' => 'synthetic-unused', 'GITHUB_STEP_SUMMARY' => File::NULL, 'GH_CALL_LOG' => log_path }.merge(defaults).merge(overrides)
+    output, status = Open3.capture2e(env, 'bash', '-c', github + draft_script)
+    calls = File.readlines(log_path, chomp: true)
+    writes = calls.reject { |call| call.start_with?('api --paginate --slurp ', 'api --method GET ') }
+    check(!output.include?('Unexpected gh call'), "#{name}: unexpected API or write: #{calls.inspect}")
+    check(status.success? == (expected != :fail), "#{name}: status #{status.exitstatus}: #{output}")
+    check(output.include?('CREATE_ARG:') == (expected == :create), "#{name}: unexpected create: #{output}")
+    check(output.include?('already published, left unchanged') == (expected == :noop), "#{name}: incorrect no-op claim: #{output}")
+    if expected == :create
+      check(writes.size == 1 && writes.first.start_with?("release create #{tag} "), "#{name}: unexpected writes: #{writes.inspect}")
+      %w[--draft --latest=false iriz-0.2.1-arm64.dmg iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json].each do |arg|
+        check(output.include?("CREATE_ARG:#{arg}\n"), "Missing create argument: #{arg}")
+      end
+      check(output.include?("CREATE_ARG:--target\nCREATE_ARG:#{sha}\n"), 'Draft must target the exact source commit')
+      check(!output.include?('--clobber'), 'Asset overwrite is forbidden')
+    else
+      check(writes.empty?, "#{name}: no writes allowed: #{writes.inspect}")
+    end
+    if expected == :noop
+      check(calls.include?("api --method GET repos/zarubinvibe/iriz/git/ref/tags/#{tag}"), "#{name}: exact real tag ref not checked")
+      check(output.include?('Existing assets were not verified by this no-op.'), "#{name}: must not imply existing asset verification")
+    end
+    check(calls.count { |call| call.include?('/git/tags/') } <= 16, "#{name}: unbounded annotation lookup")
+    puts "PASS #{name}"
+  end
 end

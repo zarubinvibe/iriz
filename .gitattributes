@@ -1,0 +1,4 @@
+# The supplied package is pinned byte-for-byte; do not normalize its line endings.
+Sources/IrizDictate/Resources/MeetingMinutes/** -text
+# Preserve the third-party license verbatim, including its original whitespace.
+Sources/IrizDictate/Resources/MeetingMinutes/fonts/OFL.txt -whitespace

@@ -71,6 +71,7 @@ public final class DictationController {
     /// нужна готовая модель.
     var pendingWarmUp: Task<Void, Never>? { modelReady ? nil : warmUpTask }
     private var recordingPurpose: DictationRecordingPurpose = .dictation
+    private var meetingRecordedAt: Date?
     private var recordedTargetPID: pid_t?
     /// РЕШЕНИЕ, а не приложение. Идентификатор того, что было спереди, живёт
     /// ровно один вызов в `handlePress`; дальше едет только выбранный профиль.
@@ -348,7 +349,8 @@ public final class DictationController {
     /// Файл пишется ДО разбора и остаётся на диске, даже если разбор упадёт:
     /// запись заседания дороже протокола, её нельзя терять из-за отказа
     /// распознавателя.
-    private func finishMeetingRecording(samples: [Float], process: Bool = true) {
+    @discardableResult
+    private func finishMeetingRecording(samples: [Float], process: Bool = true) -> MeetingRecording? {
         state = .ready
         guard !samples.isEmpty else {
             log("meeting: пустая запись, сохранять нечего")
@@ -360,18 +362,20 @@ public final class DictationController {
                 alert.addButton(withTitle: L("meeting.close", "Закрыть"))
                 _ = runMeetingAlert(alert)
             }
-            return
+            return nil
         }
-        let date = Date()
+        let date = meetingRecordedAt ?? Date().addingTimeInterval(-Double(samples.count) / Double(SAMPLE_RATE))
+        meetingRecordedAt = nil
         isBusy = true
         state = .transcribing
         let recording = saveMeetingRecording(samples: samples, at: date)
         isBusy = false
         state = .ready
-        guard let recording else { return }
+        guard let recording else { return nil }
         log("meeting: записано \(Int(recording.seconds)) с в \(recording.url.lastPathComponent)")
-        guard process else { return }
+        guard process else { return recording }
         processMeetingRecording(recording, at: date)
+        return recording
     }
 
     private func saveMeetingRecording(samples: [Float], at date: Date) -> MeetingRecording? {
@@ -403,34 +407,68 @@ public final class DictationController {
         return transcriptionGeneration
     }
 
-    private func processMeetingRecording(_ recording: MeetingRecording, at date: Date) {
+    private func processMeetingRecording(_ recording: MeetingRecording, at date: Date,
+                                         existing: MeetingArtifacts? = nil) {
+        guard !isBusy, !isRecording else { return }
+        settings.refreshFromDisk()
+        let choice = MeetingAgentConsent.request(adapter: settings.promptAgentAdapter,
+            model: settings.promptAgentModel, executableURL: settings.detectPromptAgentExecutable())
+        if case .cancel = choice { return }
         guard let generation = beginMeetingProcessing() else { return }
         let title = L("meeting.title", "Встреча") + " " + meetingDateFormatter().string(from: date)
         let pipeline = MeetingPipeline(transcriber: AudioFileTranscriber(engine: settings.speechEngine,
-                                                                         initialPrompt: whisperDefaultInitialPrompt))
+                                                                         captureTokenTimings: true))
         pipelineTask = Task { [weak self] in
             guard let self else { return }
             defer { self.finishTranscription(generation: generation) }
             do {
-                let result = try await pipeline.run(audio: recording.url, title: title, at: date)
+                var artifacts: MeetingArtifacts
+                if let existing {
+                    artifacts = existing
+                } else {
+                    artifacts = try await pipeline.run(audio: recording.url, title: title,
+                                                       recordedAt: date).artifacts
+                }
+                var fillingFailed = false
+                if case .fill(let runner) = choice {
+                    do {
+                        artifacts = try await pipeline.fillMinutes(for: artifacts, using: runner)
+                    } catch is CancellationError {
+                        return
+                    } catch {
+                        fillingFailed = true
+                        log("meeting: заполнение не удалось; исходник сохранён")
+                    }
+                }
                 guard !Task.isCancelled, self.transcriptionGeneration == generation else { return }
                 self.finishTranscription(generation: generation)
                 let alert = NSAlert()
-                alert.messageText = L("meeting.protocolReady", "Протокол встречи готов")
-                alert.informativeText = result.artifacts.transcript.path
-                if !result.speakersResolved {
-                    alert.informativeText += "\n\n" + L("meeting.speakersUnresolved", "Не удалось разделить говорящих. Текст сохранён одной репликой.")
+                alert.messageText = artifacts.minutesFilled
+                    ? L("meetingResult.draftSaved", "Черновик протокола сохранён")
+                    : L("meetingResult.unfilled", "Расшифровка сохранена; протокол не заполнен")
+                alert.alertStyle = fillingFailed ? .warning : .informational
+                alert.informativeText = artifacts.directory.path
+                    + "\n\n" + L("meetingResult.check", "Сверьте текст, голоса и таймкоды с аудио. Решения, имена и сроки требуют проверки; документ не согласован.")
+                if fillingFailed {
+                    alert.informativeText += "\n\n" + L("meetingResult.fillFailed", "Агент или экспорт не завершил работу. Проверьте настройки CLI и повторите заполнение: распознавать звук заново не нужно.")
                 }
-                alert.addButton(withTitle: L("meeting.openProtocol", "Открыть протокол"))
-                alert.addButton(withTitle: L("meeting.showRecording", "Показать запись"))
+                if artifacts.minutes == nil {
+                    alert.informativeText += "\n\n" + L("meetingResult.exportMissing", "DOCX и JSON ещё не созданы. Исходная расшифровка сохранена.")
+                }
+                alert.addButton(withTitle: artifacts.minutes == nil ? L("meetingResult.openTranscript", "Открыть расшифровку") : L("meetingResult.openDOCX", "Открыть DOCX"))
+                alert.addButton(withTitle: artifacts.minutesFilled ? L("meetingResult.refill", "Заполнить заново") : L("meetingResult.fill", "Заполнить протокол"))
+                alert.addButton(withTitle: L("meetingResult.showFiles", "Показать все файлы"))
                 alert.addButton(withTitle: L("meeting.close", "Закрыть"))
                 switch self.runMeetingAlert(alert) {
                 case .alertFirstButtonReturn:
-                    if !NSWorkspace.shared.open(result.artifacts.transcript) {
-                        NSWorkspace.shared.activateFileViewerSelecting([result.artifacts.transcript])
+                    let document = artifacts.minutes ?? artifacts.transcript
+                    if !NSWorkspace.shared.open(document) {
+                        NSWorkspace.shared.activateFileViewerSelecting([document])
                     }
                 case .alertSecondButtonReturn:
-                    NSWorkspace.shared.activateFileViewerSelecting([result.artifacts.audio])
+                    self.processMeetingRecording(recording, at: date, existing: artifacts)
+                case .alertThirdButtonReturn:
+                    NSWorkspace.shared.activateFileViewerSelecting([artifacts.directory])
                 default: break
                 }
             } catch {
@@ -735,6 +773,7 @@ public final class DictationController {
             return
         }
         recordingPurpose = purpose
+        meetingRecordedAt = purpose == .meeting ? Date() : nil
         // Приложение спрашиваем ОДИН раз и только в промпт-режиме: обычная
         // диктовка от получателя не зависит вовсе. Из ответа берутся два
         // значения — pid для адресной вставки и профиль промпта, — после чего
@@ -1396,13 +1435,30 @@ public final class DictationController {
         isRecording = false
         maxDurationTask?.cancel()
         maxDurationTask = nil
-        _ = audio.endRecording()
+        let purpose = recordingPurpose
+        let captured = audio.endRecording()
         recordingPurpose = .dictation
         recordedTargetPID = nil
         recordedPromptProfile = nil
         // Toggle-автомат о Escape не знает — состояние сбрасываем сами.
         hotkeys.resetToggleState()
         state = .ready
+        if purpose == .meeting {
+            // Escape останавливает встречу, но не уничтожает её запись.
+            // Разбор не запускаем и не отправляем текст никакому агенту.
+            if let recording = finishMeetingRecording(samples: captured.samples, process: false) {
+                let alert = NSAlert()
+                alert.messageText = L("meetingResult.stoppedSaved", "Запись встречи остановлена и сохранена")
+                alert.informativeText = L("meetingResult.stoppedHelp", "Расшифровка не запускалась. Запись можно позже импортировать в раздел «Встречи».") + "\n\n" + recording.url.path
+                alert.addButton(withTitle: L("meeting.showRecording", "Показать запись"))
+                alert.addButton(withTitle: L("meeting.close", "Закрыть"))
+                if runMeetingAlert(alert) == .alertFirstButtonReturn {
+                    NSWorkspace.shared.activateFileViewerSelecting([recording.url])
+                }
+            }
+            return
+        }
+        meetingRecordedAt = nil
         log("dictation cancelled by Escape")
     }
 
@@ -1510,7 +1566,7 @@ func promptFailureKind(for error: any Error) -> PromptFailureKind {
         return .launchRuntime
     case .timedOut:
         return .timeout
-    case .missingResult, .resultTooLarge, .invalidResultJSON, .invalidPromptSpec,
+    case .missingResult, .resultTooLarge, .invalidSchemaJSON, .invalidResultJSON, .invalidPromptSpec,
          .invalidPromptOutcome, .renderingFailed:
         return .invalidResult
     }
@@ -1573,6 +1629,7 @@ func safePromptFailureLogLabel(for error: any Error) -> String {
     case .timedOut: return "timed out"
     case .missingResult: return "missing result"
     case .resultTooLarge: return "result too large"
+    case .invalidSchemaJSON: return "invalid response schema"
     case .invalidResultJSON: return "invalid result JSON"
     case .invalidPromptSpec: return "invalid PromptSpec"
     case .invalidPromptOutcome: return "invalid prompt outcome"

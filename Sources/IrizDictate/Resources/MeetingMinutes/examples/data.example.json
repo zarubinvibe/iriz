@@ -1,0 +1,87 @@
+{
+  "fields": {
+    "meeting_id": "DEMO-001",
+    "meeting_title": "УЧЕБНЫЙ ПРИМЕР: подготовка протокола",
+    "project": "Демонстрационный проект",
+    "meeting_goal": "Проверить заполнение формы",
+    "start_date": "13.09.2026",
+    "start_time": "10:00",
+    "timezone": "Europe/Moscow",
+    "approval_status": "черновик",
+    "source_materials": "Искусственный учебный текст из data.example.json; реальная встреча не проводилась",
+    "meeting_summary": "В учебном примере согласован формат JSON. Участник Б проверит заполненный файл до 14.09.2026.",
+    "recording_sources": "Аудиозапись отсутствует: пример составлен для демонстрации",
+    "transcript_coverage": "Все реплики учебного текста приведены ниже",
+    "meeting_recording_coverage": "Не применимо: искусственный пример",
+    "transcript_end_status": "Конец учебного текста"
+  },
+  "blocks": {
+    "participants": [
+      {
+        "participant_id": "P-001",
+        "participant_name": "Участник А",
+        "speaker_label": "Говорящий 1"
+      },
+      {
+        "participant_id": "P-002",
+        "participant_name": "Участник Б",
+        "speaker_label": "Говорящий 2"
+      }
+    ],
+    "topics": [
+      {
+        "topic_id": "T-001",
+        "topic_title": "Формат данных",
+        "discussion_summary": "Предложен JSON для заполнения протокола. Предложение согласовано.",
+        "related_decision_action_ids": "D-001, A-001"
+      }
+    ],
+    "decisions": [
+      {
+        "decision_id": "D-001",
+        "decision_topic_id": "T-001",
+        "decision_text": "Использовать формат JSON для заполнения протокола",
+        "decision_approved_by": "Участник А, Участник Б",
+        "decision_source": "Учебные реплики U-001 и U-002"
+      }
+    ],
+    "actions": [
+      {
+        "action_id": "A-001",
+        "action_related_id": "D-001",
+        "action_text": "Проверить заполненный файл",
+        "action_owner_id_name": "P-002 — Участник Б",
+        "action_due": "14.09.2026",
+        "action_due_original": "до 14.09.2026",
+        "action_source": "Учебные реплики U-001 и U-002"
+      }
+    ],
+    "open_issues": [],
+    "transcript_speakers": [
+      {
+        "transcript_speaker_label": "Говорящий 1",
+        "transcript_participant_id": "P-001",
+        "transcript_speaker_name": "Участник А",
+        "speaker_identification_basis": "Назначено в учебном примере"
+      },
+      {
+        "transcript_speaker_label": "Говорящий 2",
+        "transcript_participant_id": "P-002",
+        "transcript_speaker_name": "Участник Б",
+        "speaker_identification_basis": "Назначено в учебном примере"
+      }
+    ],
+    "transcript_utterances": [
+      {
+        "utterance_id": "U-001",
+        "utterance_speaker": "Говорящий 1",
+        "utterance_text": "Предлагаю использовать формат JSON для заполнения протокола.\nУчастник Б, проверьте заполненный файл до 14.09.2026."
+      },
+      {
+        "utterance_id": "U-002",
+        "utterance_speaker": "Говорящий 2",
+        "utterance_text": "Согласен использовать JSON. Проверю файл до 14.09.2026."
+      }
+    ]
+  }
+}

@@ -54,7 +54,8 @@ let package = Package(
                 .product(name: "FluidAudio", package: "FluidAudio"),
                 "WhisperFramework",
             ],
-            path: "Sources/IrizDictate"
+            path: "Sources/IrizDictate",
+            resources: [.copy("Resources/MeetingMinutes")]
         ),
         .target(
             name: "IrizPrompt",

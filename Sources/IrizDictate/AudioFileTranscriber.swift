@@ -37,12 +37,15 @@ public actor AudioFileTranscriber {
     private var prepared = false
     private let engine: SpeechModelProfile
     private let initialPrompt: String?
+    private let captureTokenTimings: Bool
 
     /// Движок задается вызывающим, а не берется из настроек здесь: расшифровка
     /// файла из CLI не обязана читать выбор владельца из его настроек.
-    public init(engine: SpeechModelProfile = .multilingualV3, initialPrompt: String? = nil) {
+    public init(engine: SpeechModelProfile = .multilingualV3, initialPrompt: String? = nil,
+                captureTokenTimings: Bool = false) {
         self.engine = engine
         self.initialPrompt = initialPrompt
+        self.captureTokenTimings = captureTokenTimings
     }
 
     /// Библиотека шлёт прогресс только на звуке длиннее одного окна модели
@@ -80,7 +83,8 @@ public actor AudioFileTranscriber {
         let startedAt = ProcessInfo.processInfo.systemUptime
         let result = try await worker.transcribe(samples: audio.samples,
                                                  language: language,
-                                                 requestedAt: startedAt)
+                                                 requestedAt: startedAt,
+                                                 captureTokenTimings: captureTokenTimings)
         return AudioFileTranscript(
             text: result.text,
             processingSeconds: ProcessInfo.processInfo.systemUptime - startedAt,

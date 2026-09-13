@@ -12,6 +12,7 @@ public enum CodexPromptGeneratorError: Error, Sendable, Equatable {
     case timedOut
     case missingResult
     case resultTooLarge
+    case invalidSchemaJSON
     case invalidResultJSON
     case invalidPromptSpec
     case invalidPromptOutcome
@@ -45,6 +46,8 @@ extension CodexPromptGeneratorError: LocalizedError {
             "CLI агента не вернул результат."
         case .resultTooLarge:
             "Результат CLI агента превышает допустимый размер."
+        case .invalidSchemaJSON:
+            "Схема ответа должна быть корректным JSON-объектом."
         case .invalidResultJSON:
             "CLI агента вернул некорректный JSON."
         case .invalidPromptSpec:
@@ -126,6 +129,28 @@ public struct CodexPromptGenerator: Sendable {
     /// авторизации, таймаут. Разделять эти два пути значило бы завести вторую
     /// песочницу, а песочница - последнее место, где стоит держать копию.
     public func ask(_ body: String) async throws -> String {
+        try await ask(body, schema: nil)
+    }
+
+    /// Один структурированный запрос без автоматического повтора.
+    /// Здесь проверяется JSON-синтаксис; соответствие полей предметной схеме
+    /// проверяет вызывающий код. Схема Codex передаётся отдельным файлом 0600.
+    public func askJSON(_ body: String, schema: Data) async throws -> Data {
+        try Task.checkCancellation()
+        guard schema.count <= Self.resultLimit,
+              (try? JSONSerialization.jsonObject(with: schema)) is [String: Any] else {
+            throw CodexPromptGeneratorError.invalidSchemaJSON
+        }
+        let answer = try await ask(body, schema: schema)
+        try Task.checkCancellation()
+        let data = Data(answer.utf8)
+        guard (try? JSONSerialization.jsonObject(with: data)) != nil else {
+            throw CodexPromptGeneratorError.invalidResultJSON
+        }
+        return data
+    }
+
+    private func ask(_ body: String, schema: Data?) async throws -> String {
         try Task.checkCancellation()
         guard timeoutSeconds.isFinite, timeoutSeconds > 0 else {
             throw CodexPromptGeneratorError.invalidTimeout
@@ -156,6 +181,9 @@ public struct CodexPromptGenerator: Sendable {
             }
             try Self.seedAuthentication(adapter: adapter, from: environment,
                                         isolatedAgentHome: agentHome)
+            if let schema {
+                try Self.createPrivateFile(at: schemaURL, data: schema)
+            }
             try Self.createPrivateFile(
                 at: inputURL,
                 data: adapter.promptDelivery == .stdin ? Data(body.utf8) : Data()
@@ -185,9 +213,11 @@ public struct CodexPromptGenerator: Sendable {
             agentHomeURL: agentHome,
             temporaryDirectoryURL: temporaryDirectory,
             prompt: body,
-            environment: environment
+            environment: environment,
+            includeSchema: schema != nil
         )
         let exit = try await run(plan)
+        try Task.checkCancellation()
         switch exit.reason {
         case .exit where exit.status == 0: break
         case .exit:
@@ -199,8 +229,8 @@ public struct CodexPromptGenerator: Sendable {
         let answer: String
         switch adapter.resultSource {
         case .file:
-            guard let data = try? Data(contentsOf: resultURL), !data.isEmpty,
-                  let text = String(data: data, encoding: .utf8) else {
+            let data = try Self.readBoundedResult(at: resultURL)
+            guard let text = String(data: data, encoding: .utf8) else {
                 throw CodexPromptGeneratorError.missingResult
             }
             answer = text
@@ -214,6 +244,33 @@ public struct CodexPromptGenerator: Sendable {
             throw CodexPromptGeneratorError.resultTooLarge
         }
         return answer
+    }
+
+    /// Один дескриптор связывает проверку размера с чтением. Симлинк и FIFO
+    /// отвергаются, а рост файла после проверки не снимает лимит чтения.
+    private static func readBoundedResult(at url: URL) throws -> Data {
+        let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC)
+        guard descriptor >= 0 else { throw CodexPromptGeneratorError.missingResult }
+        let handle = FileHandle(fileDescriptor: descriptor, closeOnDealloc: true)
+        defer { try? handle.close() }
+        var metadata = stat()
+        guard fstat(descriptor, &metadata) == 0,
+              metadata.st_mode & S_IFMT == S_IFREG,
+              metadata.st_size > 0 else {
+            throw CodexPromptGeneratorError.missingResult
+        }
+        guard metadata.st_size < Self.resultLimit else {
+            throw CodexPromptGeneratorError.resultTooLarge
+        }
+        let data: Data
+        do {
+            data = try handle.read(upToCount: Self.resultLimit) ?? Data()
+        } catch {
+            throw CodexPromptGeneratorError.missingResult
+        }
+        guard !data.isEmpty else { throw CodexPromptGeneratorError.missingResult }
+        guard data.count < Self.resultLimit else { throw CodexPromptGeneratorError.resultTooLarge }
+        return data
     }
 
     public func generate(
@@ -474,9 +531,10 @@ public struct CodexPromptGenerator: Sendable {
         agentHomeURL: URL?,
         temporaryDirectoryURL: URL,
         prompt: String,
-        environment: [String: String]
+        environment: [String: String],
+        includeSchema: Bool = true
     ) -> CodexInvocationPlan {
-        let arguments = adapter.resolvedArguments(
+        var arguments = adapter.resolvedArguments(
             prompt: prompt,
             promptFileURL: promptFileURL,
             schemaURL: schemaURL,
@@ -484,6 +542,12 @@ public struct CodexPromptGenerator: Sendable {
             workDirectoryURL: workDirectoryURL,
             model: model
         )
+        if !includeSchema, adapter.id == PromptAgentCatalog.codexID,
+           let index = arguments.indices.dropLast().first(where: {
+               arguments[$0] == "--output-schema" && arguments[$0 + 1] == schemaURL.path
+           }) {
+            arguments.removeSubrange(index...index + 1)
+        }
 
         let allowedEnvironment = Set(["PATH", "LANG"])
         var minimalEnvironment = environment.filter { allowedEnvironment.contains($0.key) }

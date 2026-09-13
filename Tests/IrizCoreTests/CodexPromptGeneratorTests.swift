@@ -677,6 +677,208 @@ struct CodexPromptGeneratorTests {
         #expect(errno == ESRCH)
     }
 
+    @Test func plainAskOmitsCodexSchemaArgumentsAndReturnsRawText() async throws {
+        let raw = "Переведи этот текст."
+        let answer = "Обычный ответ, не JSON."
+        let fake = try makeFakeExecutable(body: """
+        for argument in "$@"; do
+          case "$argument" in --output-schema|*/schema.json) exit 51 ;; esac
+        done
+        """ + "\n" + fakeResultScript(json: answer, requiredInput: raw))
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+
+        #expect(try await fakeGenerator(fake).ask(raw) == answer)
+    }
+
+    @Test func plainAskPreservesCustomSchemaArguments() async throws {
+        let fake = try makeFakeExecutable(body: """
+        [ "$#" = 2 ] || exit 51
+        [ "$1" = '--output-schema' ] || exit 52
+        [ "$2" = "$TMPDIR/schema.json" ] || exit 53
+        [ ! -e "$2" ] || exit 54
+        [ "$(/bin/cat)" = 'text' ] || exit 55
+        printf '%s' 'raw custom answer'
+        """)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let generator = CodexPromptGenerator(
+            executableURL: fake.executable,
+            adapter: PromptAgentCatalog.custom(arguments: ["--output-schema", "{schema}"]),
+            environment: ["PATH": "/usr/bin:/bin", "HOME": fake.directory.path]
+        )
+
+        #expect(try await generator.ask("text") == "raw custom answer")
+    }
+
+    @Test func askJSONWritesExactPrivateSchemaAndKeepsIsolation() async throws {
+        let schema = #"{"type":"object","properties":{"answer":{"type":"string"}},"required":["answer"],"additionalProperties":false}"#
+        let raw = "Только текст встречи, без записи."
+        let json = #"{"answer":"не указано"}"#
+        let fake = try makeFakeExecutable(body: fakeResultScript(
+            json: json, requiredInput: raw, checkPrivateFiles: true
+        ) + "\n" + """
+        [ "$(/bin/cat "$schema")" = '\(schema)' ] || exit 51
+        [ -z "${SAMPLE_SECRET:-}" ] || exit 52
+        """)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+
+        let answer = try await fakeGenerator(fake).askJSON(raw, schema: Data(schema.utf8))
+
+        #expect(answer == Data(json.utf8))
+        let temporaryRoot = try String(contentsOf: fake.directory.appendingPathComponent("temp-root"))
+        #expect(!FileManager.default.fileExists(atPath: temporaryRoot))
+    }
+
+    @Test func askJSONRejectsInvalidSchemaBeforeLaunching() async throws {
+        let fake = try makeFakeExecutable(body: "printf 'called' > \"${0%/*}/called\"")
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let schemas = ["not json", "[]", "true", "null", "{} trailing", String(repeating: " ", count: 1024 * 1024 + 1)]
+        for schema in schemas {
+            do {
+                _ = try await fakeGenerator(fake).askJSON("text", schema: Data(schema.utf8))
+                Issue.record("Runner принял негодную схему")
+            } catch let error as CodexPromptGeneratorError {
+                #expect(error == .invalidSchemaJSON)
+            }
+        }
+        #expect(!FileManager.default.fileExists(atPath: fake.directory.appendingPathComponent("called").path))
+    }
+
+    @Test func askJSONRejectsInvalidResultWithoutRetry() async throws {
+        for json in ["not json", "{} trailing"] {
+            let fake = try makeFakeExecutable(body: fakeResultScript(json: json) + "\n" + """
+            printf 'called\\n' >> "${0%/*}/called"
+            """)
+            defer { try? FileManager.default.removeItem(at: fake.directory) }
+            do {
+                _ = try await fakeGenerator(fake).askJSON("text", schema: Data("{}".utf8))
+                Issue.record("Runner принял негодный JSON")
+            } catch let error as CodexPromptGeneratorError {
+                #expect(error == .invalidResultJSON)
+            }
+            #expect(try String(contentsOf: fake.directory.appendingPathComponent("called")) == "called\n")
+        }
+    }
+
+    @Test func askJSONChecksResultFileSizeBeforeReading() async throws {
+        // Большой разреженный файл не занимает два гигабайта на диске.
+        // Проверка размера обязана отвергнуть его до выделения памяти под ответ.
+        for size in [1024 * 1024, 1024 * 1024 + 1, 2 * 1024 * 1024 * 1024] {
+            let fake = try makeFakeExecutable(body: fakeResultScript(json: "{}") + "\n" + """
+            /usr/bin/perl -e 'truncate($ARGV[0], $ARGV[1]) or die "truncate"' "$result" '\(size)'
+            """)
+            defer { try? FileManager.default.removeItem(at: fake.directory) }
+            do {
+                _ = try await fakeGenerator(fake).askJSON("text", schema: Data("{}".utf8))
+                Issue.record("Runner прочитал слишком большой ответ")
+            } catch let error as CodexPromptGeneratorError {
+                #expect(error == .resultTooLarge)
+            }
+        }
+    }
+
+    @Test func askJSONAcceptsResultJustBelowLimitAndRejectsEmptyResult() async throws {
+        let fake = try makeFakeExecutable(body: fakeResultScript(json: "{}") + "\n" + """
+        /usr/bin/perl -e 'open(my $out, ">>", $ARGV[0]) or die "open"; print $out " " x (1048575 - 2)' "$result"
+        """)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        let data = try await fakeGenerator(fake).askJSON("text", schema: Data("{}".utf8))
+        #expect(data.count == 1024 * 1024 - 1)
+
+        let empty = try makeFakeExecutable(body: fakeResultScript(json: ""))
+        defer { try? FileManager.default.removeItem(at: empty.directory) }
+        do {
+            _ = try await fakeGenerator(empty).askJSON("text", schema: Data("{}".utf8))
+            Issue.record("Runner принял пустой результат")
+        } catch let error as CodexPromptGeneratorError {
+            #expect(error == .missingResult)
+        }
+    }
+
+    @Test func askJSONRejectsSymlinkAndFIFOResults() async throws {
+        for replacement in [
+            #"/bin/ln -s "$schema" "$result""#,
+            #"/usr/bin/mkfifo "$result""#,
+        ] {
+            let fake = try makeFakeExecutable(body: fakeResultScript(json: "{}") + "\n" + """
+            /bin/rm "$result"
+            \(replacement)
+            """)
+            defer { try? FileManager.default.removeItem(at: fake.directory) }
+            do {
+                _ = try await fakeGenerator(fake).askJSON("text", schema: Data("{}".utf8))
+                Issue.record("Runner прочитал подменённый результат")
+            } catch let error as CodexPromptGeneratorError {
+                #expect(error == .missingResult)
+            }
+        }
+    }
+
+    @Test func plainAskAlsoRejectsOversizedFileBeforeReading() async throws {
+        let fake = try makeFakeExecutable(body: fakeResultScript(json: "text") + "\n" + """
+        /usr/bin/perl -e 'truncate($ARGV[0], 2147483648) or die "truncate"' "$result"
+        """)
+        defer { try? FileManager.default.removeItem(at: fake.directory) }
+        do {
+            _ = try await fakeGenerator(fake).ask("text")
+            Issue.record("Обычный ask прочитал слишком большой ответ")
+        } catch let error as CodexPromptGeneratorError {
+            #expect(error == .resultTooLarge)
+        }
+    }
+
+    @Test func askJSONTimeoutStopsProcessWithoutRetry() async throws {
+        let fake = try makeFakeExecutable(body: """
+        printf 'called\\n' >> "${0%/*}/called"
+        exec /usr/bin/perl -e '$SIG{INT} = "IGNORE"; $SIG{TERM} = "IGNORE"; open(my $out, ">", $ARGV[0]) or die "pid"; print $out $$; close($out); sleep 60' "${0%/*}/process.pid"
+        """)
+        let marker = fake.directory.appendingPathComponent("process.pid")
+        defer {
+            if let pid = processID(at: marker), Darwin.kill(pid, 0) == 0 { _ = Darwin.kill(pid, SIGKILL) }
+            try? FileManager.default.removeItem(at: fake.directory)
+        }
+        do {
+            _ = try await fakeGenerator(fake, timeoutSeconds: 3).askJSON("text", schema: Data("{}".utf8))
+            Issue.record("Runner проигнорировал таймаут")
+        } catch let error as CodexPromptGeneratorError {
+            #expect(error == .timedOut)
+        }
+        let pid = try #require(processID(at: marker))
+        errno = 0
+        #expect(Darwin.kill(pid, 0) == -1)
+        #expect(errno == ESRCH)
+        #expect(try String(contentsOf: fake.directory.appendingPathComponent("called")) == "called\n")
+    }
+
+    @Test func askJSONCancellationStopsProcessWithoutRetry() async throws {
+        let fake = try makeFakeExecutable(body: """
+        printf 'called\\n' >> "${0%/*}/called"
+        exec /usr/bin/perl -e '$SIG{INT} = "IGNORE"; $SIG{TERM} = "IGNORE"; open(my $out, ">", $ARGV[0]) or die "pid"; print $out $$; close($out); sleep 60' "${0%/*}/process.pid"
+        """)
+        let marker = fake.directory.appendingPathComponent("process.pid")
+        defer {
+            if let pid = processID(at: marker), Darwin.kill(pid, 0) == 0 { _ = Darwin.kill(pid, SIGKILL) }
+            try? FileManager.default.removeItem(at: fake.directory)
+        }
+        let task = Task {
+            try await fakeGenerator(fake, timeoutSeconds: 30).askJSON("text", schema: Data("{}".utf8))
+        }
+        defer { task.cancel() }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(10))
+        while processID(at: marker) == nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        let pid = try #require(processID(at: marker))
+        task.cancel()
+        do {
+            _ = try await task.value
+            Issue.record("Runner проигнорировал отмену")
+        } catch is CancellationError {}
+        errno = 0
+        #expect(Darwin.kill(pid, 0) == -1)
+        #expect(errno == ESRCH)
+        #expect(try String(contentsOf: fake.directory.appendingPathComponent("called")) == "called\n")
+    }
+
     private func hasPair(_ first: String, _ second: String, in arguments: [String]) -> Bool {
         zip(arguments, arguments.dropFirst()).contains { $0 == first && $1 == second }
     }

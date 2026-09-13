@@ -11,9 +11,10 @@
 //      ложится ничего. Половина доказательства опаснее его отсутствия, потому
 //      что создаёт видимость.
 //
-// Наружу не уходит ничего: и распознавание, и разделение по говорящим работают
-// на этой машине.
+// run работает локально. Отдельный fillMinutes передаёт сохранённый текст
+// выбранному CLI-агенту; UI требует отдельное согласие перед этим вызовом.
 import Foundation
+import IrizPrompt
 
 public struct MeetingResult: Sendable {
     public let artifacts: MeetingArtifacts
@@ -36,13 +37,8 @@ public enum MeetingPipelineFailure: String, Error, Equatable {
 func meetingSpeakerTurns(transcript: AudioFileTranscript, spans: [SpeakerSpan],
                          names: SpeakerNames = SpeakerNames())
     -> (turns: [SpeakerTurn], speakersResolved: Bool) {
-    let turns = speakerTurnsNamed(speakerTurns(tokens: transcript.tokenTimings, spans: spans), names: names)
-    guard !spans.isEmpty,
-          turns.contains(where: { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
-        return ([SpeakerTurn(speaker: "Запись", text: transcript.text,
-                             start: 0, end: transcript.audioSeconds)], false)
-    }
-    return (turns, true)
+    let snapshot = meetingTranscriptSnapshot(transcript: transcript, spans: spans)
+    return (speakerTurnsNamed(snapshot.turns, names: names), snapshot.speakerQuality == .diarized)
 }
 
 @MainActor
@@ -51,7 +47,7 @@ public final class MeetingPipeline {
     private let diarizer: SpeakerDiarizer
     private let storeRoot: URL?
 
-    public init(transcriber: AudioFileTranscriber = AudioFileTranscriber(),
+    public init(transcriber: AudioFileTranscriber = AudioFileTranscriber(captureTokenTimings: true),
                 diarizer: SpeakerDiarizer = SpeakerDiarizer(),
                 storeRoot: URL? = nil) {
         self.transcriber = transcriber
@@ -65,6 +61,7 @@ public final class MeetingPipeline {
     ///   теми же участниками они не спрашиваются заново.
     public func run(audio url: URL, title: String, names: SpeakerNames = SpeakerNames(),
                     at date: Date = Date(),
+                    recordedAt: Date? = nil,
                     progress: @escaping (String) -> Void = { _ in }) async throws -> MeetingResult {
         try Task.checkCancellation()
         progress("Читаю запись")
@@ -89,7 +86,7 @@ public final class MeetingPipeline {
             throw CancellationError()
         } catch {
             try Task.checkCancellation()
-            log("meeting: расшифровка отказала (\(error))")
+            log("meeting: расшифровка отказала")
             throw MeetingPipelineFailure.transcriptionFailed
         }
         try Task.checkCancellation()
@@ -110,22 +107,60 @@ public final class MeetingPipeline {
             spans = []
         }
         try Task.checkCancellation()
-        let resolved = meetingSpeakerTurns(transcript: transcript, spans: spans, names: names)
+        let snapshot = meetingTranscriptSnapshot(transcript: transcript, spans: spans)
+        let resolved = (turns: speakerTurnsNamed(snapshot.turns, names: names),
+                        speakersResolved: snapshot.speakerQuality == .diarized)
+        let source = MeetingSource(title: title, importedAt: date, recordedAt: recordedAt,
+                                   audioSeconds: transcript.audioSeconds, transcript: snapshot,
+                                   originalFileName: url.lastPathComponent)
 
         progress("Сохраняю")
-        let document = MeetingProtocolDocument(title: title, recordedAt: date,
+        let document = MeetingProtocolDocument(title: title, recordedAt: recordedAt,
                                                audioSeconds: transcript.audioSeconds,
                                                turns: resolved.turns)
         try Task.checkCancellation()
+        let saved: MeetingArtifacts
         do {
-            let artifacts = try MeetingStore.save(audio: url, protocolText: document.text(),
-                                                  at: date, title: title, in: storeRoot)
-            return MeetingResult(artifacts: artifacts, turns: resolved.turns,
-                                 speakersResolved: resolved.speakersResolved,
-                                 audioSeconds: transcript.audioSeconds)
+            saved = try MeetingStore.save(audio: url, protocolText: document.text(),
+                                           at: date, title: title, in: storeRoot, source: source)
         } catch {
-            log("meeting: запись на диск отказала (\(error))")
+            log("meeting: запись на диск отказала")
             throw MeetingPipelineFailure.storeFailed
+        }
+        // Источник уже сохранён: отказ заполнителя больше не теряет запись.
+        progress("Собираю DOCX и JSON с расшифровкой")
+        let artifacts: MeetingArtifacts
+        do {
+            let data = try MeetingMinutesGenerator.baseData(for: source)
+            artifacts = try await Task.detached {
+                try MeetingStore.exportMinutes(data, for: saved, filled: false)
+            }.value
+        } catch {
+            log("meeting: форма не экспортирована; исходник сохранён")
+            artifacts = saved
+        }
+        return MeetingResult(artifacts: artifacts, turns: resolved.turns,
+                             speakersResolved: resolved.speakersResolved,
+                             audioSeconds: transcript.audioSeconds)
+    }
+
+    /// Вызывается только после отдельного согласия UI на выбранного агента.
+    /// Для повтора читается сохранённый источник, не запускается распознаватель.
+    public func fillMinutes(for artifacts: MeetingArtifacts, using runner: CodexPromptGenerator,
+                            progress: @escaping (String) -> Void = { _ in }) async throws -> MeetingArtifacts {
+        try Task.checkCancellation()
+        let source = try MeetingStore.loadSource(for: artifacts)
+        progress("Заполняю протокол по расшифровке")
+        let data = try await MeetingMinutesGenerator.generate(source: source, using: runner)
+        try Task.checkCancellation()
+        progress("Сохраняю DOCX, JSON и уточнения")
+        let export = Task.detached {
+            try MeetingStore.exportMinutes(data, for: artifacts, filled: true)
+        }
+        return try await withTaskCancellationHandler {
+            try await export.value
+        } onCancel: {
+            export.cancel()
         }
     }
 }

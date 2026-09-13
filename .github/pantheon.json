@@ -132,6 +132,12 @@
     },
     "doc_pages": [
       {
+        "path": "docs/MEETINGS.md",
+        "frames": [
+          "assets/pantheon/doc-contributing.png"
+        ]
+      },
+      {
         "path": "docs/DOWNLOAD.md",
         "frames": ["assets/pantheon/doc-onboarding.png"]
       },

@@ -14,8 +14,10 @@ build/
 # Граф знаний ЕДЕТ ВМЕСТЕ С ДОМОМ: агент в свежем клоне без него слеп.
 # Кэш при этом остаётся дома - он пересобирается и весит больше самого графа.
 graphify-out/cache/
+graphify-out/converted/
 # Служебные файлы графа: пересобираются вместе с ним, читателю не нужны.
 graphify-out/.graphify_root
+graphify-out/.graphify_labels.json
 graphify-out/manifest.json
 .kimi-runs/
 __pycache__/

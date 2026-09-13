@@ -1,7 +1,6 @@
 # Происхождение кода
 
-Проект стоит на чужой работе и говорит об этом прямо. Три источника, все с разрешающими
-лицензиями; условие, под которым код вообще разрешено брать, - атрибуция, и она здесь.
+Ниже перечислены сторонние компоненты, их источники и лицензии.
 
 | Что | Источник | Лицензия | Текст | Как попадает к пользователю |
 |---|---|---|---|---|
@@ -12,9 +11,18 @@
 | движок Whisper | `ggml-org/whisper.cpp` v1.9.2 | MIT | `THIRD-PARTY/whisper.cpp-LICENSE` | **бинарный `whisper.framework` внутри `.app`** |
 | иерархическая кластеризация | fastcluster (Daniel Muellner, Google) | BSD-3 | `THIRD-PARTY/fastcluster-LICENSE` | через FluidAudio, разбор говорящих |
 | кластеризация VBx | VBx | Apache-2.0 | `THIRD-PARTY/VBx-LICENSE` | через FluidAudio, разбор говорящих |
+| модели разделения голосов | FluidInference / Speaker Diarization CoreML, на основе Pyannote Community-1 | CC-BY-4.0 | [закреплённая карточка модели](https://huggingface.co/FluidInference/speaker-diarization-coreml/blob/1ed7a662fdc7109e36d822db793ee6eebdaf8594/README.md) · [лицензия](https://creativecommons.org/licenses/by/4.0/) | отдельная загрузка по кнопке, не внутри DMG |
+| шрифт шаблона протокола | PT Serif, ParaType | SIL Open Font License 1.1 | `Sources/IrizDictate/Resources/MeetingMinutes/fonts/OFL.txt` | файлы шрифтов и лицензия внутри ресурсного bundle |
 
-Три последние строки добавлены 06.09.2026 после сверки того, что РЕАЛЬНО едет
-пользователю, а не того, что записано в зависимостях.
+Модели голосов закреплены на ревизии `1ed7a662fdc7109e36d822db793ee6eebdaf8594`;
+приложение проверяет исходные байты по размеру и SHA-256 и не изменяет веса.
+Карточка конвертации указывает исходную модель
+[pyannote/speaker-diarization-community-1](https://huggingface.co/pyannote/speaker-diarization-community-1).
+Лицензия моделей CC-BY-4.0 не заменяется лицензией Apache-2.0 у SDK FluidAudio.
+Подробности загрузки — [docs/MEETINGS.md](docs/MEETINGS.md).
+
+Whisper, fastcluster и VBx добавлены 06.09.2026 после сверки того, что едет
+пользователю, а не только того, что записано в зависимостях.
 
 Whisper пропускался: `whisper.framework` кладётся внутрь `.app` собранным
 бинарником, а MIT требует нести уведомление об авторстве вместе с бинарной

@@ -1,6 +1,6 @@
 # iriz
 
-Speak out loud and the text appears. Your Mac does the decoding, and nothing travels to somebody else's cloud.
+Speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.
 
 [![Download for macOS](https://img.shields.io/badge/Download%20for%20macOS-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
 
@@ -51,11 +51,13 @@ Here is how it goes. You press one key, speak in your normal voice, press it aga
 
 What sets it apart from similar apps is where the speech is decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your Mac does the work, and the audio never leaves the machine.
 
-**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow — a bridge between the sky and the ground. She does not invent the message, she carries it whole. The app does exactly that: it takes what you said and moves it into text, adding nothing of its own.
+**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow — a bridge between the sky and the ground. She does not invent the message, she carries it whole. The name reflects the job: carrying speech into text. Automatic recognition can still mishear words, so check the result.
 
 ![The menu bar: status, modes, dictation, meetings, history](docs/assets/shots/menu-en.png)
 
-It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. It strips hesitations and repetitions. It splits a meeting or a court hearing recording by voice and puts the minutes next to the audio.
+It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. Ordinary dictation can remove hesitations and repetitions.
+
+Meetings keep the original recognition text and the audio. The DOCX contains minutes first, then the full available transcript on a new page; the same folder includes JSON and a list of details to check. Filling decisions and action items through your selected agent requires separate consent to send the text. Unknown details stay explicit, and the result remains a draft. [Processing a meeting](docs/MEETINGS.md).
 
 ![Meetings: drop the recording, the minutes land next to it](docs/assets/shots/page-meetings.png)
 
@@ -75,9 +77,9 @@ So here your Mac does the decoding, and the app reaches the network only when yo
 
 ## The Main Advantage
 
-**Main advantage:** your Mac decodes the speech, and during dictation the network is closed by a switch in the code rather than a promise in the text.
+**Main advantage:** speech recognition runs on your Mac without sending audio to a cloud recognizer.
 
-**Why this is better:** The switch sits inside the recognition library and returns to its place even when a download fails. Documentation does not prove that: a script pins the set of networking symbols in the built binary and asks the kernel whether the running app holds a single socket.
+**Why this is better:** The recognition library keeps its own model downloader off during recognition. That setting is not a system firewall: model downloads and CLI agents use separate network paths.
 
 ## How It Works
 
@@ -118,19 +120,19 @@ By default it is the right Command key. You press it, and nothing else on the Ma
 
 ### Step 2: Say it out loud
 
-A small plate appears near the cursor and its wave follows your voice, so you can see you are being heard rather than guess. The sound lives in memory only as long as it takes to decode it, and is never written to disk.
+A small plate appears near the cursor and its wave follows your voice, so you can see you are being heard. Ordinary dictation keeps audio in memory while decoding and does not save a recording. Meeting recordings are saved separately in the archive.
 
 <p align="center"><img src="docs/assets/pantheon/workflow/02-voice.png" alt="Iriz stage 2: say it out loud, drawn as a wide Pantheon marble scene" width="100%"></p>
 
-**You get:** a recording that exists for seconds and leaves nothing behind.
+**You get:** dictated text without a saved audio file in ordinary dictation mode.
 
 ### Step 3: The Mac decodes it
 
-Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Nothing is sent anywhere, and while dictation runs the recognition library keeps its downloader shut.
+Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Audio is decoded locally, and the recognition library keeps its own downloader off. Optional agent processing of the resulting text requires your consent.
 
 <p align="center"><img src="docs/assets/pantheon/workflow/03-decode.png" alt="Iriz stage 3: the Mac decodes it, drawn as a wide Pantheon marble scene" width="100%"></p>
 
-**You get:** a transcript that was never anywhere but your machine.
+**You get:** a locally recognized transcript; sending it to an agent is a separate choice.
 
 ### Step 4: The text lands in the field
 
@@ -166,7 +168,7 @@ Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole fir
 
 | Choice | Best when | What you get | Where speech goes | Layout repair | Trade-off |
 |---|---|---|---|---|---|
-| **iriz** | You dictate work material and cannot hand it out | Layout, local dictation, speech into a task | Nowhere; the Mac decodes it | Yes, English and Russian | Russian first, no notarization yet |
+| **iriz** | You dictate work material and cannot hand it out | Layout, local dictation, speech into a task | Local audio recognition; agent text only with consent | Yes, English and Russian | Russian first, no notarization yet |
 | Doing it by hand | One short phrase, once | Full control over every letter | Nowhere | No | Long texts eat your evening |
 | Punto Switcher | Layout only | Years of layout repair | Nowhere | Yes | No dictation at all |
 | macOS built-in dictation | An occasional sentence | It is already installed | Apple, unless the offline model is on | No | Weak on terms, no task building |
@@ -187,14 +189,14 @@ Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole fir
 
 ## Safety And Privacy
 
-- Audio is never saved. It lives exactly as long as it takes to decode what you said.
+- Ordinary dictation does not save audio. Meetings keep a copy of the recording in the iriz archive.
 - The screen is not read. No ScreenCaptureKit, no window captures.
-- Other apps' fields are not read: the permission is there to learn whether a field accepts text, not to take text out of it.
+- To suggest corrections after dictation, iriz reads the focused text field through Accessibility. It does not save the full contents of that field.
 - Where you dictated is not recorded. Otherwise the disk would collect metadata about who you work with and when.
 - The clipboard is put back after the paste.
-- Transcripts sit under 0700 and 0600 and stay on your disk.
+- Saved transcripts use owner-only permissions: 0700 for folders and 0600 for files. They are plaintext, not encrypted by the app.
 
-One thing goes out, and only on your button: the one-time speech model download. Prompt mode is off by default, and switching it on means agreeing that the transcript reaches the agent you picked.
+You start speech-model and optional speaker-model downloads with their buttons; those downloads do not send your audio or text. Prompt mode, translation and agent-based cleanup send text through your selected CLI after you consent. Drafting meeting minutes asks for separate consent to send the full transcript, without the audio. The CLI's settings determine its endpoint; even a local CLI can contact a remote server, and provider charges may apply.
 
 ## Limits
 

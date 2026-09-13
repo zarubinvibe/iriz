@@ -39,6 +39,13 @@ Builds live under `release/build`; output goes to `release/dist`. Both stay out 
 
 The builder checks app and framework architectures, deployment targets, language resources, bundled dependencies, code signatures and the mounted image. Previous output is kept until the new images pass. A failed build leaves its log and staging directory for diagnosis; it detaches only its own mounted image.
 
+The meeting template is a required runtime resource, not a developer-only
+document. Both app builders verify its complete bundle and the template hash,
+including inside the mounted DMG. For a meeting-feature release, also run the
+DOCX, transcript, generator and archive suites and test an export from the
+copied app. See [MEETING-RESOURCES.md](MEETING-RESOURCES.md). An older successful
+CI run does not verify a newly added template or export path.
+
 For an experimental universal build, set `IRIZ_RELEASE_VARIANTS='arm64 universal'`. Its extra `x86_64` slice is a packaging check, not proof that recognition works on an Intel Mac. Do not advertise it as tested Intel support.
 
 ## GitHub Actions
@@ -49,7 +56,7 @@ The standard ARM64 `macos-26` runner uses Xcode 26.6, listed in [GitHub's runner
 
 Before testing, the hosted-runner setup enables the built-in English and Russian input sources and sets iriz's own language preference to Russian. It does not select a different active keyboard, change the system language, grant permissions or replace the native keyboard map with a fixture. Setup refuses to write outside a GitHub-hosted macOS runner, and a failed prerequisite stops the build before the tests.
 
-To verify the full build for a version that is already published, use **Run workflow → build_only: true**. This runs the tests, builds and verifies the DMG, and uploads the four files as an Actions artifact. The entire release-writing job is skipped: no draft, tag, asset or Latest change. With the default `false`, an existing release makes the draft job fail without changing it.
+To verify the full build for a version that is already published, use **Run workflow → build_only: true**. This runs the tests, builds and verifies the DMG, and uploads the four files as an Actions artifact. The entire release-writing job is skipped: no draft, tag, asset or Latest change. With the default `false`, an already published release is a successful no-op only if its exact tag ref resolves to the commit that produced the build, including annotated tags. The job logs `already published, left unchanged` and neither edits the release nor uploads assets. This does not verify the existing assets; independent download and installation checks still decide acceptance. An existing draft, mismatched ref or source commit, invalid API response or API failure stops the job without writes. If no release exists, the job still creates only a new draft, without overwriting assets.
 
 A maintainer reviews the draft, the release notes and a clean-machine install, runs the publication checks, then publishes it. Publishing is a separate action. No Apple credentials are required by this workflow and no background updater is installed in the app.
 

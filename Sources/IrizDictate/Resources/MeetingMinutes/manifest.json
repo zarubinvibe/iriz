@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "created": "13.09.2026",
+  "template_sha256": "8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff",
+  "files": {
+    "README.md": "07b68fd3f3f824f72409c3b988a82b483fca92b2eefda2bf167884f4817a7d1c",
+    "data.schema.json": "0a0f3e5f22df726d1fee0c8140d738becfe737e752522751abfcb16a5bbc0c5a",
+    "docs/filler-usage.md": "42058d174890d4a8e7700a9f46e9f3f32b7a3ddda2a28b273a2d8cf9d10834a7",
+    "docs/filling-rules.md": "808e133cac0e436c87de5fcb1d9290bee23329d50de07802bade2fc8401dccab",
+    "docs/formatting.md": "2373ceb0b11b04ea7b292ac2c786b15ec9ad333d25e5919710b1d6f4695fd5d8",
+    "docs/owner-changes.md": "bc3f6657382d1e9664e4c5faa7a103319e65c552ea83763d94db285a3b1205e6",
+    "docs/verification.md": "1b6fd6b3704418e9c476fa9b85fc6cd52f34525e81d2fd0408275f9c52cfacaf",
+    "examples/data.example.json": "d22b08d2831b94c519ffc18ebdfc77c7c99c42f4ca720b7eef475dc909d482b6",
+    "examples/filled.example.docx": "1b48fbc129aaa7470efa607ef1fbd32f8abdf7625760a924e29ccc5bdd09438d",
+    "fields.json": "335c2d5bbec50a45bdebed56098adbbe71ba68e85fba7556fd16f49fc3ec1a61",
+    "fonts/OFL.txt": "fb8d93178f9809af0b96d13013f527482894405f010130c0783a918fe17076c8",
+    "fonts/PT_Serif-Web-Bold.ttf": "038ba7336bd7ea14f12ad155bed51a4345cac5153275d521dec3ba04021c526e",
+    "fonts/PT_Serif-Web-Regular.ttf": "a4951fade06ff8f09b7673aa81ffb65a8cd409e24d3289a6dc670bc4dda2557a",
+    "scripts/fill_template.py": "899d670e17ae8892e69ef5ea5fd0e50c438954ae410f69f1d1b22a67a8bcf340",
+    "scripts/verify_package.py": "f5df9b1bbb49780fdf23658846ea5e8789527d709ca86963f2f5576e9526492c",
+    "template.docx": "8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff",
+    "template.md": "8c4b4cd03aff02286652022d1ba6be80ee94c8ffafe1d2ead3064ae16aa7f8c0",
+    "tests/test_fill_template.py": "6f5d1781436e9ad543365ae76f450dfaa60d84ed98b5bc63335d03e5f1ee3e1a"
+  }
+}

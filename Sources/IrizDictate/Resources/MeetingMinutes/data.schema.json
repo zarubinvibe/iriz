@@ -1,0 +1,435 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Данные протокола и полной расшифровки",
+  "type": "object",
+  "required": [
+    "fields",
+    "blocks"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "fields": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "meeting_id": {
+          "type": "string",
+          "description": "Номер / идентификатор"
+        },
+        "meeting_title": {
+          "type": "string",
+          "description": "Название и тема"
+        },
+        "project": {
+          "type": "string",
+          "description": "Организация / проект"
+        },
+        "meeting_goal": {
+          "type": "string",
+          "description": "Цель встречи"
+        },
+        "start_date": {
+          "type": "string",
+          "description": "Дата начала"
+        },
+        "start_time": {
+          "type": "string",
+          "description": "Время начала"
+        },
+        "end_date": {
+          "type": "string",
+          "description": "Дата окончания"
+        },
+        "end_time": {
+          "type": "string",
+          "description": "Время окончания"
+        },
+        "timezone": {
+          "type": "string",
+          "description": "Часовой пояс"
+        },
+        "meeting_format": {
+          "type": "string",
+          "description": "Формат — очно / онлайн / смешанный"
+        },
+        "location": {
+          "type": "string",
+          "description": "Место — город, адрес, помещение"
+        },
+        "meeting_link": {
+          "type": "string",
+          "description": "Платформа и ссылка на онлайн-встречу"
+        },
+        "facilitator": {
+          "type": "string",
+          "description": "Ведущий"
+        },
+        "minutes_author": {
+          "type": "string",
+          "description": "Составитель протокола"
+        },
+        "version": {
+          "type": "string",
+          "description": "Версия и статус протокола"
+        },
+        "approval_status": {
+          "type": "string",
+          "description": "Версия и статус протокола"
+        },
+        "meeting_summary": {
+          "type": "string",
+          "description": "Краткий итог — 3–5 предложений"
+        },
+        "next_meeting_at": {
+          "type": "string",
+          "description": "Следующая встреча — дата, время, часовой пояс"
+        },
+        "next_meeting_location": {
+          "type": "string",
+          "description": "Место / ссылка"
+        },
+        "next_meeting_topic": {
+          "type": "string",
+          "description": "Тема следующей встречи"
+        },
+        "next_meeting_preparation": {
+          "type": "string",
+          "description": "Что подготовить к ней"
+        },
+        "source_materials": {
+          "type": "string",
+          "description": "Основание протокола — заметки / расшифровка / запись / приглашение"
+        },
+        "attachments": {
+          "type": "string",
+          "description": "Приложения — названия и ссылки"
+        },
+        "prepared_date": {
+          "type": "string",
+          "description": "Дата составления"
+        },
+        "recipients": {
+          "type": "string",
+          "description": "Кому направить протокол"
+        },
+        "approved_by_at": {
+          "type": "string",
+          "description": "Кто проверил / согласовал и когда"
+        },
+        "approval_comments": {
+          "type": "string",
+          "description": "Замечания к протоколу"
+        },
+        "signatures": {
+          "type": "string",
+          "description": "Подписи, если предусмотрены порядком встречи"
+        },
+        "recording_sources": {
+          "type": "string",
+          "description": "Исходные файлы / ссылки на запись"
+        },
+        "recording_order": {
+          "type": "string",
+          "description": "Порядок файлов, если запись состоит из нескольких частей"
+        },
+        "recording_durations": {
+          "type": "string",
+          "description": "Продолжительность каждого файла"
+        },
+        "transcribed_intervals": {
+          "type": "string",
+          "description": "Охваченные интервалы записи"
+        },
+        "transcript_coverage": {
+          "type": "string",
+          "description": "Полнота — вся доступная запись / частичная расшифровка"
+        },
+        "meeting_recording_coverage": {
+          "type": "string",
+          "description": "Охват самой встречи — полностью / запись фрагментарна / неизвестно"
+        },
+        "transcript_gaps": {
+          "type": "string",
+          "description": "Пропуски записи или расшифровки — интервалы и причины"
+        },
+        "meeting_languages": {
+          "type": "string",
+          "description": "Язык / языки встречи"
+        },
+        "transcript_checked_by_at": {
+          "type": "string",
+          "description": "Кто сверил расшифровку с записью и когда"
+        },
+        "transcript_end_status": {
+          "type": "string",
+          "description": "Отметка завершения — конец доступной записи / расшифровка не завершена"
+        }
+      }
+    },
+    "blocks": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "participant_id": {
+                "type": "string",
+                "description": "Идентификатор участника"
+              },
+              "participant_name": {
+                "type": "string",
+                "description": "ФИО / известное имя"
+              },
+              "participant_organization_role": {
+                "type": "string",
+                "description": "Организация, должность"
+              },
+              "participant_meeting_role": {
+                "type": "string",
+                "description": "Роль во встрече"
+              },
+              "attendance": {
+                "type": "string",
+                "description": "Участие — присутствовал / частично / отсутствовал / не подтверждено"
+              },
+              "participation_mode": {
+                "type": "string",
+                "description": "Способ участия — очно / онлайн"
+              },
+              "participation_period": {
+                "type": "string",
+                "description": "Период участия, если известен"
+              },
+              "speaker_label": {
+                "type": "string",
+                "description": "Обозначение в расшифровке, если есть"
+              }
+            }
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "topic_id": {
+                "type": "string",
+                "description": "Номер вопроса"
+              },
+              "topic_title": {
+                "type": "string",
+                "description": "Вопрос"
+              },
+              "topic_speaker": {
+                "type": "string",
+                "description": "Докладчик / инициатор"
+              },
+              "topic_status": {
+                "type": "string",
+                "description": "Статус — обсужден / перенесен / снят / не рассмотрен"
+              },
+              "discussion_summary": {
+                "type": "string",
+                "description": "Суть обсуждения"
+              },
+              "proposals": {
+                "type": "string",
+                "description": "Предложенные варианты"
+              },
+              "disagreements": {
+                "type": "string",
+                "description": "Возражения, разногласия и их авторы"
+              },
+              "related_decision_action_ids": {
+                "type": "string",
+                "description": "Связанные решения и поручения"
+              }
+            }
+          }
+        },
+        "decisions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "decision_id": {
+                "type": "string",
+                "description": "Номер решения"
+              },
+              "decision_topic_id": {
+                "type": "string",
+                "description": "Номер вопроса повестки"
+              },
+              "decision_text": {
+                "type": "string",
+                "description": "Формулировка принятого решения"
+              },
+              "decision_conditions": {
+                "type": "string",
+                "description": "Условия и ограничения"
+              },
+              "decision_approved_by": {
+                "type": "string",
+                "description": "Кто принял / согласовал"
+              },
+              "decision_reason": {
+                "type": "string",
+                "description": "Основание выбора, если озвучено"
+              },
+              "decision_source": {
+                "type": "string",
+                "description": "Источник подтверждения — файл и таймкод / абзац"
+              }
+            }
+          }
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action_id": {
+                "type": "string",
+                "description": "Номер поручения"
+              },
+              "action_related_id": {
+                "type": "string",
+                "description": "Связанный вопрос / решение"
+              },
+              "action_text": {
+                "type": "string",
+                "description": "Что сделать"
+              },
+              "action_deliverable": {
+                "type": "string",
+                "description": "Результат и критерий готовности"
+              },
+              "action_owner_id_name": {
+                "type": "string",
+                "description": "Ответственный"
+              },
+              "action_helpers": {
+                "type": "string",
+                "description": "Соисполнители, если назначены"
+              },
+              "action_due": {
+                "type": "string",
+                "description": "Срок — дата, при наличии время и часовой пояс"
+              },
+              "action_due_original": {
+                "type": "string",
+                "description": "Исходная формулировка срока"
+              },
+              "action_dependencies": {
+                "type": "string",
+                "description": "Зависимости / необходимые материалы"
+              },
+              "action_reviewer": {
+                "type": "string",
+                "description": "Кому передать результат / кто принимает"
+              },
+              "action_status": {
+                "type": "string",
+                "description": "Статус на дату протокола"
+              },
+              "action_source": {
+                "type": "string",
+                "description": "Источник подтверждения — файл и таймкод / абзац"
+              }
+            }
+          }
+        },
+        "open_issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "open_issue": {
+                "type": "string",
+                "description": "Вопрос / риск"
+              },
+              "clarification_needed": {
+                "type": "string",
+                "description": "Что осталось неясным и что требуется для решения"
+              },
+              "clarification_owner": {
+                "type": "string",
+                "description": "Кто уточняет, если назначен"
+              },
+              "clarification_due": {
+                "type": "string",
+                "description": "Срок уточнения, если установлен"
+              }
+            }
+          }
+        },
+        "transcript_speakers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "transcript_speaker_label": {
+                "type": "string",
+                "description": "Обозначение на записи"
+              },
+              "transcript_participant_id": {
+                "type": "string",
+                "description": "Связанный идентификатор участника"
+              },
+              "transcript_speaker_name": {
+                "type": "string",
+                "description": "Имя, если установлено"
+              },
+              "speaker_identification_basis": {
+                "type": "string",
+                "description": "На чем основано установление личности / что требует уточнения"
+              }
+            }
+          }
+        },
+        "transcript_utterances": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "utterance_id": {
+                "type": "string",
+                "description": "Реплика"
+              },
+              "utterance_recording_file": {
+                "type": "string",
+                "description": "Файл записи"
+              },
+              "utterance_start": {
+                "type": "string",
+                "description": "Таймкод от начала файла — ЧЧ:ММ:СС–ЧЧ:ММ:СС"
+              },
+              "utterance_end": {
+                "type": "string",
+                "description": "Таймкод от начала файла — ЧЧ:ММ:СС–ЧЧ:ММ:СС"
+              },
+              "utterance_speaker": {
+                "type": "string",
+                "description": "Говорящий"
+              },
+              "utterance_text": {
+                "type": "string",
+                "description": "Дословный текст реплики"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
