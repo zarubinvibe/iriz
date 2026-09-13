@@ -33,6 +33,8 @@ shasum -a 256 -c SHA256SUMS.txt
 
 `-` means ad-hoc signing, not a verified publisher. The normal local mode uses an existing self-signing certificate and a Finder window with an install arrow. That mode needs Pillow for the background renderer; headless mode does not. Both modes contain the same app and Applications shortcut.
 
+The full test suite includes Russian interface-copy checks and native English/Russian keyboard mapping checks. These need the corresponding test language and enabled Apple input sources; they are not locale-independent unit tests. CI prepares these conditions on its disposable runner. Do not run its setup mode on your own account.
+
 Builds live under `release/build`; output goes to `release/dist`. Both stay out of Git. Do not run the release builder and local installer simultaneously: they share the icon renderer. Scratch and output overrides must stay inside this checkout's `release/` or `.build/`, without symlinks.
 
 The builder checks app and framework architectures, deployment targets, language resources, bundled dependencies, code signatures and the mounted image. Previous output is kept until the new images pass. A failed build leaves its log and staging directory for diagnosis; it detaches only its own mounted image.
@@ -44,6 +46,8 @@ For an experimental universal build, set `IRIZ_RELEASE_VARIANTS='arm64 universal
 The **macOS release draft** workflow runs manually or on a `v*` tag in this public repository. It is inactive in forks and the private working repository. The tag, when present, must match `RELEASE_VERSION`.
 
 The standard ARM64 `macos-26` runner uses Xcode 26.6, listed in [GitHub's runner image manifest](https://github.com/actions/runner-images/blob/0af81b6d930d02b52941d584bee9214c4bc228c6/images/macos/macos-26-arm64-Readme.md#xcode). The preflight checks the selected Xcode, Swift and macOS SDK before compiling. The runner runs the tests, builds the headless ad-hoc image and uploads exactly four files. A separate job verifies their checksums, version and source commit, then creates a **draft** release. It does not execute repository code with a write token. Existing releases and assets are never overwritten. A draft does not change the download button.
+
+Before testing, the hosted-runner setup enables the built-in English and Russian input sources and sets iriz's own language preference to Russian. It does not select a different active keyboard, change the system language, grant permissions or replace the native keyboard map with a fixture. Setup refuses to write outside a GitHub-hosted macOS runner, and a failed prerequisite stops the build before the tests.
 
 To verify the full build for a version that is already published, use **Run workflow → build_only: true**. This runs the tests, builds and verifies the DMG, and uploads the four files as an Actions artifact. The entire release-writing job is skipped: no draft, tag, asset or Latest change. With the default `false`, an existing release makes the draft job fail without changing it.
 

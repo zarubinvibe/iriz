@@ -52,6 +52,9 @@ check(build['env']['DEVELOPER_DIR'] == '/Applications/Xcode_26.6.app/Contents/De
 check(build['env']['IRIZ_NOTARY_PROFILE'] == '' && build['env']['IRIZ_DMG_HEADLESS'] == '1', 'No Apple credentials or Finder in CI')
 check(build['steps'].any? { |step| step['run'] == 'swift test --no-parallel --jobs 2' }, 'Serial tests must precede packaging')
 test_index = build['steps'].index { |step| step['run'] == 'swift test --no-parallel --jobs 2' }
+environment_index = build['steps'].index { |step| step['name'] == 'Prepare hosted macOS integration environment' }
+check(environment_index && environment_index == test_index - 1, 'Environment preparation must immediately precede tests')
+check(!build['continue-on-error'] && build['steps'].none? { |step| step['continue-on-error'] }, 'Build failures must stop subsequent steps')
 package_index = build['steps'].index { |step| step['run'] == 'bash scripts/make_release.sh' }
 check(package_index && test_index < package_index, 'Packaging must follow successful tests')
 check(build['steps'].none? { |step| step.key?('if') }, 'build_only must retain every build, test, verification and upload step')
@@ -70,6 +73,67 @@ workflow['jobs'].each_value do |job|
   end
 end
 puts 'PASS workflow triggers, permissions, pins and Bash syntax'
+
+environment_script = build['steps'][environment_index].fetch('run')
+helper = File.read(File.join(__dir__, 'macos_ci_environment.swift'))
+native_guard = <<'SWIFT'
+if prepare {
+    let environment = ProcessInfo.processInfo.environment
+    require(environment["GITHUB_ACTIONS"] == "true"
+            && environment["RUNNER_ENVIRONMENT"] == "github-hosted"
+            && environment["RUNNER_OS"] == "macOS",
+            "Fixture writes require a GitHub-hosted macOS runner.")
+}
+SWIFT
+check(helper.split('func layouts', 2).first.include?(native_guard), 'The native helper must guard all writes independently of Bash')
+check(helper.include?('let prepare = arguments == ["--prepare-hosted"]'), 'Only the explicit prepare mode may write')
+prepare_body = helper[/^if prepare \{\n    let enabled = .*?^\}/m]
+%w[TISEnableInputSource CFPreferencesSetValue CFPreferencesSynchronize].each do |call|
+  check(prepare_body && helper.scan(/\b#{call}\(/).size == 1 && prepare_body.include?("#{call}("), "#{call} must only run inside the guarded prepare mode")
+end
+check(!helper.match?(/TISSelectInputSource|AppleLanguages|AppleLocale|setPersistentDomain|CFPreferencesSetAppValue/), 'Never select a layout or replace system language preferences')
+check(helper.include?('let englishIDs = ["com.apple.keylayout.US", "com.apple.keylayout.ABC"]') &&
+      helper.include?('let russianID = "com.apple.keylayout.Russian"'), 'Only the Apple EN/RU layout IDs are allowed')
+check(helper.include?('let languageKey = "ru.smltlk.interfaceLanguage" as CFString') &&
+      helper.include?('CFPreferencesSetValue(languageKey, "ru" as CFString, kCFPreferencesAnyApplication,') &&
+      helper.include?('UserDefaults.standard.string(forKey: languageKey as String) == "ru"'), 'The iriz-only global preference needs an effective Foundation readback')
+puts 'PASS native helper write boundary and exact fixture scope'
+
+environment_commands = <<'BASH'
+xcrun() {
+  case "$*" in
+    'swift scripts/macos_ci_environment.swift --prepare-hosted')
+      printf 'FIXTURE_PREPARE\n'; return "$MOCK_PREPARE_EXIT" ;;
+    'swift scripts/macos_ci_environment.swift --check')
+      printf 'FIXTURE_CHECK\n'; return "$MOCK_CHECK_EXIT" ;;
+    *) printf 'Unexpected xcrun arguments\n' >&2; return 99 ;;
+  esac
+}
+swift() {
+  [[ "$*" == 'test --no-parallel --jobs 2' ]] || return 99
+  printf 'FIXTURE_TESTS\n'
+}
+BASH
+[
+  ['hosted fixture then tests', {}, 0, %w[FIXTURE_PREPARE FIXTURE_CHECK FIXTURE_TESTS]],
+  ['fixture preparation failure stops tests', { 'MOCK_PREPARE_EXIT' => '37' }, 37, %w[FIXTURE_PREPARE]],
+  ['fixture readback failure stops tests', { 'MOCK_CHECK_EXIT' => '38' }, 38, %w[FIXTURE_PREPARE FIXTURE_CHECK]],
+  ['local runner cannot prepare', { 'GITHUB_ACTIONS' => nil }, 1, []],
+  ['false Actions flag cannot prepare', { 'GITHUB_ACTIONS' => 'false' }, 1, []],
+  ['missing runner environment cannot prepare', { 'RUNNER_ENVIRONMENT' => nil }, 1, []],
+  ['self-hosted runner cannot prepare', { 'RUNNER_ENVIRONMENT' => 'self-hosted' }, 1, []],
+  ['missing runner OS cannot prepare', { 'RUNNER_OS' => nil }, 1, []],
+  ['non-macOS runner cannot prepare', { 'RUNNER_OS' => 'Linux' }, 1, []]
+].each do |name, overrides, expected_status, expected_calls|
+  env = { 'GITHUB_ACTIONS' => 'true', 'RUNNER_ENVIRONMENT' => 'github-hosted', 'RUNNER_OS' => 'macOS',
+          'MOCK_PREPARE_EXIT' => '0', 'MOCK_CHECK_EXIT' => '0' }.merge(overrides)
+  # Both commands are mocks; the real helper never prepares this machine.
+  script = environment_commands + environment_script + "\n" + build['steps'][test_index].fetch('run')
+  output, status = Open3.capture2e(env, 'bash', '-e', '-o', 'pipefail', '-c', script)
+  check(status.exitstatus == expected_status && output.lines.map(&:strip).grep(/^FIXTURE_/) == expected_calls, "#{name}: #{output}")
+  check(!expected_calls.empty? || output.include?('Fixture writes require a GitHub-hosted macOS runner.'), "#{name}: missing guard reason")
+  puts "PASS #{name}"
+end
 
 sha = 'a' * 40
 version_script = build['steps'].find { |step| step['id'] == 'version' }.fetch('run')

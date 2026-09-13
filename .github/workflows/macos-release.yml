@@ -78,6 +78,14 @@ jobs:
       - name: Check workflow guards offline
         run: ruby scripts/macos_release_workflow_test.rb --selftest
 
+      - name: Prepare hosted macOS integration environment
+        run: |
+          set -euo pipefail
+          [[ "${GITHUB_ACTIONS:-}" == true && "${RUNNER_ENVIRONMENT:-}" == github-hosted && "${RUNNER_OS:-}" == macOS ]] \
+            || { echo 'Fixture writes require a GitHub-hosted macOS runner.'; exit 1; }
+          xcrun swift scripts/macos_ci_environment.swift --prepare-hosted
+          xcrun swift scripts/macos_ci_environment.swift --check
+
       - name: Run tests without parallel test execution
         run: swift test --no-parallel --jobs 2
 
