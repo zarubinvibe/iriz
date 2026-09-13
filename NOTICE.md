@@ -13,6 +13,12 @@
 | кластеризация VBx | VBx | Apache-2.0 | `THIRD-PARTY/VBx-LICENSE` | через FluidAudio, разбор говорящих |
 | модели разделения голосов | FluidInference / Speaker Diarization CoreML, на основе Pyannote Community-1 | CC-BY-4.0 | [закреплённая карточка модели](https://huggingface.co/FluidInference/speaker-diarization-coreml/blob/1ed7a662fdc7109e36d822db793ee6eebdaf8594/README.md) · [лицензия](https://creativecommons.org/licenses/by/4.0/) | отдельная загрузка по кнопке, не внутри DMG |
 | шрифт шаблона протокола | PT Serif, ParaType | SIL Open Font License 1.1 | `Sources/IrizDictate/Resources/MeetingMinutes/fonts/OFL.txt` | файлы шрифтов и лицензия внутри ресурсного bundle |
+| кнопка скачивания для macOS | MonitorControl, `.github/macos_badge_noborder.png` | MIT проекта | `THIRD-PARTY/MonitorControl-LICENSE` | только README, не внутри приложения |
+
+Кнопка `docs/assets/download-macos.png` скопирована без изменений из
+[MonitorControl](https://github.com/MonitorControl/MonitorControl/blob/2c2b7cea67e89db56c311c209ecc60dda6bbbd22/.github/macos_badge_noborder.png).
+SHA-256: `687db572c2d1a5fc42684a8c94ec1c4df960c6369616ff0ca10990b553008ae8`.
+Это ссылка на DMG проекта, не на App Store и не знак одобрения Apple.
 
 Модели голосов закреплены на ревизии `1ed7a662fdc7109e36d822db793ee6eebdaf8594`;
 приложение проверяет исходные байты по размеру и SHA-256 и не изменяет веса.

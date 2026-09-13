@@ -2,14 +2,6 @@
 
 Говори вслух, на экране появляется текст. Речь разбирает твой Мак. Передачу текста агенту ты разрешаешь отдельно.
 
-[![Скачать для macOS](https://img.shields.io/badge/%D0%A1%D0%BA%D0%B0%D1%87%D0%B0%D1%82%D1%8C%20%D0%B4%D0%BB%D1%8F%20macOS-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
-
-Apple Silicon · macOS 14+ · Модель скачивается отдельно: около 500 МБ
-
-[Установка и первая диктовка](docs/DOWNLOAD.ru.md) · [Что изменилось](https://github.com/zarubinvibe/iriz/releases/latest)
-
-Самоподпись, без нотаризации Apple. Этот выпуск не поддерживает Intel.
-
 [English](README.md) · [中文](README.zh.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/zarubinvibe/iriz?style=flat&color=C9A87A)](https://github.com/zarubinvibe/iriz/stargazers) [![Status](https://img.shields.io/badge/status-working-brightgreen.svg)](https://github.com/zarubinvibe/iriz) [![Olympuz](https://img.shields.io/badge/olympuz-family-B8D6EA.svg)](https://github.com/zarubinvibe/athena#olympuz-family)
@@ -40,6 +32,21 @@ Apple Silicon · macOS 14+ · Модель скачивается отдельн
 - [Безопасность и приватность](#безопасность-и-приватность)
 - [Ограничения](#ограничения)
 - [Звезда и вклад](#звезда-и-вклад)
+
+<!-- application-downloads:start -->
+
+<p align="center"><a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg"><img src="docs/assets/download-macos.png" alt="Скачать для macOS" width="180"></a><br>
+<a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg">Скачать для macOS</a> · Прямая загрузка</p>
+
+<p align="center">macOS · Apple Silicon — macOS 14+ · DMG</p>
+
+<p align="center">Настройка: При первом запуске нажми «Скачать и установить Parakeet»: модель речи скачивается отдельно, около 500 МБ.</p>
+
+<p align="center">Безопасность: Самоподпись, без нотаризации Apple. Этот выпуск не поддерживает Intel.</p>
+
+<p align="center"><a href="docs/DOWNLOAD.ru.md">Установка и первая диктовка</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest">Все версии</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest/download/SHA256SUMS.txt">Контрольные суммы</a></p>
+
+<!-- application-downloads:end -->
 
 <!-- beginner-readme:start -->
 

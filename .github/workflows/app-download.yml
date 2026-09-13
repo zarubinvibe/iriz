@@ -1,0 +1,40 @@
+name: App download
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'README.md'
+      - 'README.ru.md'
+      - 'README.zh.md'
+      - '.github/family-page.json'
+      - 'docs/assets/download-macos.png'
+      - 'scripts/check_app_download*.mjs'
+      - '.github/workflows/app-download.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: app-download
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.repository == 'zarubinvibe/iriz' && github.event.repository.visibility == 'public'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out the selected commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check download failure paths offline
+        run: node scripts/check_app_download.mjs --selftest
+
+      - name: Verify the public application download anonymously
+        run: node scripts/check_app_download.mjs

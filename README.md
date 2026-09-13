@@ -2,14 +2,6 @@
 
 Speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.
 
-[![Download for macOS](https://img.shields.io/badge/Download%20for%20macOS-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
-
-Apple Silicon · macOS 14+ · Model download: about 500 MB
-
-[Install & first dictation](docs/DOWNLOAD.md) · [Release notes](https://github.com/zarubinvibe/iriz/releases/latest)
-
-Self-signed; not notarized by Apple. Intel is not supported by this download.
-
 [Русский](README.ru.md) · [中文](README.zh.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/zarubinvibe/iriz?style=flat&color=C9A87A)](https://github.com/zarubinvibe/iriz/stargazers) [![Status](https://img.shields.io/badge/status-working-brightgreen.svg)](https://github.com/zarubinvibe/iriz) [![Olympuz](https://img.shields.io/badge/olympuz-family-B8D6EA.svg)](https://github.com/zarubinvibe/athena#olympuz-family)
@@ -40,6 +32,21 @@ Self-signed; not notarized by Apple. Intel is not supported by this download.
 - [Safety And Privacy](#safety-and-privacy)
 - [Limits](#limits)
 - [Star And Contribute](#star-and-contribute)
+
+<!-- application-downloads:start -->
+
+<p align="center"><a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg"><img src="docs/assets/download-macos.png" alt="Download for macOS" width="180"></a><br>
+<a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg">Download for macOS</a> · Direct download</p>
+
+<p align="center">macOS · Apple Silicon — macOS 14+ · DMG</p>
+
+<p align="center">Setup: At first launch, choose Download and install Parakeet to download the speech model (about 500 MB).</p>
+
+<p align="center">Security: Self-signed; not notarized by Apple. Intel is not supported by this download.</p>
+
+<p align="center"><a href="docs/DOWNLOAD.md">Install &#38; first dictation</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest">All releases</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest/download/SHA256SUMS.txt">Checksums</a></p>
+
+<!-- application-downloads:end -->
 
 <!-- beginner-readme:start -->
 

@@ -2,14 +2,6 @@
 
 你说出来，屏幕上就有字。语音识别在你的 Mac 上完成；向代理发送文本需要你另行同意。
 
-[![下载 macOS 版](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD%20macOS%20%E7%89%88-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
-
-Apple Silicon · macOS 14+ · 语音模型需另行下载，约 500 MB
-
-[安装与首次听写](docs/DOWNLOAD.zh.md) · [更新说明](https://github.com/zarubinvibe/iriz/releases/latest)
-
-应用使用自签名，尚未通过 Apple 公证。此下载不支持 Intel。
-
 [English](README.md) · [Русский](README.ru.md)
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE) [![Stars](https://img.shields.io/github/stars/zarubinvibe/iriz?style=flat&color=C9A87A)](https://github.com/zarubinvibe/iriz/stargazers) [![Status](https://img.shields.io/badge/status-working-brightgreen.svg)](https://github.com/zarubinvibe/iriz) [![Olympuz](https://img.shields.io/badge/olympuz-family-B8D6EA.svg)](https://github.com/zarubinvibe/athena#olympuz-family)
@@ -40,6 +32,21 @@ Apple Silicon · macOS 14+ · 语音模型需另行下载，约 500 MB
 - [安全与隐私](#安全与隐私)
 - [局限](#局限)
 - [点亮星标与参与](#点亮星标与参与)
+
+<!-- application-downloads:start -->
+
+<p align="center"><a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg"><img src="docs/assets/download-macos.png" alt="下载 macOS 版" width="180"></a><br>
+<a href="https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg">下载 macOS 版</a> · 直接下载</p>
+
+<p align="center">macOS · Apple Silicon — macOS 14+ · DMG</p>
+
+<p align="center">设置: 首次启动时，选择下载并安装 Parakeet。语音模型需另行下载，约 500 MB。</p>
+
+<p align="center">安全: 应用使用自签名，尚未通过 Apple 公证。此下载不支持 Intel。</p>
+
+<p align="center"><a href="docs/DOWNLOAD.zh.md">安装与首次听写</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest">所有版本</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest/download/SHA256SUMS.txt">校验和</a></p>
+
+<!-- application-downloads:end -->
 
 <!-- beginner-readme:start -->
 

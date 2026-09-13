@@ -62,6 +62,16 @@ A maintainer reviews the draft, the release notes and a clean-machine install, r
 
 Before publishing, check the DMG after downloading it from the draft: mount it, verify its signature, launch a copied app in English and Chinese, and complete the permissions/model/first-dictation flow. Check the public asset hashes against the local output. Do not report a microphone or Intel test that was not performed.
 
+After publication, **App download** checks the README buttons and downloads all four public release files without authentication. It also runs after relevant changes on `main` and through **Run workflow**. Run the same checks locally with Node 22.15 or newer:
+
+```bash
+node scripts/check_app_download.mjs --selftest
+node scripts/check_app_download.mjs --local
+node scripts/check_app_download.mjs
+```
+
+The live check follows the stable URL, verifies both complete DMGs against GitHub's asset sizes and digests, the manifest and `SHA256SUMS.txt`, and checks the manifest source against the release tag. It rejects unexpected files, HTML responses, truncated downloads and changes to Latest during the check. Requests use fixed GitHub hosts, at most five redirects, two attempts and a ten-minute total deadline; DMGs stream through SHA-256 without writing local files. A passing run confirms anonymous download integrity. Installation, signatures, permissions and first dictation still need the macOS checks above.
+
 ## Developer ID and notarization
 
 Current public builds are not notarized. A self-signed or ad-hoc signature is not an Apple Developer ID signature. Neither proves that Apple has reviewed the app.
