@@ -313,7 +313,14 @@ public final class DictationController {
         hotkeys.isRecordingActive = { [weak self] in self?.isRecording ?? false }
         hotkeys.canStartRecording = { [weak self] in
             guard let self else { return false }
-            return self.startRefusal() == nil
+            // Только предварительный допуск по состоянию. AX не вызывается
+            // внутри event tap: полная проверка идёт в handlePress, до микрофона,
+            // после dispatchHotkeyActions на главный актор.
+            return dictationStartRefusal(modelReady: self.modelReady,
+                                         isRecording: self.isRecording,
+                                         isBusy: self.isBusy,
+                                         secureInputActive: false,
+                                         modelWarming: self.modelWarming) == nil
         }
     }
 
@@ -645,7 +652,8 @@ public final class DictationController {
                               isRecording: isRecording,
                               isBusy: isBusy,
                               secureInputActive: Permissions.isSecureInputActive,
-                              modelWarming: modelWarming)
+                              modelWarming: modelWarming,
+                              focusedInputProtected: Permissions.focusedInputProtection)
     }
 
     /// Смена аудиоустройства посреди записи: крючок AudioCapture до этого

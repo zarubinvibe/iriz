@@ -171,13 +171,19 @@ let dictationWarmUpWaitLimitSeconds: Double = 180
 
 // MARK: - Отказ старта записи
 
-/// Почему запись не стартует. `secureInputActive` — новый класс отказа:
-/// в поле пароля синтетический ⌘V не дойдёт всё равно, честнее сказать сразу.
+/// Почему запись не стартует. Защита относится к текущему полю, а не к
+/// наличию фонового процесса с защищённым вводом клавиатуры.
 enum DictationStartRefusal: String, Equatable {
     case secureInputActive
     case modelNotReady
     case alreadyRecording
     case transcriptionInFlight
+}
+
+/// Неизвестное поле при активной системной защите не считается обычным.
+func dictationInputIsProtected(secureInputActive: Bool,
+                               focusedInputProtected: Bool?) -> Bool {
+    focusedInputProtected ?? secureInputActive
 }
 
 /// Отказать ли старту.
@@ -195,8 +201,12 @@ func dictationStartRefusal(modelReady: Bool,
                            isRecording: Bool,
                            isBusy: Bool,
                            secureInputActive: Bool,
-                           modelWarming: Bool = false) -> DictationStartRefusal? {
-    if secureInputActive { return .secureInputActive }
+                           modelWarming: Bool = false,
+                           focusedInputProtected: Bool? = nil) -> DictationStartRefusal? {
+    if dictationInputIsProtected(secureInputActive: secureInputActive,
+                                 focusedInputProtected: focusedInputProtected) {
+        return .secureInputActive
+    }
     if !modelReady, !modelWarming { return .modelNotReady }
     if isRecording { return .alreadyRecording }
     if isBusy { return .transcriptionInFlight }

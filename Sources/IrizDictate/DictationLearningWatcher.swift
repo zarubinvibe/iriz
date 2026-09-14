@@ -98,12 +98,17 @@ func dictationLearningReadFocusedText() -> (text: String, pid: pid_t)? {
     guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
     let pid = app.processIdentifier
     let axApp = AXUIElementCreateApplication(pid)
+    AXUIElementSetMessagingTimeout(axApp, 0.15)
 
     var focusedRaw: AnyObject?
     guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString,
                                         &focusedRaw) == .success,
-          let focused = focusedRaw else { return nil }
+          let focused = focusedRaw,
+          CFGetTypeID(focused) == AXUIElementGetTypeID() else { return nil }
     let element = focused as! AXUIElement
+    // Проверяем именно этот элемент до AXValue. Неизвестное состояние —
+    // тоже отказ: для обучения читать потенциально защищённый текст незачем.
+    guard Permissions.inputProtection(of: element) == false else { return nil }
 
     var roleRaw: AnyObject?
     AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRaw)

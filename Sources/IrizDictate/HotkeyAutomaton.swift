@@ -160,7 +160,8 @@ struct HotkeyTransitionState {
 
     /// `canStartRecording` mirrors the app-side guard on handlePress
     /// (ready, not recording, not busy, not terminating). Toggle mode
-    /// consults it before claiming either recording route.
+    /// consults it only before claiming a recording route. Ordinary keyboard
+    /// events must not trigger the app's potentially expensive AX query.
     mutating func transition(
         for event: HotkeyEventSnapshot,
         hotkey: HotkeyChoice,
@@ -177,7 +178,7 @@ struct HotkeyTransitionState {
         translationHotkeyEnabled: Bool = false,
         triggerMode: TriggerMode,
         isRecording: Bool,
-        canStartRecording: Bool = true
+        canStartRecording: @autoclosure () -> Bool = true
     ) -> HotkeyTransitionResult {
         if event.keycode == ESCAPE_KEYCODE {
             return transitionEscape(for: event, isRecording: isRecording)
@@ -278,7 +279,7 @@ struct HotkeyTransitionState {
             // in toggle mode because the state machine gates it here.
             guard !isRecording,
                   activeRecordingRoute == nil,
-                  canStartRecording else {
+                  canStartRecording() else {
                 return HotkeyTransitionResult(suppress: shortcutResult.suppress,
                                               actions: [.rejectedBusyPress])
             }
@@ -291,7 +292,7 @@ struct HotkeyTransitionState {
     private mutating func transitionPromptShortcut(
         for event: HotkeyEventSnapshot,
         isRecording: Bool,
-        canStartRecording: Bool,
+        canStartRecording: () -> Bool,
         promptHotkey: HotkeyChoice,
         triggerMode: TriggerMode
     ) -> HotkeyTransitionResult? {
@@ -338,7 +339,7 @@ struct HotkeyTransitionState {
             }
             guard !isRecording,
                   activeRecordingRoute == nil,
-                  canStartRecording else {
+                  canStartRecording() else {
                 return HotkeyTransitionResult(suppress: shortcutResult.suppress,
                                               actions: [.rejectedBusyPress])
             }
@@ -352,7 +353,7 @@ struct HotkeyTransitionState {
     private mutating func transitionTranslationShortcut(
         for event: HotkeyEventSnapshot,
         isRecording: Bool,
-        canStartRecording: Bool,
+        canStartRecording: () -> Bool,
         translationHotkey: HotkeyChoice,
         triggerMode: TriggerMode
     ) -> HotkeyTransitionResult? {
@@ -399,7 +400,7 @@ struct HotkeyTransitionState {
             }
             guard !isRecording,
                   activeRecordingRoute == nil,
-                  canStartRecording else {
+                  canStartRecording() else {
                 return HotkeyTransitionResult(suppress: shortcutResult.suppress,
                                               actions: [.rejectedBusyPress])
             }

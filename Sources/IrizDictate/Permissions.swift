@@ -26,13 +26,56 @@ enum Permissions {
         }
     }
 
-    /// Активен ли защищённый ввод — поле пароля, Secure Keyboard Entry в
-    /// терминале. Тот же системный вызов, что у AutoSwitchPolicy в IrizInput
-    /// (тянуть IrizInput в IrizDictate не за чем — API системное).
-    ///
-    /// Для диктовки это честный класс провала вставки: в защищённое поле
-    /// синтетический ⌘V не дойдёт всё равно, а сырьё уже легло бы на диск.
+    /// Глобальная защита клавиатурных событий: её может держать фоновый
+    /// процесс. Сама по себе она не описывает поле в фокусе и не запрещает микрофон.
     static var isSecureInputActive: Bool { IsSecureEventInputEnabled() }
+
+    static var isDictationInputProtected: Bool {
+        dictationInputIsProtected(secureInputActive: isSecureInputActive,
+                                  focusedInputProtected: focusedInputProtection)
+    }
+
+    /// Только метаданные текущего элемента; содержимое поля не запрашивается.
+    /// Неизвестное состояние сохраняется как nil для осторожного fallback.
+    static var focusedInputProtection: Bool? {
+        guard let app = NSWorkspace.shared.frontmostApplication else { return nil }
+        let axApp = AXUIElementCreateApplication(app.processIdentifier)
+        AXUIElementSetMessagingTimeout(axApp, 0.15)
+        var focused: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(axApp, kAXFocusedUIElementAttribute as CFString,
+                                            &focused) == .success,
+              let focused, CFGetTypeID(focused) == AXUIElementGetTypeID() else { return nil }
+        return inputProtection(of: focused as! AXUIElement)
+    }
+
+    static func inputProtection(of element: AXUIElement) -> Bool? {
+        AXUIElementSetMessagingTimeout(element, 0.15)
+        return inputProtection { attribute in
+            var value: CFTypeRef?
+            let error = AXUIElementCopyAttributeValue(element, attribute, &value)
+            return (error, value)
+        }
+    }
+
+    /// Тот же путь чтения в продукте и в пробе: проба не касается чужого окна.
+    static func inputProtection(readAttribute: (CFString) -> (AXError, CFTypeRef?)) -> Bool? {
+        let (roleError, roleValue) = readAttribute(kAXRoleAttribute as CFString)
+        let (subroleError, subroleValue) = readAttribute(kAXSubroleAttribute as CFString)
+        if subroleError == .success, subroleValue as? String == kAXSecureTextFieldSubrole { return true }
+        let (protectedError, protectedValue) = readAttribute(
+            NSAccessibility.Attribute.containsProtectedContent.rawValue as CFString)
+        if protectedError == .success, protectedValue as? Bool == true { return true }
+
+        // Необязательного атрибута может не быть у обычного поля/окна.
+        // Таймаут и ошибка связи отсутствием атрибута не считаются.
+        // Явная защита выше ошибки роли: её нельзя потерять при частичном ответе AX.
+        guard roleError == .success, let role = roleValue as? String, !role.isEmpty else { return nil }
+        let optionalAbsent: [AXError] = [.attributeUnsupported, .noValue]
+        guard (subroleError == .success && subroleValue is String) || optionalAbsent.contains(subroleError),
+              (protectedError == .success && protectedValue is Bool) || optionalAbsent.contains(protectedError)
+        else { return nil }
+        return false
+    }
 
     /// Trigger the system prompt or, if previously denied, push the
     /// user toward the right Settings pane. Returns immediately;

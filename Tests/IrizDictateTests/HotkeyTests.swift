@@ -168,6 +168,47 @@ struct HotkeyAutomatonTests {
         #expect(result.suppress)
     }
 
+    @Test func readinessIsLazyForEveryToggleRecordingRoute() {
+        let routes: [(CGKeyCode, HotkeyTransitionAction, HotkeyTransitionAction)] = [
+            (96, .press, .release),
+            (97, .pressPrompt, .releasePrompt),
+            (98, .pressTranslation, .releaseTranslation),
+        ]
+        for (keycode, start, stop) in routes {
+            var state = HotkeyTransitionState()
+            var readinessCalls = 0
+            func ready() -> Bool {
+                readinessCalls += 1
+                return true
+            }
+            func send(_ type: CGEventType, _ keycode: CGKeyCode,
+                      isRecording: Bool = false) -> HotkeyTransitionResult {
+                state.transition(for: keyEvent(type, keycode),
+                                 hotkey: hotkeyChoice(forKeycode: 96),
+                                 historyHotkey: hotkeyChoice(forKeycode: 100),
+                                 promptHotkey: hotkeyChoice(forKeycode: 97),
+                                 promptHotkeyEnabled: true,
+                                 translationHotkey: hotkeyChoice(forKeycode: 98),
+                                 translationHotkeyEnabled: true,
+                                 triggerMode: .toggle,
+                                 isRecording: isRecording,
+                                 canStartRecording: ready())
+            }
+            #expect(send(.keyDown, 0).actions.isEmpty)
+            #expect(send(.keyUp, 0).actions.isEmpty)
+            #expect(send(.keyDown, 100).actions == [.showHistory])
+            _ = send(.keyUp, 100)
+            #expect(readinessCalls == 0)
+
+            #expect(send(.keyDown, keycode).actions == [start])
+            #expect(readinessCalls == 1)
+            _ = send(.keyUp, keycode, isRecording: true)
+            #expect(readinessCalls == 1)
+            #expect(send(.keyDown, keycode, isRecording: true).actions == [stop])
+            #expect(readinessCalls == 1)
+        }
+    }
+
     @Test func toggleReleaseIsNoOpButSuppressed() {
         var state = HotkeyTransitionState()
         _ = state.transition(for: flagsChanged(54, .maskCommand),

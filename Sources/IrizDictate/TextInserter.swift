@@ -103,7 +103,8 @@ func postKeyboardEventSteps(_ steps: [KeyboardEventStep], targetPID: pid_t? = ni
 enum KeyboardShortcutPoster {
     @discardableResult
     static func postReturn() -> Bool {
-        postKeyboardEventSteps([
+        guard TextInserter.targetAllowsPosting(nil) else { return false }
+        return postKeyboardEventSteps([
             KeyboardEventStep(virtualKey: RETURN_KEYCODE, keyDown: true, flags: []),
             KeyboardEventStep(virtualKey: RETURN_KEYCODE, keyDown: false, flags: []),
         ])
@@ -188,10 +189,13 @@ enum TextInserter {
     }
 
     fileprivate static func targetAllowsPosting(_ expectedTargetPID: pid_t?) -> Bool {
-        textInsertionTargetAllowsPosting(
+        guard let checkedPID = NSWorkspace.shared.frontmostApplication?.processIdentifier,
+              textInsertionTargetAllowsPosting(
             expectedTargetPID: expectedTargetPID,
-            currentTargetPID: NSWorkspace.shared.frontmostApplication?.processIdentifier
-        )
+            currentTargetPID: checkedPID
+        ), !Permissions.isDictationInputProtected else { return false }
+        // AX — IPC: за время проверки фокус мог перейти к другому приложению.
+        return NSWorkspace.shared.frontmostApplication?.processIdentifier == checkedPID
     }
 }
 

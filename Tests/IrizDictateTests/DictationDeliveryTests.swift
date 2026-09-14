@@ -425,6 +425,35 @@ struct HungTranscriptionTests {
 @Suite("dictationStartRefusal")
 struct DictationStartRefusalTests {
 
+    @Test func backgroundSecureKeyboardInputDoesNotBlockOrdinaryFieldRecording() {
+        #expect(dictationStartRefusal(modelReady: true, isRecording: false,
+                                      isBusy: false, secureInputActive: true,
+                                      focusedInputProtected: false) == nil)
+    }
+
+    @Test func actualProtectedFieldBlocksEvenWithoutGlobalKeyboardFlag() {
+        for globalSecureInput in [false, true] {
+            #expect(dictationStartRefusal(modelReady: true, isRecording: false,
+                                          isBusy: false, secureInputActive: globalSecureInput,
+                                          focusedInputProtected: true) == .secureInputActive)
+        }
+    }
+
+    @Test func ordinaryFieldRetainsModelAndBusyGuards() {
+        #expect(dictationStartRefusal(modelReady: false, isRecording: false,
+                                      isBusy: false, secureInputActive: true,
+                                      focusedInputProtected: false) == .modelNotReady)
+        #expect(dictationStartRefusal(modelReady: false, isRecording: false,
+                                      isBusy: false, secureInputActive: true,
+                                      modelWarming: true, focusedInputProtected: false) == nil)
+        #expect(dictationStartRefusal(modelReady: true, isRecording: true,
+                                      isBusy: false, secureInputActive: true,
+                                      focusedInputProtected: false) == .alreadyRecording)
+        #expect(dictationStartRefusal(modelReady: true, isRecording: false,
+                                      isBusy: true, secureInputActive: true,
+                                      focusedInputProtected: false) == .transcriptionInFlight)
+    }
+
     /// Защищённый ввод: запись не стартует, причина названа — звонит отказ.
     @Test func secureInputBlocksRecording() {
         #expect(dictationStartRefusal(modelReady: true,
