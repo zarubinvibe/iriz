@@ -22,8 +22,10 @@ minutes_files=(template.docx data.schema.json fields.json manifest.json README.m
 # ponytail: один диспетчер вместо библиотеки моков; настоящий DMG проверяет macOS CI.
 cat > "$test_root/bin/stub" <<'STUB'
 #!/bin/bash
+_test_stub_impl() (
 set -euo pipefail
-name="$(basename "$0")"
+name="$1"
+shift
 printf '%s' "$name" >> "$TEST_TRACE"
 printf ' <%s>' "$@" >> "$TEST_TRACE"
 printf '\n' >> "$TEST_TRACE"
@@ -246,6 +248,17 @@ case "$name" in
     ;;
   *) deny "$@" ;;
 esac
+)
+
+if [ "${BASH_SOURCE[0]}" != "$0" ]; then
+  for test_command in swift lipo vtool otool hdiutil codesign install_name_tool plutil git python3 \
+    security xcrun osascript tiffutil curl wget open killall pkill kill ditto spctl python \
+    cp mv rm mkdir touch ln; do
+    eval "$test_command() { _test_stub_impl $test_command \"\$@\"; }"
+  done
+else
+  _test_stub_impl "$(basename "$0")" "$@"
+fi
 STUB
 chmod +x "$test_root/bin/stub"
 for command in swift lipo vtool otool hdiutil codesign install_name_tool plutil git python3 \
@@ -253,9 +266,25 @@ for command in swift lipo vtool otool hdiutil codesign install_name_tool plutil 
   cp mv rm mkdir touch ln; do
   ln -s stub "$test_root/bin/$command"
 done
-cat > "$test_root/no-kill.sh" <<'STUB'
-kill() { printf 'forbidden builtin kill\n' >> "$TEST_TRACE"; return 97; }
-STUB
+
+probe_stub() {
+  local label="$1" probe_command="$2" probe_status=0
+  : > "$test_root/stub-probe-trace"
+  env -i PATH="$test_root/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
+    BASH_ENV="$test_root/bin/stub" TEST_TRACE="$test_root/stub-probe-trace" \
+    /bin/bash -c "$probe_command" >/dev/null 2>&1 || probe_status=$?
+  [ "$probe_status" = 97 ] || {
+    printf 'make_release_test: %s: заглушка вернула %s вместо 97\n' "$label" "$probe_status" >&2
+    exit 1
+  }
+  [ "$(sed -n '1p' "$test_root/stub-probe-trace")" = 'security <unexpected>' ] \
+    && [ "$(wc -l < "$test_root/stub-probe-trace" | tr -d ' ')" = 1 ] || {
+      printf 'make_release_test: %s: вызов не записан в trace ровно один раз\n' "$label" >&2
+      exit 1
+    }
+}
+probe_stub 'shell function' 'security unexpected'
+probe_stub 'PATH executable' '/usr/bin/env security unexpected'
 
 checks=0
 new_case() {
@@ -284,7 +313,7 @@ run_release() {
   status=0
   (cd "$case_root" && env -i PATH="$test_root/bin:/usr/bin:/bin:/usr/sbin:/sbin" \
     TMPDIR="$case_root" LANG=en_US.UTF-8 \
-    BASH_ENV="$test_root/no-kill.sh" TEST_CASE_ROOT="$case_root" \
+    BASH_ENV="$test_root/bin/stub" TEST_CASE_ROOT="$case_root" \
     TEST_TRACE="$case_root/trace" TEST_REAL_PYTHON="$real_python" \
     TEST_MINUTES_FIXTURE="$test_root/MeetingMinutes" TEST_MINUTES_SHA="$minutes_sha" \
     SMLTLK_SIGN_IDENTITY=- IRIZ_DMG_HEADLESS=1 "$@" \
@@ -340,97 +369,166 @@ expect_pass() {
   checks=$((checks + 1))
 }
 
-for version in '../escape' '1.2.3/escape' '1.2.3;echo' ''; do
+parallel_pids=()
+parallel_failed=0
+parallel_limit=4
+wait_oldest_parallel() {
+  local pid="${parallel_pids[0]}"
+  wait "$pid" || parallel_failed=1
+  parallel_pids=("${parallel_pids[@]:1}")
+}
+
+wait_parallel_batch() {
+  while [ "${#parallel_pids[@]}" -gt 0 ]; do wait_oldest_parallel; done
+  [ "$parallel_failed" = 0 ]
+}
+
+queue_parallel_case() {
+  local case_number=$checks
+  checks=$((checks + 1))
+  if [ "${#parallel_pids[@]}" = "$parallel_limit" ]; then wait_oldest_parallel; fi
+  (
+    checks=$case_number
+    "$@"
+  ) &
+  parallel_pids+=("$!")
+}
+
+parallel_expect_fail() {
+  local label="$1" pattern="$2"
+  shift 2
+  new_case
+  expect_fail "$label" "$pattern" "$@"
+}
+
+parallel_expect_pass() {
+  new_case
+  expect_pass "$@"
+}
+
+parallel_version_guard() {
+  local version="$1"
   new_case
   if [ -z "$version" ]; then printf '\n' > "$case_root/RELEASE_VERSION"; fi
   expect_fail guard 'версия должна иметь вид' "SMLTLK_VERSION=$version"
-done
+}
 
-for scratch in / /Applications '../outside' '.'; do
+parallel_symlink_guard() {
   new_case
-  expect_fail guard 'рабочий путь должен быть внутри' "SMLTLK_SCRATCH=$scratch"
-done
+  ln -s "$test_root" "$case_root/release/linked-scratch"
+  expect_fail guard 'рабочий путь.*без симлинков' \
+    "SMLTLK_SCRATCH=$case_root/release/linked-scratch/build"
+}
 
-new_case
-ln -s "$test_root" "$case_root/release/linked-scratch"
-expect_fail guard 'рабочий путь.*без симлинков' "SMLTLK_SCRATCH=$case_root/release/linked-scratch/build"
-
-new_case
-expect_fail guard 'нотаризация требует Developer ID Application' IRIZ_NOTARY_PROFILE=fixture
-
-new_case
-expect_fail guard 'рабочий путь должен быть внутри' IRIZ_RELEASE_DIST=/
-
-new_case
-expect_fail guard 'scratch и dist должны быть раздельными' "SMLTLK_SCRATCH=$case_root/release/dist/build"
-
-new_case
-expect_fail 'resource bundle' 'нет ресурсного IrizApp_IrizCore[.]bundle' TEST_FAULT=missing-bundle
-
-new_case
-expect_fail 'localization resources' 'в бандле нет таблицы перевода zh-hans' TEST_FAULT=missing-locale
-
-for fault in minutes-bundle minutes-digest minutes-symlink minutes-extra-symlink; do
-  new_case
-  reason='пакет протокола MeetingMinutes не найден'
+parallel_minutes_fault() {
+  local fault="$1" reason='пакет протокола MeetingMinutes не найден'
   case "$fault" in
     minutes-digest) reason='SHA-256 шаблона протокола не совпадает с эталоном$' ;;
     *symlink) reason='симлинк в пакете протокола:' ;;
   esac
+  new_case
   expect_fail "$fault" "$reason" "TEST_FAULT=$fault"
   [ -f "$case_root/injected-fault" ] || fail "$fault: сбой пакета не был внедрён"
-done
-for minutes_file in "${minutes_files[@]}"; do
+}
+
+parallel_missing_minutes_file() {
+  local minutes_file="$1"
   new_case
   expect_fail "missing $minutes_file" 'пакет протокола' TEST_FAULT=minutes-file "TEST_MISSING_FILE=$minutes_file"
   grep -Fxq "make_release: пакет протокола: отсутствует или пуст $minutes_file" "$case_root/output" \
     || fail 'неверная причина отказа или не назван отсутствующий файл пакета'
   [ -f "$case_root/injected-fault" ] || fail 'пропажа файла пакета не была внедрена'
+}
+
+parallel_rpath_prefix() {
+  new_case
+  expect_fail 'rpath prefix' 'rpath фреймворков отсутствует после упаковки' TEST_FAULT=rpath-prefix
+  grep -q '^install_name_tool ' "$case_root/trace" || fail 'rpath prefix: FrameworksExtra принят за Frameworks'
+}
+
+parallel_mounted_fault() {
+  local fault="$1" reason='смонтированный .* неполон или подпись в нём не проходит'
+  if [ "$fault" = mounted-arch ]; then reason='в .*/mount[.].*/iriz[.]app/Contents/MacOS/iriz нет архитектуры arm64'; fi
+  if [ "$fault" = mounted-minutes-file ]; then reason='пакет протокола: отсутствует или пуст template[.]docx$'; fi
+  new_case
+  expect_fail "$fault" "$reason" "TEST_FAULT=$fault"
+  [ -f "$case_root/injected-fault" ] || fail "$fault: отказ не был внедрён в смонтированный образ"
+  cmp -s "$case_root/owned-mount" "$case_root/detached-mount" || fail "$fault: собственный том остался подключён"
+  [ "$(grep -c '^hdiutil <detach>' "$case_root/trace")" = 1 ] || fail "$fault: лишний detach"
+}
+
+for version in '../escape' '1.2.3/escape' '1.2.3;echo' ''; do
+  queue_parallel_case parallel_version_guard "$version"
 done
 
-new_case
-expect_fail 'arm64 framework' 'в whisper[.]framework нет архитектуры arm64' TEST_FAULT=framework-arm64
+for scratch in / /Applications '../outside' '.'; do
+  queue_parallel_case parallel_expect_fail guard 'рабочий путь должен быть внутри' \
+    "SMLTLK_SCRATCH=$scratch"
+done
 
-new_case
-expect_fail 'universal framework' 'в whisper[.]framework нет архитектуры x86_64' \
+queue_parallel_case parallel_symlink_guard
+queue_parallel_case parallel_expect_fail guard \
+  'нотаризация требует Developer ID Application' IRIZ_NOTARY_PROFILE=fixture
+queue_parallel_case parallel_expect_fail guard \
+  'рабочий путь должен быть внутри' IRIZ_RELEASE_DIST=/
+queue_parallel_case parallel_expect_fail guard \
+  'scratch и dist должны быть раздельными' \
+  "SMLTLK_SCRATCH=$test_root/case-$checks with space/release/dist/build"
+
+queue_parallel_case parallel_expect_fail 'resource bundle' \
+  'нет ресурсного IrizApp_IrizCore[.]bundle' TEST_FAULT=missing-bundle
+queue_parallel_case parallel_expect_fail 'localization resources' \
+  'в бандле нет таблицы перевода zh-hans' TEST_FAULT=missing-locale
+
+for fault in minutes-bundle minutes-digest minutes-symlink minutes-extra-symlink; do
+  queue_parallel_case parallel_minutes_fault "$fault"
+done
+for minutes_file in "${minutes_files[@]}"; do
+  queue_parallel_case parallel_missing_minutes_file "$minutes_file"
+done
+queue_parallel_case parallel_expect_fail 'arm64 framework' \
+  'в whisper[.]framework нет архитектуры arm64' TEST_FAULT=framework-arm64
+queue_parallel_case parallel_expect_fail 'universal framework' \
+  'в whisper[.]framework нет архитектуры x86_64' \
   IRIZ_RELEASE_VARIANTS='arm64 universal' TEST_FAULT=framework-universal
-
-new_case
-expect_fail 'rpath install' 'не удалось добавить rpath фреймворков' TEST_FAULT=rpath-install
-
-new_case
-expect_fail 'rpath no-op' 'rpath фреймворков отсутствует после упаковки' TEST_FAULT=rpath-noop
-
-new_case
-expect_fail 'rpath prefix' 'rpath фреймворков отсутствует после упаковки' TEST_FAULT=rpath-prefix
-grep -q '^install_name_tool ' "$case_root/trace" || fail 'rpath prefix: FrameworksExtra принят за Frameworks'
+queue_parallel_case parallel_expect_fail 'rpath install' \
+  'не удалось добавить rpath фреймворков' TEST_FAULT=rpath-install
+queue_parallel_case parallel_expect_fail 'rpath no-op' \
+  'rpath фреймворков отсутствует после упаковки' TEST_FAULT=rpath-noop
+queue_parallel_case parallel_rpath_prefix
 
 for target in app framework; do
   binary='IrizApp'
   if [ "$target" = framework ]; then binary='whisper[.]framework/whisper'; fi
   for fault in minos-missing platform-ios minos-high; do
-    new_case
-    expect_fail "$target $fault" "minOS/платформа не подтверждены для каждого среза .*/$binary$" \
+    queue_parallel_case parallel_expect_fail "$target $fault" \
+      "minOS/платформа не подтверждены для каждого среза .*/$binary$" \
       "TEST_FAULT=$target-$fault"
   done
 done
-
-new_case
-expect_fail 'DMG verify' 'шаг «hdiutil verify [(]arm64[)]» упал[.]' TEST_FAULT=dmg-verify
+queue_parallel_case parallel_expect_fail 'DMG verify' \
+  'шаг «hdiutil verify [(]arm64[)]» упал[.]' TEST_FAULT=dmg-verify
 
 for fault in mounted-signature mounted-arch mounted-minutes-file; do
-  new_case
-  reason='смонтированный .* неполон или подпись в нём не проходит'
-  if [ "$fault" = mounted-arch ]; then reason='в .*/mount[.].*/iriz[.]app/Contents/MacOS/iriz нет архитектуры arm64'; fi
-  if [ "$fault" = mounted-minutes-file ]; then reason='пакет протокола: отсутствует или пуст template[.]docx$'; fi
-  expect_fail "$fault" "$reason" "TEST_FAULT=$fault"
-  [ -f "$case_root/injected-fault" ] || fail "$fault: отказ не был внедрён в смонтированный образ"
-  cmp -s "$case_root/owned-mount" "$case_root/detached-mount" || fail "$fault: собственный том остался подключён"
-  [ "$(grep -c '^hdiutil <detach>' "$case_root/trace")" = 1 ] || fail "$fault: лишний detach"
+  queue_parallel_case parallel_mounted_fault "$fault"
 done
 
-new_case
-expect_pass
+default_case_root="$test_root/case-$checks with space"
+queue_parallel_case parallel_expect_pass
+universal_case_root="$test_root/case-$checks with space"
+queue_parallel_case parallel_expect_pass IRIZ_RELEASE_VARIANTS='arm64 universal' SMLTLK_VERSION=2.3.4 \
+  "IRIZ_RELEASE_DIST=$universal_case_root/release/custom-dist" IRIZ_DMG_HEADLESS= CI=true
+notary_case_root="$test_root/case-$checks with space"
+queue_parallel_case parallel_expect_pass TEST_NOTARY=1 IRIZ_NOTARY_PROFILE=fixture \
+  'SMLTLK_SIGN_IDENTITY=Developer ID Application: Fixture (TEST123)'
+anchor_case_root="$test_root/case-$checks with space"
+queue_parallel_case parallel_expect_fail 'DMG Apple anchor' \
+  'шаг «проверка подписи образа arm64» упал[.]' \
+  TEST_NOTARY=1 IRIZ_NOTARY_PROFILE=fixture TEST_FAULT=dmg-anchor \
+  'SMLTLK_SIGN_IDENTITY=Developer ID Application: Fixture (TEST123)'
+wait_parallel_batch
+
+case_root="$default_case_root"
 [ -f "$case_root/release/dist/iriz-1.2.3-arm64.dmg" ] || fail 'нет versioned arm64 DMG'
 [ -f "$case_root/release/dist/iriz-macos-arm64.dmg" ] || fail 'нет стабильного arm64 alias'
 if grep -q -- '<x86_64>' "$case_root/trace"; then fail 'universal собрался без opt-in'; fi
@@ -462,15 +560,11 @@ for row in manifest["artifacts"]:
 assert (dist / "iriz-1.2.3-arm64.dmg").read_bytes() == (dist / "iriz-macos-arm64.dmg").read_bytes()
 PY
 
-new_case
-expect_pass IRIZ_RELEASE_VARIANTS='arm64 universal' SMLTLK_VERSION=2.3.4 \
-  "IRIZ_RELEASE_DIST=$case_root/release/custom-dist" IRIZ_DMG_HEADLESS= CI=true
+case_root="$universal_case_root"
 [ -f "$case_root/release/custom-dist/iriz-2.3.4-universal.dmg" ] || fail 'opt-in universal не собрался'
 grep -q -- '<x86_64>' "$case_root/trace" || fail 'universal не запросил x86_64'
 
-new_case
-expect_pass TEST_NOTARY=1 IRIZ_NOTARY_PROFILE=fixture \
-  'SMLTLK_SIGN_IDENTITY=Developer ID Application: Fixture (TEST123)'
+case_root="$notary_case_root"
 "$real_python" - "$case_root" <<'PY'
 import json, pathlib, re, sys
 root = pathlib.Path(sys.argv[1])
@@ -490,10 +584,7 @@ assert manifest["signing"] == {"identity": "Developer ID Application: Fixture (T
                                "mode": "developer-id", "targets": ["app", "dmg"]}, manifest
 PY
 
-new_case
-expect_fail 'DMG Apple anchor' 'шаг «проверка подписи образа arm64» упал[.]' \
-  TEST_NOTARY=1 IRIZ_NOTARY_PROFILE=fixture TEST_FAULT=dmg-anchor \
-  'SMLTLK_SIGN_IDENTITY=Developer ID Application: Fixture (TEST123)'
+case_root="$anchor_case_root"
 [ -f "$case_root/injected-fault" ] || fail 'Apple anchor: отказ не был внедрён'
 if grep -Eq '^xcrun <notarytool> <submit> <[^>]*[.]dmg>' "$case_root/trace"; then
   fail 'DMG отправлен на нотаризацию после отказа Apple anchor'
