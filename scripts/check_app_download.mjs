@@ -1,9 +1,12 @@
 #!/usr/bin/env node
-// Anonymous, read-only verification. Downloaded content is never executed or saved.
+// Anonymous live checks stream bytes only; draft checks mount read-only and run one isolated UI export.
 import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { readFile, realpath, stat } from 'node:fs/promises';
-import { dirname, resolve, sep } from 'node:path';
+import { createReadStream } from 'node:fs';
+import { lstat, mkdir, mkdtemp, open, readFile, readdir, readlink, realpath, rm, stat } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { crc32, inflateSync } from 'node:zlib';
 
@@ -16,6 +19,20 @@ const META_LIMIT = 1024 * 1024;
 const DMG_LIMIT = 512 * 1024 * 1024;
 const HASH = /^[a-f0-9]{64}$/;
 const SHA = /^[a-f0-9]{40}$/;
+const MEETING_TEMPLATE_SHA = '8b4ffde7a7d09c6f3450b2de8667334fe79f544157553c3e81d77456b43807ff';
+const MEETING_FILES = [
+  'README.md', 'data.schema.json', 'docs/filler-usage.md', 'docs/filling-rules.md',
+  'docs/formatting.md', 'docs/owner-changes.md', 'docs/verification.md',
+  'examples/data.example.json', 'examples/filled.example.docx', 'fields.json',
+  'fonts/OFL.txt', 'fonts/PT_Serif-Web-Bold.ttf', 'fonts/PT_Serif-Web-Regular.ttf',
+  'scripts/fill_template.py', 'scripts/verify_package.py', 'template.docx', 'template.md',
+  'tests/test_fill_template.py',
+];
+export const UI_SHOT_NAMES = [
+  'menu-normal', 'menu-alarm', 'menu-paused', 'menu-tap-dead',
+  'settings', 'history-list', 'history-empty', 'history-rescue',
+].flatMap(surface => ['light', 'dark'].flatMap(theme => [1, 2]
+  .map(scale => `${surface}-${theme}@${scale}x.png`)));
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const LOCALES = [['README.md', 'What This Is', 'Contents'], ['README.ru.md', 'Что это', 'Оглавление'], ['README.zh.md', '这是什么', '目录']];
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -24,6 +41,41 @@ const sameNames = (actual, expected, label) => {
   requireThat(Array.isArray(actual) && actual.length === expected.length &&
     new Set(actual).size === actual.length && expected.every(name => actual.includes(name)), `${label}: wrong or duplicate filenames`);
 };
+
+async function hashFile(path) {
+  const hash = createHash('sha256');
+  for await (const chunk of createReadStream(path)) hash.update(chunk);
+  return hash.digest('hex');
+}
+
+async function sameFileBytes(left, right) {
+  const [a, b] = await Promise.all([open(left, 'r'), open(right, 'r')]);
+  const leftBuffer = Buffer.allocUnsafe(1024 * 1024), rightBuffer = Buffer.allocUnsafe(1024 * 1024);
+  try {
+    while (true) {
+      const [leftRead, rightRead] = await Promise.all([a.read(leftBuffer), b.read(rightBuffer)]);
+      if (leftRead.bytesRead !== rightRead.bytesRead) return false;
+      if (!leftBuffer.subarray(0, leftRead.bytesRead).equals(rightBuffer.subarray(0, rightRead.bytesRead))) return false;
+      if (leftRead.bytesRead === 0) return true;
+    }
+  } finally { await Promise.all([a.close(), b.close()]); }
+}
+
+async function regularFile(path, label, maxBytes = DMG_LIMIT) {
+  const info = await lstat(path).catch(() => null);
+  requireThat(info?.isFile() && !info.isSymbolicLink() && info.size > 0 && info.size <= maxBytes,
+    `${label}: missing, symlinked, empty or oversized`);
+  return info;
+}
+
+function nativeCommand(command, args, { cwd, env, timeout = 120_000 } = {}) {
+  return new Promise((resolvePromise, rejectPromise) => execFile(command, args, {
+    cwd, env, timeout, maxBuffer: 8 * META_LIMIT, windowsHide: true,
+  }, (error, stdout, stderr) => {
+    if (error) return rejectPromise(new Error(`${basename(command)} failed: ${String(stderr || stdout || error.message).trim()}`));
+    resolvePromise({ stdout, stderr });
+  }));
+}
 
 export function trustedURL(value) {
   let url;
@@ -179,6 +231,185 @@ export function validateManifest(manifest, snapshot, downloaded) {
   }
 }
 
+export function validateDownloadedManifest(manifest, { version, source, images, files }) {
+  requireThat(manifest?.version === version && manifest.source_sha === source && manifest.source_dirty === false,
+    'Downloaded manifest version/source is invalid');
+  requireThat(manifest.notarized === false && manifest.signing?.mode === 'ad-hoc' && manifest.signing.identity === '-',
+    'Downloaded manifest signing is not the required ad-hoc identity');
+  sameNames(manifest.artifacts?.map(item => item.file), images, 'Downloaded manifest artifacts');
+  for (const name of images) {
+    const item = manifest.artifacts.find(value => value.file === name), file = files.get(name);
+    requireThat(item.bytes === file.bytes && item.sha256 === file.sha256 &&
+      Array.isArray(item.architectures) && item.architectures.length === 1 && item.architectures[0] === 'arm64',
+    `Downloaded manifest artifact differs: ${name}`);
+  }
+}
+
+async function verifyMeetingPackage(packagePath) {
+  const packageInfo = await lstat(packagePath).catch(() => null);
+  requireThat(packageInfo?.isDirectory() && !packageInfo.isSymbolicLink(), 'Meeting package directory is invalid');
+  const packageRoot = await realpath(packagePath);
+  const manifestPath = join(packagePath, 'manifest.json');
+  await regularFile(manifestPath, 'Meeting package manifest', META_LIMIT);
+  const manifest = json(await readFile(manifestPath), 'Meeting package manifest');
+  requireThat(manifest?.version === 1 && HASH.test(manifest.template_sha256) &&
+    manifest.files && typeof manifest.files === 'object' && !Array.isArray(manifest.files),
+  'Meeting package manifest is invalid');
+  requireThat(manifest.files['template.docx'] === manifest.template_sha256,
+    'Meeting template is not bound to its package manifest');
+  requireThat(manifest.template_sha256 === MEETING_TEMPLATE_SHA,
+    'Meeting template checksum differs from the shipped template');
+  sameNames(Object.keys(manifest.files), MEETING_FILES, 'Meeting package files');
+  for (const [relative, expected] of Object.entries(manifest.files)) {
+    requireThat(/^(?!\/)(?!.*(?:^|\/)\.\.(?:\/|$))[a-zA-Z0-9._/-]+$/.test(relative) && HASH.test(expected),
+      'Meeting package manifest contains an unsafe file');
+    const path = resolve(packagePath, relative);
+    requireThat(path.startsWith(`${resolve(packagePath)}${sep}`) &&
+      (await realpath(path)).startsWith(`${packageRoot}${sep}`), 'Meeting package file escapes its bundle');
+    await regularFile(path, `Meeting package file ${relative}`, 64 * META_LIMIT);
+    requireThat(await hashFile(path) === expected, `Meeting package checksum differs: ${relative}`);
+  }
+}
+
+export async function verifyDownloadedNative({ images, version, environment, run = nativeCommand }) {
+  const tempBase = await realpath(environment.TMPDIR || tmpdir());
+  const scratch = await mkdtemp(join(tempBase, 'iriz-release-verify-'));
+  const mount = join(scratch, 'mount'), copiedApp = join(scratch, 'iriz.app'), home = join(scratch, 'home');
+  const launchTemp = join(scratch, 'tmp'), shots = join(scratch, 'shots');
+  await Promise.all([mkdir(mount), mkdir(home, { mode: 0o700 }), mkdir(launchTemp, { mode: 0o700 }), mkdir(shots)]);
+  const cleanEnvironment = {
+    HOME: home, CFFIXED_USER_HOME: home, TMPDIR: launchTemp,
+    PATH: '/usr/bin:/bin:/usr/sbin:/sbin', LANG: 'en_US.UTF-8', LC_ALL: 'en_US.UTF-8',
+  };
+  let mounted = false, failure;
+  try {
+    for (const image of images)
+      await run('/usr/bin/hdiutil', ['verify', image], { env: cleanEnvironment, timeout: 120_000 });
+    await run('/usr/bin/hdiutil', ['attach', '-readonly', '-nobrowse', '-noautoopen', '-mountpoint', mount, images[0]],
+      { env: cleanEnvironment, timeout: 120_000 });
+    mounted = true;
+    const app = join(mount, 'iriz.app'), executable = join(app, 'Contents', 'MacOS', 'iriz');
+    const appInfo = await lstat(app).catch(() => null);
+    requireThat(appInfo?.isDirectory() && !appInfo.isSymbolicLink(), 'Mounted DMG has no regular iriz.app bundle');
+    const appRoot = await realpath(app);
+    requireThat(appRoot.startsWith(`${await realpath(mount)}${sep}`) &&
+      (await realpath(executable)).startsWith(`${appRoot}${sep}`), 'Mounted app paths escape the DMG');
+    const executableInfo = await regularFile(executable, 'Mounted app executable');
+    requireThat((executableInfo.mode & 0o111) !== 0, 'Mounted app executable is not executable');
+    const applications = join(mount, 'Applications'), applicationsInfo = await lstat(applications).catch(() => null);
+    requireThat(applicationsInfo?.isSymbolicLink() && await readlink(applications) === '/Applications',
+      'Mounted DMG Applications link is invalid');
+    const resources = join(app, 'Contents', 'Resources');
+    for (const bundle of ['IrizApp_IrizCore.bundle', 'IrizApp_IrizDictate.bundle']) {
+      const info = await lstat(join(resources, bundle)).catch(() => null);
+      requireThat(info?.isDirectory() && !info.isSymbolicLink(), `Mounted app resource bundle missing: ${bundle}`);
+    }
+    await verifyMeetingPackage(join(resources, 'IrizApp_IrizDictate.bundle', 'MeetingMinutes'));
+    await regularFile(join(app, 'Contents', 'Info.plist'), 'Mounted app Info.plist', META_LIMIT);
+    const plistVersion = await run('/usr/bin/plutil', ['-extract', 'CFBundleShortVersionString', 'raw',
+      '-o', '-', join(app, 'Contents', 'Info.plist')], { env: cleanEnvironment });
+    requireThat(String(plistVersion.stdout).trim() === version, 'Mounted app bundle version differs');
+    const minimumOS = await run('/usr/bin/plutil', ['-extract', 'LSMinimumSystemVersion', 'raw',
+      '-o', '-', join(app, 'Contents', 'Info.plist')], { env: cleanEnvironment });
+    requireThat(String(minimumOS.stdout).trim() === '14.0', 'Mounted app minimum macOS version differs');
+    const architecture = await run('/usr/bin/lipo', ['-archs', executable], { env: cleanEnvironment });
+    requireThat(String(architecture.stdout).trim() === 'arm64', 'Mounted app executable is not exact arm64');
+    await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', app], { env: cleanEnvironment });
+    const signature = await run('/usr/bin/codesign', ['-dv', '--verbose=4', app], { env: cleanEnvironment });
+    requireThat(/(?:^|\n)Signature=adhoc(?:\n|$)/.test(`${signature.stdout}\n${signature.stderr}`),
+      'Mounted app signature is not ad-hoc');
+    await run('/usr/bin/ditto', [app, copiedApp], { env: cleanEnvironment, timeout: 120_000 });
+    const copiedInfo = await lstat(copiedApp).catch(() => null);
+    requireThat(copiedInfo?.isDirectory() && !copiedInfo.isSymbolicLink() &&
+      (await realpath(copiedApp)).startsWith(`${await realpath(scratch)}${sep}`),
+    'Copied app bundle is invalid');
+    await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', '--verbose=2', copiedApp],
+      { env: cleanEnvironment });
+    await run('/usr/bin/hdiutil', ['detach', mount], { env: cleanEnvironment, timeout: 30_000 });
+    mounted = false;
+    const copiedExecutable = join(copiedApp, 'Contents', 'MacOS', 'iriz');
+    await run(copiedExecutable, ['--export-ui-shots', shots],
+      { cwd: home, env: cleanEnvironment, timeout: 120_000 });
+    const shotEntries = await readdir(shots, { withFileTypes: true });
+    const shotFiles = shotEntries.filter(entry => entry.isFile()).map(entry => entry.name);
+    sameNames(shotFiles, UI_SHOT_NAMES, 'Copied app UI shots');
+    for (const name of UI_SHOT_NAMES) {
+      await regularFile(join(shots, name), `UI shot ${name}`, 32 * META_LIMIT);
+      const handle = await open(join(shots, name), 'r');
+      const signature = Buffer.alloc(8);
+      try { requireThat((await handle.read(signature)).bytesRead === 8 &&
+        signature.equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), `UI shot is not PNG: ${name}`); }
+      finally { await handle.close(); }
+    }
+  } catch (error) { failure = error; }
+  finally {
+    if (mounted) {
+      try {
+        await run('/usr/bin/hdiutil', ['detach', mount], { env: cleanEnvironment, timeout: 30_000 });
+        mounted = false;
+      }
+      catch (error) { if (!failure) failure = error; }
+    }
+    if (!mounted) {
+      try { await rm(scratch, { recursive: true, force: true }); }
+      catch (error) { if (!failure) failure = error; }
+    }
+  }
+  if (failure) throw failure;
+}
+
+export async function verifyDownloadedRelease({
+  environment = process.env, nativeProbe = verifyDownloadedNative,
+} = {}) {
+  const assetInput = environment.PRODUCT_RELEASE_ASSET_DIR;
+  const version = environment.PRODUCT_RELEASE_VERSION;
+  const tag = environment.PRODUCT_RELEASE_TAG;
+  const source = environment.PRODUCT_RELEASE_SOURCE_SHA;
+  const token = environment.PRODUCT_RELEASE_VERIFY_TOKEN;
+  requireThat(typeof assetInput === 'string' && assetInput.length > 0, 'PRODUCT_RELEASE_ASSET_DIR is required');
+  requireThat(/^\d+\.\d+\.\d+$/.test(version || '') && tag === `v${version}`,
+    'Downloaded release version/tag is invalid');
+  requireThat(SHA.test(source || ''), 'Downloaded release source SHA is invalid');
+  requireThat(typeof token === 'string' && /^[a-zA-Z0-9._-]{16,256}$/.test(token),
+    'Downloaded release verify token is invalid');
+  requireThat(['draft', 'published-assets'].includes(environment.PRODUCT_RELEASE_STAGE),
+    'Downloaded release stage is invalid');
+  requireThat(resolve(assetInput) === assetInput, 'Downloaded release asset path must be absolute');
+  const inputInfo = await lstat(assetInput).catch(() => null);
+  requireThat(inputInfo?.isDirectory() && !inputInfo.isSymbolicLink(),
+    'Downloaded release asset path is not a regular directory');
+  const assetDir = await realpath(assetInput);
+  const rootInfo = await lstat(assetDir);
+  requireThat(rootInfo.isDirectory() && !rootInfo.isSymbolicLink(), 'Downloaded release asset path is not a directory');
+  const images = [`iriz-${version}-arm64.dmg`, 'iriz-macos-arm64.dmg'];
+  const expected = [...images, 'release-manifest.json', 'SHA256SUMS.txt'];
+  const entries = await readdir(assetDir, { withFileTypes: true });
+  const rootFiles = entries.filter(entry => entry.isFile()).map(entry => entry.name);
+  sameNames(rootFiles, expected, 'Downloaded release root files');
+  for (const entry of entries) {
+    requireThat(expected.includes(entry.name) ||
+      (entry.isDirectory() && ['verifier-home', 'verifier-tmp'].includes(entry.name)),
+    `Downloaded release has unexpected root entry: ${entry.name}`);
+  }
+  const files = new Map();
+  for (const name of expected) {
+    const path = join(assetDir, name);
+    const info = await regularFile(path, `Downloaded release file ${name}`,
+      name.endsWith('.dmg') ? DMG_LIMIT : META_LIMIT);
+    files.set(name, { path, bytes: info.size, sha256: await hashFile(path) });
+  }
+  requireThat(await sameFileBytes(files.get(images[0]).path, files.get(images[1]).path),
+    'Downloaded stable and versioned DMGs differ byte-for-byte');
+  const expectedSums = expected.filter(name => name !== 'SHA256SUMS.txt');
+  const sums = checksums(await readFile(files.get('SHA256SUMS.txt').path), expectedSums);
+  for (const [name, digest] of sums)
+    requireThat(files.get(name).sha256 === digest, `Downloaded SHA256SUMS mismatch: ${name}`);
+  const manifest = json(await readFile(files.get('release-manifest.json').path), 'Downloaded manifest');
+  validateDownloadedManifest(manifest, { version, source, images, files });
+  await nativeProbe({ images: images.map(name => files.get(name).path), version, environment });
+  return `PRODUCT_RELEASE_VERIFIED=${token}`;
+}
+
 export async function verifyRelease(options = {}) {
   const deadline = Date.now() + 600_000;
   const get = (url, extra = {}) => request(url, { ...options, deadline, ...extra });
@@ -319,6 +550,11 @@ async function main() {
   const args = process.argv.slice(2);
   assert(args.length <= 1 && (!args.length || ['--selftest', '--local'].includes(args[0])), 'Usage: node scripts/check_app_download.mjs [--selftest|--local]');
   if (args[0] === '--selftest') return (await import('./check_app_download_test.mjs')).selftest();
+  if (process.env.PRODUCT_RELEASE_ASSET_DIR) {
+    assert(args.length === 0, 'Downloaded release verification takes no arguments');
+    console.log(await verifyDownloadedRelease());
+    return;
+  }
   const readmes = await verifyReadmes();
   console.log(`PASS: application download CTA in ${readmes.join(', ')}`);
   if (args[0] === '--local') return;

@@ -1,8 +1,92 @@
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { chmod, cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { crc32, deflateSync } from 'node:zlib';
 import { API, DOWNLOAD, STABLE, sha256, trustedURL, request, releaseSnapshot,
-  checksums, validateManifest, validateReadme, validateBadgePNG, verifyRelease } from './check_app_download.mjs';
+  checksums, validateManifest, validateReadme, validateBadgePNG, verifyRelease,
+  verifyDownloadedNative, verifyDownloadedRelease, UI_SHOT_NAMES } from './check_app_download.mjs';
+
+const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+
+async function downloadedFixture(work) {
+  const root = await mkdtemp(join(tmpdir(), 'iriz-downloaded-release-test-'));
+  const version = '9.8.7', source = 'a'.repeat(40), token = 'receipt-token-123456';
+  const images = [`iriz-${version}-arm64.dmg`, 'iriz-macos-arm64.dmg'];
+  const dmg = Buffer.from('synthetic identical dmg bytes');
+  const manifest = {
+    version, source_sha: source, source_dirty: false, notarized: false,
+    signing: { mode: 'ad-hoc', identity: '-' },
+    artifacts: images.map(file => ({
+      file, bytes: dmg.length, sha256: sha256(dmg), architectures: ['arm64'],
+    })),
+  };
+  const files = new Map(images.map(name => [name, dmg]));
+  files.set('release-manifest.json', Buffer.from(JSON.stringify(manifest)));
+  files.set('SHA256SUMS.txt', Buffer.from([...files]
+    .map(([name, bytes]) => `${sha256(bytes)}  ${name}\n`).join('')));
+  for (const [name, bytes] of files) await writeFile(join(root, name), bytes);
+  const writeChecksums = async () => {
+    const bytes = Buffer.from([...files].filter(([name]) => name !== 'SHA256SUMS.txt')
+      .map(([name, value]) => `${sha256(value)}  ${name}\n`).join(''));
+    files.set('SHA256SUMS.txt', bytes);
+    await writeFile(join(root, 'SHA256SUMS.txt'), bytes);
+  };
+  const writeManifest = async value => {
+    const bytes = Buffer.from(JSON.stringify(value));
+    files.set('release-manifest.json', bytes);
+    await writeFile(join(root, 'release-manifest.json'), bytes);
+    await writeChecksums();
+  };
+  const environment = {
+    PRODUCT_RELEASE_ASSET_DIR: root,
+    PRODUCT_RELEASE_VERSION: version,
+    PRODUCT_RELEASE_TAG: `v${version}`,
+    PRODUCT_RELEASE_SOURCE_SHA: source,
+    PRODUCT_RELEASE_VERIFY_TOKEN: token,
+    PRODUCT_RELEASE_STAGE: 'draft',
+  };
+  try { return await work({ root, environment, manifest, files, images, token, writeChecksums, writeManifest }); }
+  finally { await rm(root, { recursive: true, force: true }); }
+}
+
+function nativeFixtureRunner({ failCodesign = false, minimumOS = '14.0', shotNames = UI_SHOT_NAMES } = {}) {
+  const calls = [];
+  const run = async (command, args, options = {}) => {
+    calls.push([command, ...args]);
+    assert.equal(options.env.GH_TOKEN, undefined);
+    assert.equal(options.env.HOME, options.env.CFFIXED_USER_HOME);
+    if (command === '/usr/bin/hdiutil' && args[0] === 'attach') {
+      const mount = args[args.indexOf('-mountpoint') + 1];
+      const resources = join(mount, 'iriz.app', 'Contents', 'Resources');
+      const meeting = join(resources, 'IrizApp_IrizDictate.bundle', 'MeetingMinutes');
+      const executable = join(mount, 'iriz.app', 'Contents', 'MacOS', 'iriz');
+      await mkdir(join(resources, 'IrizApp_IrizCore.bundle'), { recursive: true });
+      await mkdir(join(executable, '..'), { recursive: true });
+      await writeFile(executable, 'synthetic executable');
+      await writeFile(join(mount, 'iriz.app', 'Contents', 'Info.plist'), 'synthetic plist');
+      await chmod(executable, 0o755);
+      await symlink('/Applications', join(mount, 'Applications'));
+      await cp(new URL('../Sources/IrizDictate/Resources/MeetingMinutes', import.meta.url), meeting,
+        { recursive: true });
+    }
+    if (command === '/usr/bin/plutil') return {
+      stdout: `${args.includes('LSMinimumSystemVersion') ? minimumOS : '9.8.7'}\n`, stderr: '',
+    };
+    if (command === '/usr/bin/lipo') return { stdout: 'arm64\n', stderr: '' };
+    if (command === '/usr/bin/codesign' && args[0] === '-dv') {
+      if (failCodesign) throw new Error('synthetic codesign failure');
+      return { stdout: '', stderr: 'Signature=adhoc\nTeamIdentifier=not set\n' };
+    }
+    if (command === '/usr/bin/ditto') await cp(args[0], args[1], { recursive: true });
+    if (args[0] === '--export-ui-shots') {
+      assert.equal(options.cwd, options.env.HOME);
+      for (const name of shotNames) await writeFile(join(args[1], name), PNG_SIGNATURE);
+    }
+    return { stdout: '', stderr: '' };
+  };
+  return { calls, run };
+}
 
 function fixture() {
   const version = '9.8.7';
@@ -170,6 +254,76 @@ export async function selftest() {
     assert.throws(() => validateManifest({ ...data.manifest, version: '0.0.0' }, snapshot, new Map()), /version\/source/);
     assert.throws(() => validateManifest({ ...data.manifest, source_dirty: true }, snapshot, new Map()), /version\/source/);
   });
+  await test('downloaded release emits receipt only after native verification', () => downloadedFixture(async data => {
+    let probed = false;
+    const receipt = await verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => { probed = true; } });
+    assert.equal(probed, true);
+    assert.equal(receipt, `PRODUCT_RELEASE_VERIFIED=${data.token}`);
+  }));
+  await test('downloaded release refuses invalid receipt token', () => downloadedFixture(async data => {
+    data.environment.PRODUCT_RELEASE_VERIFY_TOKEN = '';
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => assert.fail('native probe must not run') }), /verify token/);
+  }));
+  await test('downloaded release refuses invalid stage', () => downloadedFixture(async data => {
+    data.environment.PRODUCT_RELEASE_STAGE = 'published';
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => assert.fail('native probe must not run') }), /stage/);
+  }));
+  await test('downloaded release refuses manifest contract drift', () => downloadedFixture(async data => {
+    await data.writeManifest({ ...data.manifest, source_dirty: true });
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => assert.fail('native probe must not run') }), /manifest version\/source/);
+    await data.writeManifest({ ...data.manifest, signing: { mode: 'self-signed', identity: 'local' } });
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => assert.fail('native probe must not run') }), /required ad-hoc/);
+  }));
+  await test('downloaded release refuses checksum mismatch', () => downloadedFixture(async data => {
+    const bad = Buffer.from(data.files.get('SHA256SUMS.txt').toString().replace(/^[a-f0-9]{64}/, '0'.repeat(64)));
+    await writeFile(join(data.root, 'SHA256SUMS.txt'), bad);
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => assert.fail('native probe must not run') }), /SHA256SUMS mismatch/);
+  }));
+  await test('downloaded release propagates native probe failure without receipt', () => downloadedFixture(async data => {
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: async () => { throw new Error('synthetic hdiutil failure'); } }), /synthetic hdiutil failure/);
+  }));
+  await test('downloaded native probe uses readonly mount and clean launch smoke', () => downloadedFixture(async data => {
+    const native = nativeFixtureRunner();
+    const receipt = await verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: input => verifyDownloadedNative({ ...input, run: native.run }) });
+    assert.equal(receipt, `PRODUCT_RELEASE_VERIFIED=${data.token}`);
+    assert.equal(native.calls.filter(call => call[0] === '/usr/bin/hdiutil' && call[1] === 'verify').length, 2);
+    assert(native.calls.some(call => call[0] === '/usr/bin/hdiutil' && call[1] === 'attach' &&
+      call.includes('-readonly') && call.includes('-nobrowse') && call.includes('-noautoopen')));
+    assert(native.calls.some(call => call[0] === '/usr/bin/lipo' && call[1] === '-archs'));
+    assert.equal(native.calls.filter(call => call[0] === '/usr/bin/codesign' && call[1] === '--verify').length, 2);
+    assert(native.calls.some(call => call[0] === '/usr/bin/ditto'));
+    const detach = native.calls.findIndex(call => call[0] === '/usr/bin/hdiutil' && call[1] === 'detach');
+    const launch = native.calls.findIndex(call => call[1] === '--export-ui-shots');
+    assert(detach >= 0 && launch > detach && native.calls[launch][0].includes('/iriz.app/Contents/MacOS/iriz'));
+  }));
+  await test('downloaded native probe requires macOS 14', () => downloadedFixture(async data => {
+    const native = nativeFixtureRunner({ minimumOS: '13.0' });
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: input => verifyDownloadedNative({ ...input, run: native.run }) }), /minimum macOS/);
+    assert.equal(native.calls.at(-1)[0], '/usr/bin/hdiutil');
+    assert.equal(native.calls.at(-1)[1], 'detach');
+  }));
+  await test('downloaded native probe requires every expected UI shot', () => downloadedFixture(async data => {
+    const native = nativeFixtureRunner({ shotNames: UI_SHOT_NAMES.slice(1) });
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: input => verifyDownloadedNative({ ...input, run: native.run }) }), /UI shots/);
+  }));
+  await test('downloaded native probe detaches after mounted check failure', () => downloadedFixture(async data => {
+    const native = nativeFixtureRunner({ failCodesign: true });
+    await assert.rejects(() => verifyDownloadedRelease({ environment: data.environment,
+      nativeProbe: input => verifyDownloadedNative({ ...input, run: native.run }) }), /synthetic codesign failure/);
+    assert.equal(native.calls.at(-1)[0], '/usr/bin/hdiutil');
+    assert.equal(native.calls.at(-1)[1], 'detach');
+    assert(!native.calls.some(call => call[1] === '--export-ui-shots'));
+  }));
   const badge = 'docs/assets/download-macos.png';
   const block = `<!-- application-downloads:start -->\n<a href="${STABLE}"><img src="${badge}" alt="Download for macOS" width="180"></a>\n[Download](${STABLE})\n<!-- application-downloads:end -->`;
   const readme = `# iriz\n\n## Contents\n\n${block}\n\n## What This Is\n`;
@@ -194,7 +348,7 @@ export async function selftest() {
     result.writeUInt32BE(crc32(result.subarray(4, result.length - 4)), result.length - 4);
     return result;
   };
-  const pngHeader = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+  const pngHeader = PNG_SIGNATURE;
   const ihdr = Buffer.from([0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0]);
   const png = Buffer.concat([pngHeader, pngChunk('IHDR', ihdr), pngChunk('IDAT', deflateSync(Buffer.alloc(5))), pngChunk('IEND', Buffer.alloc(0))]);
   await test('valid badge PNG', () => validateBadgePNG(png));

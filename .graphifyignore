@@ -1,0 +1,2 @@
+# Binary templates have tracked text/JSON companions; derived Markdown sidecars are ignored.
+*.docx
