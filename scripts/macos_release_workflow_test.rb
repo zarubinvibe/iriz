@@ -50,6 +50,11 @@ check(draft['permissions'] == { 'contents' => 'write' } && draft['needs'] == 'bu
 check(build['runs-on'] == 'macos-26' && build['env']['SMLTLK_SIGN_IDENTITY'] == '-', 'Build must use standard ARM64 and ad-hoc signing')
 check(build['env']['DEVELOPER_DIR'] == '/Applications/Xcode_26.6.app/Contents/Developer', 'Pin the Xcode 26.6 toolchain')
 check(build['env']['IRIZ_NOTARY_PROFILE'] == '' && build['env']['IRIZ_DMG_HEADLESS'] == '1', 'No Apple credentials or Finder in CI')
+notes_check_index = build['steps'].index { |step| step['name'] == 'Verify generated GitHub Release notes' }
+notes_check = notes_check_index && build['steps'][notes_check_index]
+check(notes_check && notes_check['env'] == { 'RELEASE_VERSION' => '${{ steps.version.outputs.version }}' } &&
+      notes_check['run'] == 'node scripts/render_github_release_notes.mjs --check --version "$RELEASE_VERSION"',
+      'Build must verify the generated notes for the exact release version')
 check(build['steps'].any? { |step| step['run'] == 'swift test --no-parallel --jobs 2' }, 'Serial tests must precede packaging')
 test_index = build['steps'].index { |step| step['run'] == 'swift test --no-parallel --jobs 2' }
 environment_index = build['steps'].index { |step| step['name'] == 'Prepare hosted macOS integration environment' }
@@ -61,6 +66,28 @@ check(build['steps'].none? { |step| step.key?('if') }, 'build_only must retain e
 check(build['steps'].any? { |step| step['name'] == 'Verify the exact release files' }, 'Build must verify its release files')
 upload = build['steps'].find { |step| step['id'] == 'upload' }
 check(upload && upload.fetch('with')['overwrite'] == false, 'Build artifacts must upload without overwriting another run')
+upload_index = build['steps'].index(upload)
+stage_index = build['steps'].index { |step| step['name'] == 'Stage release notes for the draft' }
+stage = stage_index && build['steps'][stage_index]
+check(stage && stage['run'] == 'cp ".github/release-notes/v$RELEASE_VERSION.md" "release/dist/release-notes-v$RELEASE_VERSION.md"' &&
+      package_index < stage_index && stage_index == upload_index - 1,
+      'Verified release notes must be staged immediately before artifact upload')
+artifact_paths = upload.fetch('with').fetch('path').lines.map(&:strip).reject(&:empty?)
+check(artifact_paths == [
+  'release/dist/iriz-${{ steps.version.outputs.version }}-arm64.dmg',
+  'release/dist/iriz-macos-arm64.dmg',
+  'release/dist/SHA256SUMS.txt',
+  'release/dist/release-manifest.json',
+  'release/dist/release-notes-v${{ steps.version.outputs.version }}.md'
+], 'Actions artifact must contain four public assets plus the generated notes')
+download = draft['steps'].find { |step| step['name'] == "Download only this build's artifact" }
+check(download && download.fetch('with')['artifact-ids'] == '${{ needs.build.outputs.artifact_id }}' &&
+      download.fetch('with')['path'] == 'release-files' && download.fetch('with')['merge-multiple'] == true &&
+      download.fetch('with')['digest-mismatch'] == 'error', 'Draft must download only the exact verified build artifact')
+draft_verify = draft['steps'].find { |step| step['name'] == 'Verify release metadata and checksums' }.fetch('run')
+check(draft_verify.include?('release-manifest.json "release-notes-v$RELEASE_VERSION.md"') &&
+      draft_verify.include?('[[ -f "$file" && ! -L "$file" && -s "$file" ]]'),
+      'Draft must reject missing, empty or linked release notes')
 check(draft['steps'].none? { |step| step['uses'].to_s.start_with?('actions/checkout@') }, 'No checkout in the write job')
 workflow['jobs'].each_value do |job|
   job['steps'].each do |step|
@@ -306,6 +333,9 @@ Dir.mktmpdir('iriz-release-write-test-') do |fixture|
         check(output.include?("CREATE_ARG:#{arg}\n"), "Missing create argument: #{arg}")
       end
       check(output.include?("CREATE_ARG:--target\nCREATE_ARG:#{sha}\n"), 'Draft must target the exact source commit')
+      check(output.include?("CREATE_ARG:--notes-file\nCREATE_ARG:release-notes-v0.2.1.md\n"),
+            'Draft must use the generated notes file')
+      check(!output.include?("CREATE_ARG:--notes\n"), 'Draft must not replace generated notes with inline copy')
       check(!output.include?('--clobber'), 'Asset overwrite is forbidden')
     else
       check(writes.empty?, "#{name}: no writes allowed: #{writes.inspect}")

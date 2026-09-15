@@ -2,6 +2,10 @@
 
 [Русский](SECURITY.ru.md) · [中文](SECURITY.zh.md)
 
+Start here: read [What is actually valuable here](#what-is-actually-valuable-here) and report a problem under [If you found a hole](#if-you-found-a-hole).
+
+Status: ready for the current local-first, ad-hoc signed, unnotarized build.
+
 <p align="center"><img src="docs/assets/pantheon/window-wash-source.png" alt="Iris in white marble wiping a pane of glass by a classical column: you can see through, nothing is hidden" width="100%"></p>
 
 ## What is actually valuable here
@@ -48,7 +52,7 @@ on mine.
 ## What this project does not promise
 
 - No protection against someone already sitting at your Mac under your account.
-- No Apple notarization: the build is signed with a self-signed certificate, and macOS will
-  honestly warn you about that on the first launch.
+- No Apple notarization: the public build uses an ad-hoc signature without a Developer ID
+  certificate, and macOS will honestly warn you about that on the first launch.
 - No promise that a third-party agent in prompt mode behaves decently. It is a third party.
   That is exactly why prompt mode is off by default and turned on by you.

@@ -1,5 +1,13 @@
 # The conversation at the first install
 
+[Русский](ONBOARDING-CHAT.ru.md) · [简体中文](ONBOARDING-CHAT.zh.md) · [README](../README.md)
+
+Start here: follow Steps 1 through 5 in order and stop when a check differs from this guide.
+
+Status: ready for a first install; failed or skipped checks stay visible.
+
+**Result:** the agent explains each change before making it, asks at decision points, and leaves failed or skipped checks visible.
+
 <!-- owner-greeting:start -->
 
 <p align="center"><img src="assets/pantheon/doc-onboarding.png" alt="Iris sets a tablet on a low table by a column, the gold ribbon of voice settles into the carved groove" width="100%"></p>
@@ -79,6 +87,10 @@ not in the app.
 is missing. If the download fails, read the reason in the window and click "Try again" after
 addressing it. We wait for the model before trying dictation.
 
+Parakeet is the shortest route because iriz installs it automatically. The author uses
+manually installed Whisper large-v3-turbo instead. If the user wants another supported profile,
+pause here and open the [model guide](MODELS.md).
+
 **What you get:** once the model is installed and permissions are granted, we test dictation
 in the welcome window. Press the key, say a sentence, press again. The text appears in the
 trial field.
@@ -102,3 +114,5 @@ report; they do not become a promise that everything works.
 ```bash
 bash scripts/verify.sh && bash scripts/offline_binary_gate.sh
 ```
+
+Next: start with `bash install.sh` and read its report before adding `--build`.

@@ -75,6 +75,15 @@ struct LocalizationTablesTests {
         #expect(value.range(of: "[а-яА-Я]", options: .regularExpression) == nil)
     }
 
+    @Test("китайское знакомство просит говорить по-русски для перевода в английский")
+    func китайскийПереводНазываетОбаЯзыка() throws {
+        let bundle = try #require(table(.zh))
+        #expect(bundle.localizedString(forKey: "firstrun.translate.title", value: "", table: nil)
+                == "说俄语，出英文")
+        #expect(bundle.localizedString(forKey: "firstrun.translatePressKey", value: "", table: nil)
+                == "按一下这个键，用俄语说句话")
+    }
+
     @Test("имя продукта не переводится ни в одной таблице")
     func имяПродуктаНеПереводится() throws {
         // «iriz» строчными и без склонения - решение владельца. Переводчик,

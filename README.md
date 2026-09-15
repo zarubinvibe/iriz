@@ -1,6 +1,6 @@
 # iriz
 
-Speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.
+Result: speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.
 
 [Русский](README.ru.md) · [中文](README.zh.md)
 
@@ -16,22 +16,25 @@ Speak out loud and the text appears. Speech recognition runs on your Mac; sendin
 >
 > And the small thing this all started from: I forget to switch the language and type a sentence in the wrong layout. Here that repairs itself.
 >
-> — Filipp Zarubin
+> Filipp Zarubin
 
 <!-- owner-welcome:end -->
 
 ## Contents
 
-- [What This Is](#what-this-is)
-- [Why It Helps](#why-it-helps)
-- [The Main Advantage](#the-main-advantage)
-- [How It Works](#how-it-works)
+- [What this is](#what-this-is)
+- [Why it helps](#why-it-helps)
+- [The main advantage](#the-main-advantage)
+- [How it works](#how-it-works)
 - [Quickstart](#quickstart)
-- [Simple Comparison](#simple-comparison)
-- [Simple Words](#simple-words)
-- [Safety And Privacy](#safety-and-privacy)
+
+**Also:**
+
+- [Simple comparison](#simple-comparison)
+- [Simple words](#simple-words)
+- [Safety and privacy](#safety-and-privacy)
 - [Limits](#limits)
-- [Star And Contribute](#star-and-contribute)
+- [Star and contribute](#star-and-contribute)
 
 <!-- application-downloads:start -->
 
@@ -40,9 +43,9 @@ Speak out loud and the text appears. Speech recognition runs on your Mac; sendin
 
 <p align="center">macOS · Apple Silicon — macOS 14+ · DMG</p>
 
-<p align="center">Setup: At first launch, choose Download and install Parakeet to download the speech model (about 500 MB).</p>
+<p align="center">Setup: Fastest first run: install Parakeet (about 500 MB). The author uses Whisper large-v3-turbo; read the model guide before choosing.</p>
 
-<p align="center">Security: Self-signed; not notarized by Apple. Intel is not supported by this download.</p>
+<p align="center">Security: Ad-hoc signed; not notarized by Apple. Intel is not supported by this download.</p>
 
 <p align="center"><a href="docs/DOWNLOAD.md">Install &#38; first dictation</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest">All releases</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest/download/SHA256SUMS.txt">Checksums</a></p>
 
@@ -50,7 +53,7 @@ Speak out loud and the text appears. Speech recognition runs on your Mac; sendin
 
 <!-- beginner-readme:start -->
 
-## What This Is
+## What this is
 
 This is a Mac app that types for you while you talk.
 
@@ -58,20 +61,13 @@ Here is how it goes. You press one key, speak in your normal voice, press it aga
 
 What sets it apart from similar apps is where the speech is decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your Mac does the work, and the audio never leaves the machine.
 
-**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow — a bridge between the sky and the ground. She does not invent the message, she carries it whole. The name reflects the job: carrying speech into text. Automatic recognition can still mishear words, so check the result.
-
-![The menu bar: status, modes, dictation, meetings, history](docs/assets/shots/menu-en.png)
+**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow, a bridge between the sky and the ground. She does not invent the message, she carries it whole. The name reflects the job: carrying speech into text. Automatic recognition can still mishear words, so check the result.
 
 It does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. Ordinary dictation can remove hesitations and repetitions.
 
 Meetings keep the original recognition text and the audio. The DOCX contains minutes first, then the full available transcript on a new page; the same folder includes JSON and a list of details to check. Filling decisions and action items through your selected agent requires separate consent to send the text. Unknown details stay explicit, and the result remains a draft. [Processing a meeting](docs/MEETINGS.md).
 
-![Meetings: drop the recording, the minutes land next to it](docs/assets/shots/page-meetings.png)
-
-![Iris at a marble table: the laptop screen carries the first screen of the iriz walkthrough](docs/assets/pantheon/desk-firstrun.png)
-
-
-## Why It Helps
+## Why it helps
 
 Anyone who writes for a living loses hours to typing. The same thought comes out faster and whole when spoken: typing, you hunt for words; speaking, you do not.
 
@@ -79,30 +75,21 @@ One thing gets in the way. Cloud dictation cleans speech better than anything lo
 
 So here your Mac does the decoding, and the app reaches the network only when you press the button.
 
-![A marble laptop up close: the iriz dictation history window on its screen](docs/assets/pantheon/desk-history.png)
-
-
-## The Main Advantage
+## The main advantage
 
 **Main advantage:** speech recognition runs on your Mac without sending audio to a cloud recognizer.
 
 **Why this is better:** The recognition library keeps its own model downloader off during recognition. That setting is not a system firewall: model downloads and CLI agents use separate network paths.
 
-## How It Works
+## How it works
 
 Press the key, say your sentence, press again. The text lands where the cursor was blinking.
 
 A glass drop sits at the bottom of the screen the whole time. While you are silent it stays small. Start talking and a wave runs inside it: that is the answer to «can it hear me».
 
-![The plate while recording: a wave inside the glass](docs/assets/shots/plate-listening-dark.png)
-
-Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches right there, a second before you speak — no need to walk to the settings for it.
-
-![The plate under the pointer: a row of six buttons](docs/assets/shots/plate-hover-dark.png)
+Point at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches there, a second before you speak.
 
 If pasting did not work, nothing is lost: the same plate opens into a panel and you take the text from there.
-
-![Dictation settings: where the speech gets cleaned](docs/assets/shots/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 
@@ -135,7 +122,7 @@ A small plate appears near the cursor and its wave follows your voice, so you ca
 
 ### Step 3: The Mac decodes it
 
-Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Audio is decoded locally, and the recognition library keeps its own downloader off. Optional agent processing of the resulting text requires your consent.
+Recognition runs locally on your Mac. Speed and hardware use depend on the model: Parakeet is fast and installs automatically, while Whisper models need a manual model file. Audio stays on the machine. Optional agent processing of the resulting text requires your consent.
 
 <p align="center"><img src="docs/assets/pantheon/workflow/03-decode.png" alt="Iriz stage 3: the Mac decodes it, drawn as a wide Pantheon marble scene" width="100%"></p>
 
@@ -153,16 +140,14 @@ It goes into the field you were already in: an email, a chat, a terminal. If the
 
 Download the [macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), open it, and drag iriz into Applications. This build needs Apple Silicon and macOS 14 or newer. No Xcode or Terminal is needed.
 
-Open iriz and choose Download and install Parakeet in onboarding (about 500 MB). Grant the permissions in the following steps. Wait for readiness, focus a text field, and try your dictation key.
+For the quickest first run, choose Download and install Parakeet in onboarding (about 500 MB). It is the only model iriz installs automatically. The author instead uses manually installed Whisper large-v3-turbo on a MacBook Air M3 with 24 GB of memory. [Choose a speech model](docs/MODELS.md), then grant the requested permissions and try your dictation key.
 
 [Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, use the tested Xcode 26.6 toolchain (macOS 26 SDK, Swift 6.3.3) and one of the paths below.
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz
 cd ~/iriz
-bash install.sh          # просто терминал, без единого агента
-code .                   # или открой папку в редакторе
-claude                   # или пусти агента: он проведет установку разговором
+bash install.sh
 ```
 
 Without Git, download [the source ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), unpack it and run the same installer there. Or open the project in Claude Code and run `/iriz-setup` for a guided install. It asks before installing.
@@ -171,7 +156,7 @@ Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole fir
 
 **You get:** the installer says what this is, looks at what your machine is missing, runs the tree selfcheck, and names the next step. It installs nothing until you ask.
 
-## Simple Comparison
+## Simple comparison
 
 | Choice | Best when | What you get | Where speech goes | Layout repair | Trade-off |
 |---|---|---|---|---|---|
@@ -182,7 +167,7 @@ Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole fir
 | Wispr Flow and the like | Rambling speech into smooth text | The best cleanup there is | Their server | No | Your client names travel with it |
 | Local Whisper apps | Dictation without a cloud | Also decodes on your machine | Nowhere | No | No layout repair, no task from speech |
 
-## Simple Words
+## Simple words
 
 | Word | Simple meaning |
 |---|---|
@@ -191,14 +176,13 @@ Never done this before? [The onboarding](docs/ONBOARDING.md) walks the whole fir
 | Command | One instruction you give the computer |
 | Branch | A separate line of changes that does not touch `main` |
 | Pull Request | A request to review your change and accept it |
-| Neural Engine | A separate part of the Apple chip for neural networks: it keeps recognition fast and the machine cool |
+| Neural Engine | A part of Apple Silicon used by some local models. Other models can use Metal or the CPU |
 | Speech model | The weight files that turn sound into letters. It lives on your disk and downloads once |
 
-## Safety And Privacy
+## Safety and privacy
 
 - Ordinary dictation does not save audio. Meetings keep a copy of the recording in the iriz archive.
-- The screen is not read. No ScreenCaptureKit, no window captures.
-- To suggest corrections after dictation, iriz reads the focused text field through Accessibility. It does not save the full contents of that field.
+- The screen is not read: no ScreenCaptureKit and no window captures. To suggest corrections after dictation, iriz reads only the focused text field through Accessibility and does not save its full contents.
 - Where you dictated is not recorded. Otherwise the disk would collect metadata about who you work with and when.
 - The clipboard is put back after the paste.
 - Saved transcripts use owner-only permissions: 0700 for folders and 0600 for files. They are plaintext, not encrypted by the app.
@@ -211,17 +195,17 @@ Status: working. The author dictates with it every day.
 
 - This download supports Apple Silicon Macs on macOS 14 or newer. Intel is unverified; Windows, Linux and iPad are not supported.
 - Automatic layout repair covers English and Russian. The interface has Russian, English and Simplified Chinese.
-- The app is self-signed and not notarized by Apple. Read the first-launch security warning in the download guide.
-- The default Parakeet model needs a separate download of about 500 MB and does not recognize Chinese. Other models have different language coverage.
+- The app uses an ad-hoc signature, without a Developer ID certificate, and is not notarized by Apple. Read the first-launch security warning in the download guide.
+- iriz currently supports three speech profiles. Only Parakeet installs automatically; Whisper model files are installed manually. Language coverage, disk use and speed differ.
 - Updates are manual: download the new DMG, quit iriz and replace the application. Models and local history remain outside the app bundle.
 
-Deeper: [the step-by-step walkthrough with a frame of every surface](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), [security](SECURITY.md).
+Deeper: [choose a speech model](docs/MODELS.md), [open the step-by-step walkthrough with interface screenshots](docs/ONBOARDING.md), [read the changelog](CHANGELOG.md), [help the project](CONTRIBUTING.md), [read the security notes](SECURITY.md).
 
-## Star And Contribute
+## Star and contribute
 
 Useful? Give iriz a star: [https://github.com/zarubinvibe/iriz](https://github.com/zarubinvibe/iriz). It takes a second and it decides whether other people ever find the project.
 
-Want to change something? The path is short: fork the repository, create a branch, commit your change, push the branch, then open a Pull Request. Do not push directly to `main`; the release gate rejects it.
+Want to change something? The path is short: fork the repository, create a branch, commit your change, push the branch, then open a Pull Request. Do not push directly to `main`.
 
 Found a problem instead? Open an issue at [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) and say what you ran and what happened.
 
@@ -230,7 +214,7 @@ Found a problem instead? Open an issue at [https://github.com/zarubinvibe/iriz/i
 <!-- pantheon-family:start -->
 ## Olympuz family
 
-This is one of the public [Olympuz projects](https://github.com/zarubinvibe/athena#olympuz-family). Each row opens the repository or downloads its source as a ZIP.
+Public [Olympuz family projects](https://github.com/zarubinvibe/athena#olympuz-family) are listed below. Each row opens the repository or downloads its source as a ZIP.
 
 | Type | Name | What it does | How it helps this house | Source |
 |---|---|---|---|---|
@@ -248,3 +232,5 @@ This is one of the public [Olympuz projects](https://github.com/zarubinvibe/athe
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Next: [download the macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg) and try your first dictation.

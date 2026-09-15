@@ -1,7 +1,7 @@
 {
   "schema_version": 3,
   "family_id": "zarubinvibe-pantheon",
-  "catalog_version": "2026-09-06",
+  "catalog_version": "2026-09-14",
   "dress": "full",
   "project": {
     "slug": "iriz",
@@ -135,6 +135,36 @@
         "path": "docs/MEETINGS.md",
         "frames": [
           "assets/pantheon/doc-contributing.png"
+        ]
+      },
+      {
+        "path": "docs/MEETINGS.ru.md",
+        "frames": [
+          "assets/pantheon/doc-contributing.png"
+        ]
+      },
+      {
+        "path": "docs/MEETINGS.zh.md",
+        "frames": [
+          "assets/pantheon/doc-contributing.png"
+        ]
+      },
+      {
+        "path": "docs/MODELS.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/MODELS.ru.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
+        ]
+      },
+      {
+        "path": "docs/MODELS.zh.md",
+        "frames": [
+          "assets/pantheon/doc-onboarding.png"
         ]
       },
       {

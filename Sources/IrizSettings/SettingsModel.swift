@@ -191,9 +191,10 @@ final class SettingsModel: ObservableObject {
     /// Примеры «как сказал - какой промпт хочу».
     @Published var promptGuidanceExamples: [PromptUserExample]
     @Published var promptModeEnabled: Bool
-    /// Какой распознаватель стоит. Выбор с ценой на обеих сторонах, поэтому он
-    /// у владельца, а не зашит: Whisper берет английские термины внутри русской
-    /// фразы, Parakeet быстрее в 11-15 раз. Разбор - `bench/BENCH-CANDIDATES-2026-09-03.md`.
+    /// Какой распознаватель стоит. Владелец выбирает Turbo для русского и
+    /// смешанной RU/EN техречи на M3 с 24 ГБ памяти. Замер сравнивает Parakeet
+    /// только с полной large-v3: 44,05 против 19,05 ошибки на смешанной речи;
+    /// Turbo отдельно не мерили. Разбор - `bench/BENCH-CANDIDATES-2026-09-03.md`.
     @Published var speechEngine: SpeechModelProfile {
         didSet { refreshSpeechModelReadiness() }
     }

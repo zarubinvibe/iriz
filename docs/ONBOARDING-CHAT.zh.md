@@ -1,5 +1,13 @@
 # 首次安装时的对话
 
+[English](ONBOARDING-CHAT.md) · [Русский](ONBOARDING-CHAT.ru.md) · [README](../README.zh.md)
+
+如何阅读：从第 1 步开始；代理每次只执行当前一步，确认结果后再继续。
+
+状态：已就绪，可按下面的对话完成首次安装。
+
+**结果：** 代理会在执行前说明每项改动，在需要选择时询问你，并明确保留失败或跳过的检查。
+
 <!-- owner-greeting:start -->
 
 <p align="center"><img src="assets/pantheon/doc-onboarding.png" alt="伊里斯把石板放在柱旁的矮桌上，金色的声音丝带落入刻好的凹槽" width="100%"></p>
@@ -69,6 +77,9 @@
 如果模型还没装好，试用步骤也有“前往安装模型”按钮。下载失败时，先看窗口里的原因，处理后再点
 “重试”。模型装好后，我们再尝试听写。
 
+这里推荐 Parakeet，是因为 iriz 可以自动安装它。这是最短路径，不是作者本人的模型选择。作者使用
+手动安装的 Whisper large-v3-turbo。如果用户想选其他受支持配置，请先停在这里，打开[模型指南](MODELS.zh.md)。
+
 **你会得到：** 模型装好、权限授予后，我们在欢迎窗口里测试听写。按键，说一句话，再按一下，文字
 会出现在试用输入框中。
 
@@ -87,3 +98,5 @@
 ```bash
 bash scripts/verify.sh && bash scripts/offline_binary_gate.sh
 ```
+
+下一步：先运行 `bash install.sh`，读完报告后再加上 `--build`。

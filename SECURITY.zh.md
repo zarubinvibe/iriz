@@ -2,6 +2,10 @@
 
 [English](SECURITY.md) · [Русский](SECURITY.ru.md)
 
+如何阅读：先看数据边界，再看验证方式和漏洞报告流程。
+
+状态：已更新，记录当前的隐私边界和已知限制。
+
 <p align="center"><img src="docs/assets/pantheon/window-wash-source.png" alt="白色大理石的伊里斯在古典柱旁擦拭玻璃：一眼看穿，什么都没藏" width="100%"></p>
 
 ## 这里真正值钱的是什么
@@ -42,7 +46,7 @@ bash scripts/verify.sh                # 全部一起：测试和闸门
 ## 这个项目不承诺什么
 
 - 不承诺能防住已经用你的账户坐在你 Mac 前的人。
-- 不承诺 Apple 公证：构建使用自签名证书，macOS 会在首次启动时如实警告。
+- 不承诺 Apple 公证：公开构建使用 ad hoc 签名，没有 Developer ID 证书；macOS 会在首次启动时如实警告。
 - 不承诺第三方代理在提示词模式下会规矩。它是第三方。正因如此，提示词模式默认关闭，由你打开。
 
 ## 为什么这条界线画在这里

@@ -78,6 +78,11 @@ jobs:
       - name: Check workflow guards offline
         run: ruby scripts/macos_release_workflow_test.rb --selftest
 
+      - name: Verify generated GitHub Release notes
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: node scripts/render_github_release_notes.mjs --check --version "$RELEASE_VERSION"
+
       - name: Prepare hosted macOS integration environment
         run: |
           set -euo pipefail
@@ -109,7 +114,12 @@ jobs:
           shasum -a 256 -c SHA256SUMS.txt
           cmp "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg
 
-      - name: Keep the four release files
+      - name: Stage release notes for the draft
+        env:
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: cp ".github/release-notes/v$RELEASE_VERSION.md" "release/dist/release-notes-v$RELEASE_VERSION.md"
+
+      - name: Keep the release inputs
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -119,6 +129,7 @@ jobs:
             release/dist/iriz-macos-arm64.dmg
             release/dist/SHA256SUMS.txt
             release/dist/release-manifest.json
+            release/dist/release-notes-v${{ steps.version.outputs.version }}.md
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
@@ -150,7 +161,7 @@ jobs:
           set -euo pipefail
           [[ "$RELEASE_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
           [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          for file in "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json; do
+          for file in "iriz-$RELEASE_VERSION-arm64.dmg" iriz-macos-arm64.dmg SHA256SUMS.txt release-manifest.json "release-notes-v$RELEASE_VERSION.md"; do
             [[ -f "$file" && ! -L "$file" && -s "$file" ]]
           done
           jq -e --arg version "$RELEASE_VERSION" --arg sha "$SOURCE_SHA" '
@@ -233,5 +244,5 @@ jobs:
             SHA256SUMS.txt release-manifest.json \
             --repo "$GH_REPO" --target "$SOURCE_SHA" --draft --latest=false \
             --title "iriz $RELEASE_VERSION" \
-            --notes "Draft for manual review. Apple Silicon / macOS 14+. Ad-hoc signed, not notarized by Apple. Speech models are downloaded separately in the app. Verify the checksums, installation and first-run flow before publishing. Source: $SOURCE_SHA."
+            --notes-file "release-notes-v$RELEASE_VERSION.md"
           printf 'Created draft %s. Publishing and marking Latest require manual review.\n' "$tag" >> "$GITHUB_STEP_SUMMARY"

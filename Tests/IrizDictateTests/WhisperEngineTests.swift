@@ -74,11 +74,11 @@ struct SpeechEngineSwitchTests {
         return defaults
     }
 
-    @Test("Предпочтительный движок - Whisper turbo, он взял термины владельца")
+    @Test("Предпочтительный движок - Whisper large-v3-turbo")
     func defaultsToTurbo() {
-        // Дефолт сменен осознанно 03.09.2026 по замеру: прежний движок
-        // транслитерировал английские термины внутри русской фразы, и это
-        // делало диктовку непригодной ровно в рабочем словаре владельца.
+        // Замер 03.09.2026 показал преимущество полной large-v3 на смешанной русской
+        // и английской технической речи. Turbo выбрана как меньшая модель того же семейства;
+        // равноценного замера WER и скорости для Turbo не было.
         let settings = DictationSettings(defaults: freshDefaults())
         // Настройка без значения решается ДИСКОМ, а не константой: под тестом
         // на машине сборки whisper может не стоять. Проверяем предпочтение.
@@ -136,6 +136,7 @@ struct SpeechEngineSwitchTests {
     func namesAreDistinct() {
         let names = Set(SpeechModelProfile.allCases.map(\.shortName))
         #expect(names.count == SpeechModelProfile.allCases.count)
-        #expect(SpeechModelProfile.whisperLargeV3.shortName.contains("large-v3"))
+        #expect(SpeechModelProfile.whisperLargeV3.shortName == "Whisper large-v3")
+        #expect(SpeechModelProfile.whisperTurbo.shortName == "Whisper large-v3-turbo")
     }
 }

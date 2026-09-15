@@ -2,6 +2,10 @@
 
 [Русский](CONTRIBUTING.ru.md) · [中文](CONTRIBUTING.zh.md)
 
+Start here: read [What you need](#what-you-need) and use [Before you send a change](#before-you-send-a-change) as the checklist.
+
+Status: ready for contributions; current priorities are under [What is needed most right now](#what-is-needed-most-right-now).
+
 <p align="center"><img src="docs/assets/pantheon/doc-contributing.png" alt="Two identical marble tablets on a low table, the left one holding the gold ribbon of voice, the right one empty and waiting, the herald staff standing beside them" width="100%"></p>
 
 The second tablet in that frame is empty on purpose. There is room here for somebody else's work, and it is the same size as mine.

@@ -27,12 +27,12 @@
     "ru",
     "zh"
   ],
-  "quick_code": "git clone https://github.com/zarubinvibe/iriz.git ~/iriz\ncd ~/iriz\nbash install.sh          # просто терминал, без единого агента\ncode .                   # или открой папку в редакторе\nclaude                   # или пусти агента: он проведет установку разговором\n",
+  "quick_code": "git clone https://github.com/zarubinvibe/iriz.git ~/iriz\ncd ~/iriz\nbash install.sh\n",
   "text": {
     "en": {
       "title": "iriz",
       "name": "iriz",
-      "tagline": "Speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.",
+      "tagline": "Result: speak out loud and the text appears. Speech recognition runs on your Mac; sending text to an agent is a separate choice.",
       "application": {
         "downloads": {
           "macos-arm64": {
@@ -40,20 +40,20 @@
             "requirements": "macOS 14+ · DMG"
           }
         },
-        "setup": "At first launch, choose Download and install Parakeet to download the speech model (about 500 MB).",
-        "security": "Self-signed; not notarized by Apple. Intel is not supported by this download.",
+        "setup": "Fastest first run: install Parakeet (about 500 MB). The author uses Whisper large-v3-turbo; read the model guide before choosing.",
+        "security": "Ad-hoc signed; not notarized by Apple. Intel is not supported by this download.",
         "guide": {
           "label": "Install & first dictation",
           "url": "docs/DOWNLOAD.md"
         }
       },
       "hero_alt": "Iris in white marble with marble wings beside the classical column, a gold ribbon of voice landing in the groove of her tablet",
-      "what": "This is a Mac app that types for you while you talk.\n\nHere is how it goes. You press one key, speak in your normal voice, press it again. The text lands where the cursor was: in an email, in a chat, in a search field. Nothing to switch to, no separate window.\n\nWhat sets it apart from similar apps is where the speech is decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your Mac does the work, and the audio never leaves the machine.\n\n**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow — a bridge between the sky and the ground. She does not invent the message, she carries it whole. The name reflects the job: carrying speech into text. Automatic recognition can still mishear words, so check the result.\n\n![The menu bar: status, modes, dictation, meetings, history](docs/assets/shots/menu-en.png)\n\nIt does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. Ordinary dictation can remove hesitations and repetitions.\n\nMeetings keep the original recognition text and the audio. The DOCX contains minutes first, then the full available transcript on a new page; the same folder includes JSON and a list of details to check. Filling decisions and action items through your selected agent requires separate consent to send the text. Unknown details stay explicit, and the result remains a draft. [Processing a meeting](docs/MEETINGS.md).\n\n![Meetings: drop the recording, the minutes land next to it](docs/assets/shots/page-meetings.png)\n\n![Iris at a marble table: the laptop screen carries the first screen of the iriz walkthrough](docs/assets/pantheon/desk-firstrun.png)\n",
-      "why": "Anyone who writes for a living loses hours to typing. The same thought comes out faster and whole when spoken: typing, you hunt for words; speaking, you do not.\n\nOne thing gets in the way. Cloud dictation cleans speech better than anything local, but what you said leaves the machine: a client call, a draft, names and figures. For a doctor, a lawyer, a therapist, that trade never pays off.\n\nSo here your Mac does the decoding, and the app reaches the network only when you press the button.\n\n![A marble laptop up close: the iriz dictation history window on its screen](docs/assets/pantheon/desk-history.png)\n",
+      "what": "This is a Mac app that types for you while you talk.\n\nHere is how it goes. You press one key, speak in your normal voice, press it again. The text lands where the cursor was: in an email, in a chat, in a search field. Nothing to switch to, no separate window.\n\nWhat sets it apart from similar apps is where the speech is decoded. Usually your voice travels to somebody's server, turns into text there and comes back. Here your Mac does the work, and the audio never leaves the machine.\n\n**Why «iriz».** Iris was the messenger of the Greek gods and the rainbow, a bridge between the sky and the ground. She does not invent the message, she carries it whole. The name reflects the job: carrying speech into text. Automatic recognition can still mishear words, so check the result.\n\nIt does more. It fixes a phrase typed in the wrong keyboard layout. Correct a word after pasting and the app offers to remember the replacement. Ordinary dictation can remove hesitations and repetitions.\n\nMeetings keep the original recognition text and the audio. The DOCX contains minutes first, then the full available transcript on a new page; the same folder includes JSON and a list of details to check. Filling decisions and action items through your selected agent requires separate consent to send the text. Unknown details stay explicit, and the result remains a draft. [Processing a meeting](docs/MEETINGS.md).",
+      "why": "Anyone who writes for a living loses hours to typing. The same thought comes out faster and whole when spoken: typing, you hunt for words; speaking, you do not.\n\nOne thing gets in the way. Cloud dictation cleans speech better than anything local, but what you said leaves the machine: a client call, a draft, names and figures. For a doctor, a lawyer, a therapist, that trade never pays off.\n\nSo here your Mac does the decoding, and the app reaches the network only when you press the button.",
       "advantage": "speech recognition runs on your Mac without sending audio to a cloud recognizer.",
       "better": "The recognition library keeps its own model downloader off during recognition. That setting is not a system firewall: model downloads and CLI agents use separate network paths.",
-      "how": "Press the key, say your sentence, press again. The text lands where the cursor was blinking.\n\nA glass drop sits at the bottom of the screen the whole time. While you are silent it stays small. Start talking and a wave runs inside it: that is the answer to «can it hear me».\n\n![The plate while recording: a wave inside the glass](docs/assets/shots/plate-listening-dark.png)\n\nPoint at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches right there, a second before you speak — no need to walk to the settings for it.\n\n![The plate under the pointer: a row of six buttons](docs/assets/shots/plate-hover-dark.png)\n\nIf pasting did not work, nothing is lost: the same plate opens into a panel and you take the text from there.\n\n![Dictation settings: where the speech gets cleaned](docs/assets/shots/page-dictation.png)",
-      "quick_intro": "Download the [macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), open it, and drag iriz into Applications. This build needs Apple Silicon and macOS 14 or newer. No Xcode or Terminal is needed.\n\nOpen iriz and choose Download and install Parakeet in onboarding (about 500 MB). Grant the permissions in the following steps. Wait for readiness, focus a text field, and try your dictation key.\n\n[Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, use the tested Xcode 26.6 toolchain (macOS 26 SDK, Swift 6.3.3) and one of the paths below.",
+      "how": "Press the key, say your sentence, press again. The text lands where the cursor was blinking.\n\nA glass drop sits at the bottom of the screen the whole time. While you are silent it stays small. Start talking and a wave runs inside it: that is the answer to «can it hear me».\n\nPoint at it with the mouse and the drop opens into a row of buttons: record, prompt, translate, language, history, settings. The language switches there, a second before you speak.\n\nIf pasting did not work, nothing is lost: the same plate opens into a panel and you take the text from there.",
+      "quick_intro": "Download the [macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), open it, and drag iriz into Applications. This build needs Apple Silicon and macOS 14 or newer. No Xcode or Terminal is needed.\n\nFor the quickest first run, choose Download and install Parakeet in onboarding (about 500 MB). It is the only model iriz installs automatically. The author instead uses manually installed Whisper large-v3-turbo on a MacBook Air M3 with 24 GB of memory. [Choose a speech model](docs/MODELS.md), then grant the requested permissions and try your dictation key.\n\n[Installation, model recovery and updates](docs/DOWNLOAD.md). To build from source instead, use the tested Xcode 26.6 toolchain (macOS 26 SDK, Swift 6.3.3) and one of the paths below.",
       "quick_extra": "Without Git, download [the source ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), unpack it and run the same installer there. Or open the project in Claude Code and run `/iriz-setup` for a guided install. It asks before installing.",
       "quick_result": "the installer says what this is, looks at what your machine is missing, runs the tree selfcheck, and names the next step. It installs nothing until you ask.",
       "compare": [
@@ -109,7 +109,7 @@
       "glossary": [
         [
           "Neural Engine",
-          "A separate part of the Apple chip for neural networks: it keeps recognition fast and the machine cool"
+          "A part of Apple Silicon used by some local models. Other models can use Metal or the CPU"
         ],
         [
           "Speech model",
@@ -118,8 +118,7 @@
       ],
       "safety": [
         "Ordinary dictation does not save audio. Meetings keep a copy of the recording in the iriz archive.",
-        "The screen is not read. No ScreenCaptureKit, no window captures.",
-        "To suggest corrections after dictation, iriz reads the focused text field through Accessibility. It does not save the full contents of that field.",
+        "The screen is not read: no ScreenCaptureKit and no window captures. To suggest corrections after dictation, iriz reads only the focused text field through Accessibility and does not save its full contents.",
         "Where you dictated is not recorded. Otherwise the disk would collect metadata about who you work with and when.",
         "The clipboard is put back after the paste.",
         "Saved transcripts use owner-only permissions: 0700 for folders and 0600 for files. They are plaintext, not encrypted by the app."
@@ -129,12 +128,12 @@
       "limits": [
         "This download supports Apple Silicon Macs on macOS 14 or newer. Intel is unverified; Windows, Linux and iPad are not supported.",
         "Automatic layout repair covers English and Russian. The interface has Russian, English and Simplified Chinese.",
-        "The app is self-signed and not notarized by Apple. Read the first-launch security warning in the download guide.",
-        "The default Parakeet model needs a separate download of about 500 MB and does not recognize Chinese. Other models have different language coverage.",
+        "The app uses an ad-hoc signature, without a Developer ID certificate, and is not notarized by Apple. Read the first-launch security warning in the download guide.",
+        "iriz currently supports three speech profiles. Only Parakeet installs automatically; Whisper model files are installed manually. Language coverage, disk use and speed differ.",
         "Updates are manual: download the new DMG, quit iriz and replace the application. Models and local history remain outside the app bundle."
       ],
-      "docs": "Deeper: [the step-by-step walkthrough with a frame of every surface](docs/ONBOARDING.md), [how to help](CONTRIBUTING.md), [security](SECURITY.md).",
-      "license": "MIT. See [LICENSE](LICENSE).",
+      "docs": "Deeper: [choose a speech model](docs/MODELS.md), [open the step-by-step walkthrough with interface screenshots](docs/ONBOARDING.md), [read the changelog](CHANGELOG.md), [help the project](CONTRIBUTING.md), [read the security notes](SECURITY.md).",
+      "license": "MIT. See [LICENSE](LICENSE).\n\nNext: [download the macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg) and try your first dictation.",
       "welcome": "Hello. I am a lawyer who vibe-codes, and I type a great deal. I type fast, and it still eats so much of the day that by evening half of it turns out to have been typing.\n\nAfter trying a few tools I noticed something simple: I say things more precisely than I type them. Typing, I hunt for words. Speaking, I do not, the thought comes out whole, and the model on the other end understands me better. One thing stood in the way, privacy. So the line is drawn here: whatever has to stay mine is decoded on my own machine, and the only thing that leaves it is what I sent out myself, a translation or a task built from what I said.\n\nAnd the small thing this all started from: I forget to switch the language and type a sentence in the wrong layout. Here that repairs itself.",
       "compare_header": [
         "Choice",
@@ -148,7 +147,7 @@
     "ru": {
       "title": "iriz",
       "name": "iriz",
-      "tagline": "Говори вслух, на экране появляется текст. Речь разбирает твой Мак. Передачу текста агенту ты разрешаешь отдельно.",
+      "tagline": "Результат: говоришь вслух, на экране появляется текст. Речь разбирает твой Мак. Передачу текста агенту ты разрешаешь отдельно.",
       "application": {
         "downloads": {
           "macos-arm64": {
@@ -156,20 +155,20 @@
             "requirements": "macOS 14+ · DMG"
           }
         },
-        "setup": "При первом запуске нажми «Скачать и установить Parakeet»: модель речи скачивается отдельно, около 500 МБ.",
-        "security": "Самоподпись, без нотаризации Apple. Этот выпуск не поддерживает Intel.",
+        "setup": "Быстрый первый запуск: установи Parakeet, около 500 МБ. Автор использует Whisper large-v3-turbo; перед выбором открой инструкцию по моделям.",
+        "security": "Подпись ad hoc, без сертификата Developer ID и нотаризации Apple. Этот выпуск не поддерживает Intel.",
         "guide": {
           "label": "Установка и первая диктовка",
           "url": "docs/DOWNLOAD.ru.md"
         }
       },
       "hero_alt": "Ирида из белого мрамора с мраморными крыльями у классической колонны, золотая лента голоса ложится в борозду на табличке",
-      "what": "Это программа для Мака, которая печатает за тебя, пока ты говоришь.\n\nРаботает так. Ты нажимаешь одну клавишу, говоришь обычным голосом, нажимаешь еще раз. Текст встает туда, где стоял курсор: в письмо, в чат, в поле поиска. Никуда переключаться не нужно, отдельного окна нет.\n\nГлавное отличие от похожих программ в том, где разбирается речь. Обычно голос уезжает на чужой сервер, там превращается в текст и возвращается. Здесь считает твой Мак, и звук с машины не уходит.\n\n**Почему «iriz».** Ирида у греков - вестница богов и радуга, мост между небом и землей. Она не сочиняет послание, а доносит его целым. Отсюда и задача программы: переносить речь в текст. Распознавание может ошибаться, поэтому результат нужно проверить.\n\n![Меню в строке меню: состояние, режимы, диктовка, встречи, история](docs/assets/shots/menu-ru.png)\n\nУмеет и другое. Чинит фразу, набранную не в той раскладке. Поправишь слово после вставки, и программа предложит запомнить замену. В обычной диктовке может убрать запинки и повторы.\n\nУ встреч другой порядок: исходная расшифровка не редактируется, звук сохраняется рядом. DOCX содержит сначала протокол, затем полную доступную расшифровку с новой страницы; рядом лежат JSON и список уточнений. Заполнение решений и поручений через выбранного агента требует отдельного согласия на передачу текста. Неизвестные сведения отмечаются явно, результат остается черновиком. [Как обработать встречу](docs/MEETINGS.md).\n\n![Встречи: перенеси запись, рядом ляжет протокол](docs/assets/shots/page-meetings.png)\n\n![Ирида за мраморным столом: на экране ноутбука первый экран знакомства iriz](docs/assets/pantheon/desk-firstrun.png)\n",
-      "why": "Кто много пишет по работе, тратит на набор часы. Голосом та же мысль выходит быстрее и целее: печатая, человек подбирает слова, говоря, не подбирает.\n\nМешает одно. Облачная диктовка чистит речь лучше любой местной, но наружу уезжает сказанное: разговор с клиентом, черновик документа, имена и суммы. Для врача, юриста, психолога такой обмен не окупается ничем.\n\nПоэтому тут разбирает Мак, а в сеть программа ходит только по твоей кнопке.\n\n![Мраморный ноутбук крупно: на экране окно истории надиктовок iriz](docs/assets/pantheon/desk-history.png)\n",
+      "what": "Это программа для Мака, которая печатает за тебя, пока ты говоришь.\n\nРаботает так. Ты нажимаешь одну клавишу, говоришь обычным голосом, нажимаешь еще раз. Текст встает туда, где стоял курсор: в письмо, в чат, в поле поиска. Никуда переключаться не нужно, отдельного окна нет.\n\nГлавное отличие от похожих программ в том, где разбирается речь. Обычно голос уезжает на чужой сервер, там превращается в текст и возвращается. Здесь считает твой Мак, и звук с машины не уходит.\n\n**Почему «iriz».** Ирида у греков была вестницей богов и радугой, мостом между небом и землей. Она не сочиняла послание, а доносила его целым. Отсюда задача программы: переносить речь в текст. Распознавание может ошибаться, поэтому результат нужно проверить.\n\nУмеет и другое. Чинит фразу, набранную не в той раскладке. Поправишь слово после вставки, и программа предложит запомнить замену. В обычной диктовке может убрать запинки и повторы.\n\nУ встреч другой порядок: исходная расшифровка не редактируется, звук сохраняется рядом. DOCX содержит сначала протокол, затем полную доступную расшифровку с новой страницы; рядом лежат JSON и список уточнений. Заполнение решений и поручений через выбранного агента требует отдельного согласия на передачу текста. Неизвестные сведения отмечаются явно, результат остается черновиком. [Как обработать встречу](docs/MEETINGS.ru.md).",
+      "why": "Кто много пишет по работе, тратит на набор часы. Голосом та же мысль выходит быстрее и целее: печатая, человек подбирает слова, говоря, не подбирает.\n\nМешает одно. Облачная диктовка чистит речь лучше любой местной, но наружу уезжает сказанное: разговор с клиентом, черновик документа, имена и суммы. Для врача, юриста, психолога такой обмен не окупается ничем.\n\nПоэтому тут разбирает Мак, а в сеть программа ходит только по твоей кнопке.",
       "advantage": "речь распознается на твоем Маке, без передачи аудио облачному распознавателю.",
       "better": "Во время распознавания библиотека держит свой загрузчик моделей выключенным. Этот режим не заменяет системный межсетевой экран: загрузка моделей и CLI-агенты обращаются к сети отдельно.",
-      "how": "Нажимаешь клавишу, говоришь фразу, нажимаешь еще раз. Текст встает туда, где мигал курсор.\n\nВнизу экрана все это время висит стеклянная капля. Пока ты молчишь, она маленькая. Заговоришь - внутри бежит волна: это и есть ответ на вопрос «слышит ли меня».\n\n![Плашка на записи: волна внутри стекла](docs/assets/shots/plate-listening-dark.png)\n\nНаведи на нее мышь - капля раскроется в ряд кнопок: запись, промпт, перевод, язык, история, настройки. Язык переключается здесь же, за секунду до того, как заговорить, и ходить за этим в настройки незачем.\n\n![Плашка под мышью: ряд из шести кнопок](docs/assets/shots/plate-hover-dark.png)\n\nЕсли вставить не удалось, ничего не потеряно: та же плашка раскроется в панель, и текст можно забрать оттуда.\n\n![Настройки диктовки: где чистится речь](docs/assets/shots/page-dictation.png)",
-      "quick_intro": "[Скачай DMG для macOS](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), открой и перетащи iriz в Applications. Нужен Мак с Apple Silicon на macOS 14 или новее. Xcode и терминал не нужны.\n\nОткрой iriz и нажми «Скачать и установить Parakeet» в знакомстве. На следующих шагах выдай разрешения. Загрузка займет около 500 МБ. Дождись готовности, поставь курсор в текстовое поле и попробуй клавишу диктовки.\n\n[Установка, восстановление модели и обновления](docs/DOWNLOAD.ru.md). Для сборки из исходников используй проверенный Xcode 26.6 (macOS 26 SDK, Swift 6.3.3). Ниже команды и другие способы установки.",
+      "how": "Нажимаешь клавишу, говоришь фразу, нажимаешь еще раз. Текст встает туда, где мигал курсор.\n\nВнизу экрана все это время висит стеклянная капля. Пока ты молчишь, она маленькая. Заговоришь, внутри бежит волна: это и есть ответ на вопрос «слышит ли меня».\n\nНаведи на нее мышь, и капля раскроется в ряд кнопок: запись, промпт, перевод, язык, история, настройки. Язык переключается здесь же, за секунду до того, как заговорить.\n\nЕсли вставить не удалось, ничего не потеряно: та же плашка раскроется в панель, и текст можно забрать оттуда.",
+      "quick_intro": "[Скачай DMG для macOS](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg), открой и перетащи iriz в Applications. Нужен Мак с Apple Silicon на macOS 14 или новее. Xcode и терминал не нужны.\n\nДля самого короткого первого запуска нажми «Скачать и установить Parakeet» в знакомстве. Это единственная модель, которую iriz ставит автоматически; загрузка занимает около 500 МБ. Автор вместо нее использует установленную вручную Whisper large-v3-turbo на MacBook Air M3 с 24 ГБ памяти. [Выбери модель распознавания](docs/MODELS.ru.md), затем выдай разрешения и попробуй клавишу диктовки.\n\n[Установка, восстановление модели и обновления](docs/DOWNLOAD.ru.md). Для сборки из исходников используй проверенный Xcode 26.6 (macOS 26 SDK, Swift 6.3.3). Ниже команды и другие способы установки.",
       "quick_extra": "Нет Git? Скачай [ZIP с исходниками](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip), распакуй и запусти в нем тот же установщик. Или открой проект в Claude Code и запусти `/iriz-setup`: агент проведет установку по шагам и спросит перед изменениями.",
       "quick_result": "установщик объясняет, что это, смотрит, чего не хватает на машине, гоняет самопроверку дерева и называет следующий шаг. Ничего не ставит, пока ты не попросишь.",
       "compare": [
@@ -225,7 +224,7 @@
       "glossary": [
         [
           "Neural Engine",
-          "Отдельный кусок процессора Apple под нейросети: держит распознавание быстрым и не греет машину"
+          "Часть Apple Silicon, которую используют некоторые местные модели. Другие могут работать через Metal или процессор"
         ],
         [
           "Модель распознавания",
@@ -234,8 +233,7 @@
       ],
       "safety": [
         "Обычная диктовка не сохраняет звук. У встреч копия записи остается в архиве iriz.",
-        "Экран не читается. Ни ScreenCaptureKit, ни снимков окон.",
-        "Чтобы предложить исправления после диктовки, iriz читает текст поля в фокусе через Accessibility. Полное содержимое поля не сохраняется.",
+        "Экран не читается: ни ScreenCaptureKit, ни снимков окон. Чтобы предложить исправления после диктовки, iriz через Accessibility читает только поле в фокусе и не сохраняет его полное содержимое.",
         "Место диктовки не записывается. Иначе на диске копились бы метаданные о том, с кем и когда ты работаешь.",
         "Буфер обмена возвращается на место после вставки.",
         "Сохраненные расшифровки доступны владельцу: права 0700 у папок и 0600 у файлов. Это открытый текст, приложение его не шифрует."
@@ -245,12 +243,12 @@
       "limits": [
         "Этот выпуск рассчитан на Apple Silicon и macOS 14 или новее. Intel не проверен; Windows, Linux и iPad не поддерживаются.",
         "Раскладка исправляется для пары английский и русский. Интерфейс доступен на русском, английском и китайском.",
-        "У приложения самоподпись, нотаризации Apple нет. Предупреждение о первом запуске есть в инструкции скачивания.",
-        "Модель Parakeet скачивается отдельно, занимает около 500 МБ и не распознает китайскую речь. У других моделей свой набор языков.",
+        "Приложение подписано ad hoc, без сертификата Developer ID и нотаризации Apple. Предупреждение о первом запуске есть в инструкции скачивания.",
+        "Сейчас iriz поддерживает три профиля распознавания. Автоматически ставится только Parakeet; файлы Whisper устанавливаются вручную. Языки, место на диске и скорость отличаются.",
         "Обновление ручное: скачай новый DMG, закрой iriz и замени приложение. Модели и история хранятся вне его пакета."
       ],
-      "docs": "Глубже: [пошаговое знакомство с кадрами каждой поверхности](docs/ONBOARDING.ru.md), [как помочь](CONTRIBUTING.ru.md), [безопасность](SECURITY.ru.md).",
-      "license": "MIT. Текст в файле [LICENSE](LICENSE).",
+      "docs": "Дальше: [выбрать модель распознавания](docs/MODELS.ru.md), [открыть пошаговое знакомство со скриншотами интерфейса](docs/ONBOARDING.ru.md), [прочитать историю выпусков](CHANGELOG.ru.md), [помочь проекту](CONTRIBUTING.ru.md), [прочитать о безопасности](SECURITY.ru.md).",
+      "license": "MIT. Текст в файле [LICENSE](LICENSE).\n\nДальше: [скачай DMG для macOS](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg) и попробуй первую диктовку.",
       "welcome": "Привет. Я юрист и вайб-кодер, и печатаю я очень много. Печатаю быстро, но времени это все равно съедает столько, что к вечеру половина дня оказывается набором текста.\n\nПопробовав несколько инструментов, я понял простую вещь: голосом я говорю точнее, чем печатаю. Когда печатаю, я подбираю слова. Когда говорю, не подбираю, и мысль выходит целой, а модель на том конце понимает меня лучше. Мешала одна вещь - приватность. Поэтому здесь она разведена по границе: то, что должно остаться моим, разбирается только на моей машине, а наружу уходит лишь то, что я сам туда отправил, вроде перевода или сборки задания.\n\nИ мелочь, из которой все начиналось: я забываю переключить язык и набираю фразу не в той раскладке. Тут это чинится само.",
       "compare_header": [
         "Вариант",
@@ -264,7 +262,7 @@
     "zh": {
       "title": "iriz",
       "name": "iriz",
-      "tagline": "你说出来，屏幕上就有字。语音识别在你的 Mac 上完成；向代理发送文本需要你另行同意。",
+      "tagline": "结果：你说出来，屏幕上就有字。语音识别在你的 Mac 上完成；向代理发送文本需要你另行同意。",
       "application": {
         "downloads": {
           "macos-arm64": {
@@ -272,20 +270,20 @@
             "requirements": "macOS 14+ · DMG"
           }
         },
-        "setup": "首次启动时，选择下载并安装 Parakeet。语音模型需另行下载，约 500 MB。",
-        "security": "应用使用自签名，尚未通过 Apple 公证。此下载不支持 Intel。",
+        "setup": "最快的首次设置方式是安装 Parakeet，约 500 MB。作者使用 Whisper large-v3-turbo；选择前请先看模型指南。",
+        "security": "应用使用 ad hoc 签名，没有 Developer ID 证书，也未通过 Apple 公证。此下载不支持 Intel。",
         "guide": {
           "label": "安装与首次听写",
           "url": "docs/DOWNLOAD.zh.md"
         }
       },
       "hero_alt": "白色大理石的伊里斯长着大理石翅膀，站在古典石柱旁，金色的声音丝带落进石板上的凹槽里",
-      "what": "这是一个 Mac 应用：你说话，它替你打字。\n\n用起来是这样。按一下键，用平常的声音说话，再按一下。文字会落在光标原来的位置：邮件里、聊天里、搜索框里。不用切换到别的地方，也没有单独的窗口。\n\n和同类应用最大的区别在于语音在哪里被解码。通常你的声音会被送到别人的服务器，在那里变成文字再回来。这里是你的 Mac 在计算，声音不会离开这台机器。\n\n**为什么叫「iriz」。** 伊里斯是希腊神话里众神的信使，也是彩虹——连接天与地的桥。她不编造消息，只把它完整地带到。这个名字对应的是把语音转成文字的工作。自动识别仍会听错词，结果需要你核查。\n\n![菜单栏：状态、模式、口述、会议、历史](docs/assets/shots/menu-zh.png)\n\n它还会别的。它能修好用错键盘布局打出来的句子。粘贴之后你改了一个词，它会问要不要记住这个替换。普通口述可以去掉犹豫和重复。\n\n会议处理会保留原始识别文本和录音。DOCX 先放纪要，再另起一页放完整的可用转写；同一文件夹还包含 JSON 和待核实事项。通过所选代理填写决策和任务前，会单独征求发送文本的同意。未知信息会明确标注，结果仍是草稿。[会议处理说明](docs/MEETINGS.md)。\n\n![会议：把录音拖进来，纪要会放在旁边](docs/assets/shots/page-meetings.png)\n\n![伊里斯坐在大理石桌前，笔记本屏幕上是 iriz 引导的第一屏](docs/assets/pantheon/desk-firstrun.png)\n",
-      "why": "靠写字吃饭的人，每天都有几个小时花在打字上。同一个想法，说出来更快也更完整：打字时人在挑词，说话时不挑。\n\n只有一件事挡在前面。云端听写把口语整理得比任何本地方案都干净，可你说的内容也随之离开了这台机器：和客户的通话、文件草稿、人名和金额。对医生、律师、心理咨询师来说，这笔交换怎么算都不划算。\n\n所以这里由你的 Mac 来识别，只有你按下按钮时，程序才会联网。\n\n![近处的大理石笔记本，屏幕上是 iriz 的口述记录窗口](docs/assets/pantheon/desk-history.png)\n",
+      "what": "这是一个 Mac 应用：你说话，它替你打字。\n\n用起来是这样。按一下键，用平常的声音说话，再按一下。文字会落在光标原来的位置：邮件里、聊天里、搜索框里。不用切换到别的地方，也没有单独的窗口。\n\n和同类应用最大的区别在于语音在哪里被解码。通常你的声音会被送到别人的服务器，在那里变成文字再回来。这里是你的 Mac 在计算，声音不会离开这台机器。\n\n**为什么叫「iriz」。** 伊里斯是希腊神话里众神的信使，也是彩虹，是连接天与地的桥。她不编造消息，只把它完整地带到。这个名字对应的是把语音转成文字的工作。自动识别仍会听错词，结果需要你核查。\n\n它还会别的。它能修好用错键盘布局打出来的句子。粘贴之后你改了一个词，它会问要不要记住这个替换。普通口述可以去掉犹豫和重复。\n\n会议处理会保留原始识别文本和录音。DOCX 先放纪要，再另起一页放完整的可用转写；同一文件夹还包含 JSON 和待核实事项。通过所选代理填写决策和任务前，会单独征求发送文本的同意。未知信息会明确标注，结果仍是草稿。[会议处理说明](docs/MEETINGS.zh.md)。",
+      "why": "靠写字吃饭的人，很多时间花在打字上。同一个想法，说出来更快也更完整：打字时人在挑词，说话时不挑。\n\n只有一件事挡在前面。云端听写把口语整理得比任何本地方案都干净，可你说的内容也随之离开了这台机器：和客户的通话、文件草稿、人名和金额。对医生、律师、心理咨询师来说，这笔交换怎么算都不划算。\n\n所以这里由你的 Mac 来识别，只有你按下按钮时，程序才会联网。",
       "advantage": "语音识别在你的 Mac 上完成，无需把音频发送到云端识别服务。",
       "better": "识别期间，语音库自身的模型下载器保持关闭。这个设置不是系统防火墙：模型下载和 CLI 代理使用各自的网络连接。",
-      "how": "按键，说一句话，再按一下。文字会落在光标闪烁的地方。\n\n这段时间里，屏幕下方一直有一颗玻璃水滴。你不说话时它很小。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。\n\n![录音中的浮窗：玻璃里的声波](docs/assets/shots/plate-listening-dark.png)\n\n把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换，不用专门去设置里找。\n\n![鼠标下的浮窗：一排六个按钮](docs/assets/shots/plate-hover-dark.png)\n\n如果没能粘贴上，什么也不会丢：同一个浮窗会展开成面板，文字从那里拿走。\n\n![口述设置：在哪里清理口语](docs/assets/shots/page-dictation.png)",
-      "quick_intro": "[下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，打开后将 iriz 拖入 Applications。需要 Apple Silicon Mac 和 macOS 14 或更新版本，不需要 Xcode 或终端。\n\n打开 iriz，在引导中点击「下载并安装 Parakeet」（约 500 MB），然后按后续步骤授予权限。等模型就绪，将光标放入文本框，再试用听写快捷键。\n\n[安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建请使用已验证的 Xcode 26.6（macOS 26 SDK、Swift 6.3.3），命令及其他安装方式见下方。",
+      "how": "按键，说一句话，再按一下。文字会落在光标闪烁的地方。\n\n这段时间里，屏幕下方一直有一颗玻璃水滴。你不说话时它很小。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。\n\n把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换。\n\n如果没能粘贴上，什么也不会丢：同一个浮窗会展开成面板，文字从那里拿走。",
+      "quick_intro": "[下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，打开后将 iriz 拖入 Applications。需要 Apple Silicon Mac 和 macOS 14 或更新版本，不需要 Xcode 或终端。\n\n最快的首次设置方式是在引导中点击「下载并安装 Parakeet」，下载约 500 MB。这是 iriz 唯一能自动安装的模型。作者本人使用手动安装的 Whisper large-v3-turbo，机器是配备 24 GB 内存的 M3 MacBook Air。先看[语音模型选择指南](docs/MODELS.zh.md)，再授予权限并试用听写快捷键。\n\n[安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建请使用已验证的 Xcode 26.6（macOS 26 SDK、Swift 6.3.3），命令及其他安装方式见下方。",
       "quick_extra": "没有 Git？下载[源码 ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip)，解压后运行同一个安装脚本。也可以在 Claude Code 中打开项目并运行 `/iriz-setup`，让智能体逐步引导安装，每次安装前都会先询问。",
       "quick_result": "安装脚本先说清楚这是什么，再看你的机器缺什么，跑一遍 `bash scripts/selfcheck.sh --selftest`，最后告诉你下一步该做什么。你不开口，它什么都不装。真要构建，加一个参数：`bash install.sh --build`。",
       "compare": [
@@ -341,7 +339,7 @@
       "glossary": [
         [
           "Neural Engine",
-          "苹果芯片里只管神经网络的那一块：识别快，机器也不发烫"
+          "Apple Silicon 中供部分本地模型使用的单元。其他模型可能使用 Metal 或 CPU"
         ],
         [
           "语音模型",
@@ -350,8 +348,7 @@
       ],
       "safety": [
         "普通听写不会保存录音。会议录音的副本会保留在 iriz 归档中。",
-        "不读屏幕。没有 ScreenCaptureKit，也不截窗口。",
-        "为了在听写后建议词语更正，iriz 会通过辅助功能读取当前焦点输入框的文本，但不会保存该输入框的完整内容。",
+        "不读屏幕，不使用 ScreenCaptureKit，也不截取窗口。为了在听写后建议词语更正，iriz 只会通过辅助功能读取当前焦点输入框，并且不会保存其中的完整内容。",
         "你在哪里听写过，不记录。否则磁盘上会攒起你和谁、在什么时候工作的痕迹。",
         "粘贴之后，剪贴板放回原样。",
         "保存的转录仅允许所有者访问：文件夹权限为 0700，文件为 0600。文件是明文，应用不会加密。"
@@ -361,12 +358,12 @@
       "limits": [
         "此下载面向 Apple Silicon 和 macOS 14 及以上。Intel 未经验证；不支持 Windows、Linux 或 iPad。",
         "自动修正键盘布局只支持英语和俄语。界面支持俄语、英语和简体中文。",
-        "应用使用自签名，尚未通过 Apple 公证。首次启动的安全提示见下载指南。",
-        "默认 Parakeet 模型需要单独下载，约 500 MB，不识别中文语音。其他模型支持的语言不同。",
+        "应用使用 ad hoc 签名，没有 Developer ID 证书，也未通过 Apple 公证。首次启动的安全提示见下载指南。",
+        "iriz 目前支持三个语音识别配置。只有 Parakeet 可自动安装；Whisper 模型文件需要手动放置。语言覆盖、磁盘占用和速度各不相同。",
         "更新需手动完成：下载新 DMG，退出 iriz，再替换应用。模型与历史记录保存在应用包之外。"
       ],
-      "docs": "更深入：[逐步上手，每个界面都有截图](docs/ONBOARDING.zh.md)、[如何参与](CONTRIBUTING.zh.md)、[安全](SECURITY.zh.md)。",
-      "license": "MIT。见 [LICENSE](LICENSE)。",
+      "docs": "继续了解：[选择语音模型](docs/MODELS.zh.md)、[查看带界面截图的逐步上手指南](docs/ONBOARDING.zh.md)、[查看更新记录](CHANGELOG.zh.md)、[参与项目](CONTRIBUTING.zh.md)、[阅读安全说明](SECURITY.zh.md)。",
+      "license": "MIT。见 [LICENSE](LICENSE)。\n\n下一步：[下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，然后试一次听写。",
       "welcome": "你好。我是个律师，也写代码，而且打字打得很多。打得不算慢，可一天下来还是发现，半天时间都花在敲字上了。\n\n试过几个工具之后，我明白了一件很简单的事：我说出来的比敲出来的准。敲字的时候我在挑词；说话的时候不挑，念头是整的，另一头的模型也更明白我要什么。挡在中间的只有一件事，隐私。所以这里把界划清楚了：该留在我这儿的，只在我自己的机器上识别；出去的，只有我自己送出去的那部分，比如翻译，或者把我说的话整理成任务。\n\n还有最开始那件小事：我总忘了切输入语言，一句话敲成了另一套布局。在这儿它自己会改回来。",
       "compare_header": [
         "方案",
@@ -422,19 +419,19 @@
     "decode": {
       "en": {
         "short": "The Mac turns it into letters, on its own chip",
-        "body": "Recognition runs on the Neural Engine of your Mac: seven seconds of speech take about a tenth of a second. Audio is decoded locally, and the recognition library keeps its own downloader off. Optional agent processing of the resulting text requires your consent.",
+        "body": "Recognition runs locally on your Mac. Speed and hardware use depend on the model: Parakeet is fast and installs automatically, while Whisper models need a manual model file. Audio stays on the machine. Optional agent processing of the resulting text requires your consent.",
         "result": "a locally recognized transcript; sending it to an agent is a separate choice.",
         "alt": "Iriz stage 3: the Mac decodes it, drawn as a wide Pantheon marble scene"
       },
       "ru": {
         "short": "Мак превращает сказанное в буквы своим же чипом",
-        "body": "Распознавание идет на Neural Engine твоего Мака: семь секунд речи разбираются примерно за десятую долю секунды. Аудио обрабатывается локально, загрузчик самой библиотеки распознавания выключен. Дальнейшая обработка текста агентом требует твоего согласия.",
+        "body": "Распознавание идет локально на твоем Маке. Скорость и используемое железо зависят от модели: Parakeet работает быстро и ставится автоматически, а моделям Whisper нужен файл, установленный вручную. Аудио остается на машине. Дальнейшая обработка текста агентом требует твоего согласия.",
         "result": "локальная расшифровка; передать ее агенту ты решаешь отдельно.",
         "alt": "Этап 3 iriz: Мак разбирает сказанное, снятый широким кадром канона Пантеона"
       },
       "zh": {
         "short": "Mac 用自己的芯片把话变成字",
-        "body": "识别跑在这台 Mac 的 Neural Engine 上：七秒话大约零点一秒就出结果。音频在本机处理，识别库自身的下载器保持关闭。后续若由代理处理文本，需要你的同意。",
+        "body": "语音识别在你的 Mac 本机运行。速度和所用硬件取决于模型：Parakeet 速度快且可自动安装，Whisper 模型则需要手动放置模型文件。音频留在本机。后续若由代理处理文本，需要你的同意。",
         "result": "在本机识别得到的转录；是否发给代理，由你另外决定。",
         "alt": "iriz 第三步：Mac 本机识别，用潘忒翁大理石宽幅场景表现"
       }

@@ -1,11 +1,15 @@
 # Meeting transcripts and minutes
 
+[Русский](MEETINGS.ru.md) · [简体中文](MEETINGS.zh.md) · [README](../README.md)
+
+**Result:** every processed meeting keeps its source audio and transcript. Each export creates a new draft folder instead of overwriting the previous one.
+
 <p align="center"><img src="assets/pantheon/doc-contributing.png" alt="A voice waveform beside a blank tablet: retain the source, then fill the minutes" width="100%"></p>
 
-Open **Settings → Meetings**, install a speech model using the controls on that
-page, and drop a Russian-language recording into the queue. A live recording
-can also start from the menu bar. Meeting audio is retained; ordinary dictation
-does not retain audio.
+1. Open **Settings → Meetings** and install a speech model using the controls on that page.
+2. Drop a Russian-language recording into the queue.
+
+A live recording can also start from the menu bar. Meeting audio is retained; ordinary dictation does not retain audio.
 
 Before processing, choose local transcription alone or consent to send the
 transcript to the selected CLI agent. The dialog names the destination and
@@ -16,13 +20,15 @@ apply. The audio file is not included in the agent request.
 ## What is saved
 
 The meeting archive contains a copy of the audio, the original recognition
-text in Markdown, and an immutable `meeting-source.json`. Each export creates
-a new version folder containing:
+text in Markdown, and `meeting-source.json`, which iriz writes once and does
+not overwrite during later exports. Each export creates a new version folder
+containing four files:
 
 - `meeting-minutes.docx`: part I, minutes; part II, the full available transcript
   starting on a new page;
 - `meeting-data.json`: the exact fields and repeated blocks used for that DOCX;
-- `clarifications.txt`: unknown details and checks still needed.
+- `clarifications.txt`: unknown details and checks still needed;
+- `export.json`: the export time and whether the minutes were filled.
 
 All 38 common fields and seven block types are validated. Every actual card
 must contain its required keys. Missing information is marked explicitly;
@@ -68,16 +74,15 @@ footer numbering are retained; authoring instructions are removed from the
 output. A document reader may substitute fonts if PT Serif is not installed
 in that reader's environment; the font files and OFL license are bundled.
 
-Meeting files are stored as plaintext with owner-only file permissions, not
-app-level encryption. FileVault provides disk encryption if enabled. The
+Meeting archives and exports are not encrypted by the app. Their files use
+owner-only permissions. FileVault provides disk encryption if enabled. The
 external agent sees the transcript only after the separate consent step.
 Custom CLI configuration may change its actual endpoint. An argument-based
 CLI also exposes its prompt to processes running under the same account;
 the consent dialog warns about this.
 
 The plain `iriz transcribe` command remains a text-only file transcription
-command; the meeting workflow described here is in the app. See the
-[resource and packaging contract](MEETING-RESOURCES.md) for build checks.
+command; the meeting workflow described here is in the app.
 
 ## Speaker models
 

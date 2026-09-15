@@ -2,6 +2,10 @@
 
 [Русский](CONTRIBUTING.ru.md) · [English](CONTRIBUTING.md)
 
+如何阅读：先看「你需要什么」，再按「提交之前」的检查项准备改动。
+
+状态：已更新，适用于当前仓库。
+
 <p align="center"><img src="docs/assets/pantheon/doc-contributing.png" alt="矮桌上并排放着两块一模一样的大理石板，左边那块上落着金色的声音丝带，右边那块空着等人来写，旁边立着传令杖" width="100%"></p>
 
 那张图里右边的石板是故意空着的。这里给别人的活留了位置，而且和给我自己的一样大。

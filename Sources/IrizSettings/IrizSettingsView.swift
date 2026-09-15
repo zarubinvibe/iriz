@@ -503,7 +503,7 @@ public struct IrizSettingsView: View {
             speechRecognitionControls
 
             settingsNote {
-                Text(L("settings.parakeetBystreeV11", "Parakeet быстрее в 11-15 раз, но транслитерирует английские термины внутри русской фразы: git rebase слышится как «гид репейс». Whisper large-v3 берет их латиницей (19 процентов ошибок на смешанной речи против 44), зато надиктовка в полминуты ждет расшифровки около 16 секунд. Оба считают на этом Маке, наружу не уходит ничего."))
+                Text(L("settings.parakeetBystreeV11", "Parakeet быстро ставится одной кнопкой. Я использую Whisper large-v3-turbo на M3 с 24 ГБ памяти: она распознаёт русский и лучше подходит моей речи с английскими техническими терминами. Оба варианта работают локально, аудио остаётся на Маке."))
                     .font(.footnote)
                     .foregroundStyle(IRIZ_SUBTLE)
             }

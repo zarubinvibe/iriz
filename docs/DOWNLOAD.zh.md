@@ -4,19 +4,19 @@
 
 [![下载 macOS 版](https://img.shields.io/badge/下载%20macOS%20版-111111?style=for-the-badge&logo=apple&logoColor=white)](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)
 
-需要 Apple Silicon Mac（M1 或更新）和 macOS 14 或更新版本。此下载不支持 Intel Mac。应用采用 MIT 许可证，免费使用，不需要账号、API 密钥、Xcode 或终端。语音模型另行下载，约 500 MB；还需为下载和安装的临时文件留出空间。
+需要 Apple Silicon Mac（M1 或更新）和 macOS 14 或更新版本。此下载不支持 Intel Mac。应用采用 MIT 许可证，免费使用，不需要账号、API 密钥、Xcode 或终端。可一键安装的 Parakeet 模型需另行下载，约 500 MB；还需为下载和安装的临时文件留出空间。
 
 ## 首次启动
 
 <img src="assets/pantheon/doc-onboarding.png" alt="伊里斯引导金色语音丝带落在大理石板上，旁边矗立着家族石柱" width="100%">
 
 1. 打开 DMG，将 **iriz** 拖入 **Applications**，然后推出磁盘映像。请从 Applications 启动，不要从已挂载的映像运行。
-2. 此版本使用自签名，**尚未通过 Apple 公证**，macOS 无法验证发布者。如果你信任此仓库并已核对文件，尝试打开应用后，可前往“系统设置 → 隐私与安全性 → 仍要打开”。请阅读 [Apple 的说明](https://support.apple.com/en-us/102445)。不要关闭 Gatekeeper，也不要绕过恶意软件警告。
-3. 欢迎页之后，在模型步骤点击**下载并安装 Parakeet**。Parakeet 通过网络下载，约 500 MB；iriz 会自动安装并选用它。界面显示进度，失败后可点击**重试**。保持联网直到模型就绪；DMG 不包含模型。
+2. 此版本使用 ad hoc 签名，没有 Developer ID 证书，**也未通过 Apple 公证**。macOS 无法验证发布者。如果你信任此仓库并已核对文件，尝试打开应用后，可前往“系统设置 → 隐私与安全性 → 仍要打开”。请阅读 [Apple 的说明](https://support.apple.com/en-us/102445)。不要关闭 Gatekeeper，也不要绕过恶意软件警告。
+3. 如果想最快完成设置，请在欢迎页后的模型步骤点击**下载并安装 Parakeet**。Parakeet 通过网络下载，约 500 MB；iriz 会自动安装并选用它。界面显示进度，失败后可点击**重试**。保持联网直到模型就绪；DMG 不包含模型。
 4. 继续按引导授予麦克风、辅助功能和输入监控权限，分别用于收音、插入文字和响应听写快捷键。若 macOS 要求，请重新启动应用。模型下载期间可以完成授权，开始听写前请等待模型就绪。
 5. 将光标放入空白文本框。按引导中显示的听写键（默认右侧 Command），说一句话，再按一次，文字应出现在该文本框中。
 
-如果跳过模型步骤，键盘布局修正仍可使用，但听写需要模型。打开 **iriz → 设置 → 口述 → 下载 Parakeet 模型…**，即可返回模型安装页。已有模型时，按钮显示为**设置语音识别…**。应用只提供 Parakeet 的自动安装。识别引擎列表也有其他选项，但需要另行安装对应模型，本指南不介绍该过程。Parakeet 不识别中文语音。界面语言与语音语言是两项独立设置。
+如果跳过模型步骤，键盘布局修正仍可使用，但听写需要模型。打开 **iriz → 设置 → 口述 → 下载 Parakeet 模型…**，即可返回模型安装页。已有模型时，按钮显示为**设置语音识别…**。应用只提供 Parakeet 的自动安装。作者本人使用 Whisper large-v3-turbo，其模型文件需要手动安装。请[比较三个受支持配置和十个下载候选](MODELS.zh.md)。Parakeet 不识别中文语音。界面语言与语音语言是两项独立设置。
 
 ## 遇到问题
 
@@ -38,4 +38,4 @@
 shasum -a 256 ~/Downloads/iriz-macos-arm64.dmg
 ```
 
-哈希一致可以检查文件是否损坏，但不能替代 Apple 对发布者的验证。从源码构建见 [RELEASING.md](RELEASING.md)，其他界面的介绍见[完整引导](ONBOARDING.zh.md)。
+哈希一致可以检查文件是否损坏，但不能替代 Apple 对发布者的验证。其他界面的介绍见[完整引导](ONBOARDING.zh.md)。

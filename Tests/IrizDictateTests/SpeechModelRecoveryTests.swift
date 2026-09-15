@@ -67,6 +67,18 @@ struct SpeechModelRecoveryTests {
         #expect(speechModelCacheIsComplete(for: .whisperTurbo, at: root))
     }
 
+    @Test("Whisper загружается только по закреплённым именам и SHA-256")
+    func whisperUsesPinnedManifest() throws {
+        #expect(ModelIntegrity.whisperRepositoryCommit == "5359861c739e955e79d9a303bcbc70fb988958b1")
+        let turbo = try #require(ModelIntegrity.whisperFile(for: .whisperTurbo))
+        #expect(turbo.relativePath == "ggml-large-v3-turbo.bin")
+        #expect(turbo.sha256 == "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69")
+        let large = try #require(ModelIntegrity.whisperFile(for: .whisperLargeV3))
+        #expect(large.relativePath == "ggml-large-v3.bin")
+        #expect(large.sha256 == "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2")
+        #expect(ModelIntegrity.whisperFile(for: .multilingualV3) == nil)
+    }
+
     @Test("адреса скачивания ограничены файлами закреплённого манифеста")
     func downloadsUsePinnedAllowlist() throws {
         for file in ModelIntegrity.parakeetV3DownloadFiles {

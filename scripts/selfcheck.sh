@@ -96,5 +96,16 @@ for script in install.sh scripts/build_app.sh; do
   [ -r "$script" ] && ok "$script читается" || fail "$script не читается"
 done
 
+# 6. GitHub Release получает сгенерированную копию с абсолютной картинкой.
+# Node.js нужен сопровождающему релиз, но не пользователю install.sh.
+if ! command -v node >/dev/null 2>&1; then
+  ok "GitHub Release notes: проверка пропущена без Node.js (только для сопровождающего)"
+elif node scripts/render_github_release_notes.mjs --selftest >/dev/null \
+  && node scripts/render_github_release_notes.mjs --check >/dev/null; then
+  ok "GitHub Release notes собраны из канонического файла"
+else
+  fail "GitHub Release notes устарели; запусти node scripts/render_github_release_notes.mjs"
+fi
+
 printf '\nотказов: %d\n\n' "$fails"
 [ "$fails" -eq 0 ]

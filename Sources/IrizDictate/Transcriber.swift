@@ -68,35 +68,36 @@ public enum DictationLanguage: String, CaseIterable, Sendable {
 
 public enum SpeechModelProfile: String, CaseIterable, Sendable {
     case multilingualV3 = "multilingual_v3"
-    /// Кандидат волны 2. Берет латиницу внутри русской фразы (19,05 процента
-    /// против 44,05 у Parakeet на смешанной речи), но в 11-15 раз медленнее -
-    /// разбор в `bench/BENCH-CANDIDATES-2026-09-03.md`. Оба живут в одном
-    /// бинарнике, выбор за владельцем.
+    /// В замере full large-v3 берет латиницу внутри русской фразы: 19,05 процента
+    /// ошибки против 44,05 у Parakeet. На коротких русских файлах она работала
+    /// в 1,3 раза быстрее записи, Parakeet - в 21-29. Полный разбор лежит в
+    /// `bench/BENCH-CANDIDATES-2026-09-03.md`.
     case whisperLargeV3 = "whisper_large_v3"
-    /// Тот же словарь и тот же рычаг, вдвое меньше вес. Канон 25.07.2026 советовал
-    /// turbo НЕ брать, но канон уже подтвержденно устарел в двух других местах, а
-    /// решает здесь замер, а не совет.
+    /// Личный выбор владельца: русский, смешанная RU/EN техречь и файл модели
+    /// около 1,5 ГиБ подходят его M3 с 24 ГБ памяти. Turbo отдельно не мерили:
+    /// цифры замера полной large-v3 к нему не относятся.
     case whisperTurbo = "whisper_large_v3_turbo"
 
     public var shortName: String {
         switch self {
         case .multilingualV3: return "Parakeet TDT v3"
         case .whisperLargeV3: return "Whisper large-v3"
-        case .whisperTurbo: return "Whisper large-v3 turbo"
+        case .whisperTurbo: return "Whisper large-v3-turbo"
         }
     }
 
     /// Движок продукта по умолчанию. ОДНО место на всё: настройки берут его как
     /// значение по умолчанию, CLI - как значение флага. Иначе приложение и CLI
     /// расходятся, и владелец видит разное качество на одной записи.
-    /// ПРЕДПОЧТИТЕЛЬНЫЙ движок. Выбран не по скорости: замер показал, что именно
-    /// он берёт термины владельца, а Parakeet их теряет.
+    /// ПРЕДПОЧТИТЕЛЬНЫЙ движок владельца. Turbo выбран для русского, смешанной
+    /// RU/EN техречи и разумного размера на M3 с 24 ГБ памяти. Замер подтвердил
+    /// преимущество семейства Whisper на смешанной речи только для full large-v3,
+    /// а не для Turbo.
     ///
-    /// Но предпочтение - это не то же самое, что «взять и запустить». Образ
-    /// (`scripts/make_release.sh`) кладёт только parakeet-tdt-0.6b-v3, и свежая
-    /// установка искала на диске файл whisper, которого там нет: приложение не
-    /// диктовало ВООБЩЕ, молча, без единого сообщения. Найдено разбором путей
-    /// пользователей 04.09.2026.
+    /// Но предпочтение - это не то же самое, что «взять и запустить». Свежий DMG
+    /// не содержит моделей, а автоматический установщик умеет поставить только
+    /// Parakeet. Если сразу выбрать отсутствующий Whisper, приложение не сможет
+    /// диктовать. Найдено разбором путей пользователей 04.09.2026.
     ///
     /// Поэтому рядом стоит `installedDefault`: он и решает, с чем работать.
     public static let productDefault: SpeechModelProfile = .whisperTurbo
@@ -114,14 +115,14 @@ public enum SpeechModelProfile: String, CaseIterable, Sendable {
         probe: (SpeechModelProfile) -> Bool = speechModelCacheExists
     ) -> SpeechModelProfile {
         if probe(productDefault) { return productDefault }
-        // Порядок падения назван явно: сперва то, что кладётся в образ.
+        // Порядок падения назван явно: сперва профиль со встроенным установщиком.
         for fallback in [SpeechModelProfile.multilingualV3, .whisperLargeV3, .whisperTurbo]
         where probe(fallback) {
             return fallback
         }
-        // На диске нет ничего. Возвращаем то, что едет в образе: приложение
-        // покажет «модель не установлена» про НЕЁ, и человек пойдёт ставить то,
-        // что у него и так есть в DMG.
+        // На диске нет ничего. Возвращаем профиль, для которого есть встроенный
+        // установщик: приложение покажет «модель не установлена» и даст рабочую
+        // кнопку загрузки.
         return .multilingualV3
     }
 
@@ -131,11 +132,7 @@ public enum SpeechModelProfile: String, CaseIterable, Sendable {
 
     /// Файл модели на диске. У Parakeet модель - каталог, поэтому nil.
     var whisperModelFile: String? {
-        switch self {
-        case .multilingualV3: return nil
-        case .whisperLargeV3: return "ggml-large-v3.bin"
-        case .whisperTurbo: return "ggml-large-v3-turbo.bin"
-        }
+        ModelIntegrity.whisperFile(for: self)?.relativePath
     }
 
     var productionProfile: SpeechModelProfile { self }
@@ -213,7 +210,20 @@ enum ModelIntegrityError: LocalizedError {
 public enum ModelIntegrity {
     static let parakeetV3Repository = "FluidInference/parakeet-tdt-0.6b-v3-coreml"
     static let parakeetV3RepositoryCommit = "aed02740059203c4a87495924f685de3722ae9ce"
+    static let whisperRepository = "ggerganov/whisper.cpp"
+    static let whisperRepositoryCommit = "5359861c739e955e79d9a303bcbc70fb988958b1"
     private static let sha256Characters = Set("0123456789abcdefABCDEF")
+
+    private static let whisperFiles: [SpeechModelProfile: ModelFileDigest] = [
+        .whisperLargeV3: ModelFileDigest(
+            relativePath: "ggml-large-v3.bin",
+            sha256: "64d182b440b98d5203c4f9bd541544d84c605196c4f7b845dfa11fb23594d1e2"
+        ),
+        .whisperTurbo: ModelFileDigest(
+            relativePath: "ggml-large-v3-turbo.bin",
+            sha256: "1fc70f774d38eb169993ac391eea357ef47c88757ef72ee5943879b7e8e2bc69"
+        ),
+    ]
 
     private static let parakeetV3StrictDirectories = [
         "Decoder.mlmodelc",
@@ -250,6 +260,10 @@ public enum ModelIntegrity {
 
     static var parakeetV3DownloadFiles: [ModelFileDigest] { parakeetV3Files }
 
+    static func whisperFile(for profile: SpeechModelProfile) -> ModelFileDigest? {
+        whisperFiles[profile]
+    }
+
     static func parakeetV3CacheIsComplete(at directory: URL) -> Bool {
         do {
             let directories = Set(parakeetV3Files.flatMap { parentDirectories(of: $0.relativePath) })
@@ -272,6 +286,14 @@ public enum ModelIntegrity {
                         expectedFiles: parakeetV3Files,
                         strictDirectories: parakeetV3StrictDirectories)
         log("ASR: verified \(parakeetV3Files.count) model files from \(parakeetV3Repository) @ \(parakeetV3RepositoryCommit)")
+    }
+
+    static func verifyWhisperModel(for profile: SpeechModelProfile, at directory: URL) throws {
+        guard let file = whisperFile(for: profile) else {
+            throw ModelIntegrityError.invalidManifestPath("no Whisper manifest for \(profile.rawValue)")
+        }
+        try verifyFiles(root: directory, expectedFiles: [file], strictDirectories: [])
+        log("ASR: verified \(file.relativePath) from \(whisperRepository) @ \(whisperRepositoryCommit)")
     }
 
     static func verifyFiles(root: URL,
@@ -549,6 +571,7 @@ actor TranscriptionWorker {
         switch profile {
         case .multilingualV3: engine = .parakeetV3(try await loadParakeetV3())
         case .whisperLargeV3, .whisperTurbo:
+            try ModelIntegrity.verifyWhisperModel(for: profile, at: whisperModelCacheDirectory())
             engine = .whisper(try WhisperEngine(modelURL: whisperModelURL(profile.whisperModelFile ?? "")))
         }
         loadedProfile = profile

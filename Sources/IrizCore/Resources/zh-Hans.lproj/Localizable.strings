@@ -35,11 +35,11 @@
 "firstrun.skip" = "暂时跳过";
 "firstrun.translate.body" = "第二个键和听写一样，只是出来的文字是另一种语言。";
 "firstrun.translate.note" = "翻译走的是跑任务的那个智能体：没有它，这个键就没反应。";
-"firstrun.translate.title" = "说中文，出英文";
+"firstrun.translate.title" = "说俄语，出英文";
 "firstrun.translateEnable" = "开启翻译";
 "firstrun.translateFieldPlaceholder" = "译文会出现在这里";
 "firstrun.translateNeedsAgent" = "先回上一步接上智能体。";
-"firstrun.translatePressKey" = "按住这个键，用中文说句话";
+"firstrun.translatePressKey" = "按一下这个键，用俄语说句话";
 "firstrun.trialBackToPermission" = "返回授权那步";
 "firstrun.trialDeaf" = "我还听不见这个键：按键权限还没给。";
 "firstrun.trialDone" = "成了。凡是光标在闪的地方，都这样。";
@@ -209,7 +209,7 @@
 "settings.knopkiOchistitVseZdes" = "这里故意没有“全部清除”按钮：不看就按，代价比省下的那点空间高得多。要挑着删，去看得见删的是什么的地方——历史窗口。";
 "settings.modelLokalnogoAgenta" = "本地代理使用的模型";
 "settings.nazhmiteSohranitChtobyZapisat" = " 点“存储”写入。";
-"settings.parakeetBystreeV11" = "Parakeet 快 11–15 倍，但会把非英语句子里的英文术语按读音音译掉：git rebase 会被写成它听起来的样子。Whisper large-v3 保留拉丁字母（混合语音错误率 19% 对 44%），代价是半分钟的口述要等约 16 秒。两者都在这台 Mac 上计算，什么都不会外传。";
+"settings.parakeetBystreeV11" = "Parakeet 可以一键安装，也是速度更快的选项。我在一台 24 GB 内存的 M3 上使用 Whisper large-v3-turbo，因为它能识别俄语，更适合我夹有英文技术词的语音。两种选项都在本机运行，音频不会离开这台 Mac。";
 "settings.perelivyTriTonaVokrug" = "流光——围绕模式颜色的三个色调。平静——同样的色调，幅度减半。单色——完全没有流光。调色板不改变模式颜色：普通口述保持暖色，提示词保持冷色，否则光看浮窗就分不清在录什么。";
 "settings.perelivyTriTonaVokrug2" = "流光：围绕模式颜色的三个色调。平静：同样的色调，幅度减半。单色：没有流光。调色板不改变模式颜色——口述保持暖色，提示词保持冷色";
 "settings.perenesiteZapisVstrechi" = "把会议录音拖到这里";

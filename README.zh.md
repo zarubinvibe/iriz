@@ -1,6 +1,6 @@
 # iriz
 
-你说出来，屏幕上就有字。语音识别在你的 Mac 上完成；向代理发送文本需要你另行同意。
+结果：你说出来，屏幕上就有字。语音识别在你的 Mac 上完成；向代理发送文本需要你另行同意。
 
 [English](README.md) · [Русский](README.ru.md)
 
@@ -16,7 +16,7 @@
 >
 > 还有最开始那件小事：我总忘了切输入语言，一句话敲成了另一套布局。在这儿它自己会改回来。
 >
-> — Filipp Zarubin
+> Filipp Zarubin
 
 <!-- owner-welcome:end -->
 
@@ -27,6 +27,9 @@
 - [最大的优势](#最大的优势)
 - [工作流程](#工作流程)
 - [快速开始](#快速开始)
+
+**其他：**
+
 - [简单对比](#简单对比)
 - [简单词汇](#简单词汇)
 - [安全与隐私](#安全与隐私)
@@ -40,9 +43,9 @@
 
 <p align="center">macOS · Apple Silicon — macOS 14+ · DMG</p>
 
-<p align="center">设置: 首次启动时，选择下载并安装 Parakeet。语音模型需另行下载，约 500 MB。</p>
+<p align="center">设置: 最快的首次设置方式是安装 Parakeet，约 500 MB。作者使用 Whisper large-v3-turbo；选择前请先看模型指南。</p>
 
-<p align="center">安全: 应用使用自签名，尚未通过 Apple 公证。此下载不支持 Intel。</p>
+<p align="center">安全: 应用使用 ad hoc 签名，没有 Developer ID 证书，也未通过 Apple 公证。此下载不支持 Intel。</p>
 
 <p align="center"><a href="docs/DOWNLOAD.zh.md">安装与首次听写</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest">所有版本</a> · <a href="https://github.com/zarubinvibe/iriz/releases/latest/download/SHA256SUMS.txt">校验和</a></p>
 
@@ -58,29 +61,19 @@
 
 和同类应用最大的区别在于语音在哪里被解码。通常你的声音会被送到别人的服务器，在那里变成文字再回来。这里是你的 Mac 在计算，声音不会离开这台机器。
 
-**为什么叫「iriz」。** 伊里斯是希腊神话里众神的信使，也是彩虹——连接天与地的桥。她不编造消息，只把它完整地带到。这个名字对应的是把语音转成文字的工作。自动识别仍会听错词，结果需要你核查。
-
-![菜单栏：状态、模式、口述、会议、历史](docs/assets/shots/menu-zh.png)
+**为什么叫「iriz」。** 伊里斯是希腊神话里众神的信使，也是彩虹，是连接天与地的桥。她不编造消息，只把它完整地带到。这个名字对应的是把语音转成文字的工作。自动识别仍会听错词，结果需要你核查。
 
 它还会别的。它能修好用错键盘布局打出来的句子。粘贴之后你改了一个词，它会问要不要记住这个替换。普通口述可以去掉犹豫和重复。
 
-会议处理会保留原始识别文本和录音。DOCX 先放纪要，再另起一页放完整的可用转写；同一文件夹还包含 JSON 和待核实事项。通过所选代理填写决策和任务前，会单独征求发送文本的同意。未知信息会明确标注，结果仍是草稿。[会议处理说明](docs/MEETINGS.md)。
-
-![会议：把录音拖进来，纪要会放在旁边](docs/assets/shots/page-meetings.png)
-
-![伊里斯坐在大理石桌前，笔记本屏幕上是 iriz 引导的第一屏](docs/assets/pantheon/desk-firstrun.png)
-
+会议处理会保留原始识别文本和录音。DOCX 先放纪要，再另起一页放完整的可用转写；同一文件夹还包含 JSON 和待核实事项。通过所选代理填写决策和任务前，会单独征求发送文本的同意。未知信息会明确标注，结果仍是草稿。[会议处理说明](docs/MEETINGS.zh.md)。
 
 ## 它解决什么问题
 
-靠写字吃饭的人，每天都有几个小时花在打字上。同一个想法，说出来更快也更完整：打字时人在挑词，说话时不挑。
+靠写字吃饭的人，很多时间花在打字上。同一个想法，说出来更快也更完整：打字时人在挑词，说话时不挑。
 
 只有一件事挡在前面。云端听写把口语整理得比任何本地方案都干净，可你说的内容也随之离开了这台机器：和客户的通话、文件草稿、人名和金额。对医生、律师、心理咨询师来说，这笔交换怎么算都不划算。
 
 所以这里由你的 Mac 来识别，只有你按下按钮时，程序才会联网。
-
-![近处的大理石笔记本，屏幕上是 iriz 的口述记录窗口](docs/assets/pantheon/desk-history.png)
-
 
 ## 最大的优势
 
@@ -94,15 +87,9 @@
 
 这段时间里，屏幕下方一直有一颗玻璃水滴。你不说话时它很小。一开口，里面就有声波流动：这就是“它有没有听见我”的答案。
 
-![录音中的浮窗：玻璃里的声波](docs/assets/shots/plate-listening-dark.png)
-
-把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换，不用专门去设置里找。
-
-![鼠标下的浮窗：一排六个按钮](docs/assets/shots/plate-hover-dark.png)
+把鼠标移上去，水滴会展开成一排按钮：录音、提示词、翻译、语言、历史、设置。语言就在这里切换，开口前一秒就能换。
 
 如果没能粘贴上，什么也不会丢：同一个浮窗会展开成面板，文字从那里拿走。
-
-![口述设置：在哪里清理口语](docs/assets/shots/page-dictation.png)
 
 <!-- workflow-diagram:start -->
 
@@ -135,7 +122,7 @@
 
 ### 第 3 步：Mac 本机识别
 
-识别跑在这台 Mac 的 Neural Engine 上：七秒话大约零点一秒就出结果。音频在本机处理，识别库自身的下载器保持关闭。后续若由代理处理文本，需要你的同意。
+语音识别在你的 Mac 本机运行。速度和所用硬件取决于模型：Parakeet 速度快且可自动安装，Whisper 模型则需要手动放置模型文件。音频留在本机。后续若由代理处理文本，需要你的同意。
 
 <p align="center"><img src="docs/assets/pantheon/workflow/03-decode.png" alt="iriz 第三步：Mac 本机识别，用潘忒翁大理石宽幅场景表现" width="100%"></p>
 
@@ -153,16 +140,14 @@
 
 [下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，打开后将 iriz 拖入 Applications。需要 Apple Silicon Mac 和 macOS 14 或更新版本，不需要 Xcode 或终端。
 
-打开 iriz，在引导中点击「下载并安装 Parakeet」（约 500 MB），然后按后续步骤授予权限。等模型就绪，将光标放入文本框，再试用听写快捷键。
+最快的首次设置方式是在引导中点击「下载并安装 Parakeet」，下载约 500 MB。这是 iriz 唯一能自动安装的模型。作者本人使用手动安装的 Whisper large-v3-turbo，机器是配备 24 GB 内存的 M3 MacBook Air。先看[语音模型选择指南](docs/MODELS.zh.md)，再授予权限并试用听写快捷键。
 
 [安装、恢复模型和更新](docs/DOWNLOAD.zh.md)。从源码构建请使用已验证的 Xcode 26.6（macOS 26 SDK、Swift 6.3.3），命令及其他安装方式见下方。
 
 ```bash
 git clone https://github.com/zarubinvibe/iriz.git ~/iriz
 cd ~/iriz
-bash install.sh          # просто терминал, без единого агента
-code .                   # или открой папку в редакторе
-claude                   # или пусти агента: он проведет установку разговором
+bash install.sh
 ```
 
 没有 Git？下载[源码 ZIP](https://github.com/zarubinvibe/iriz/archive/refs/heads/main.zip)，解压后运行同一个安装脚本。也可以在 Claude Code 中打开项目并运行 `/iriz-setup`，让智能体逐步引导安装，每次安装前都会先询问。
@@ -191,14 +176,13 @@ claude                   # или пусти агента: он проведет
 | Command | 命令：给电脑的一条指令 |
 | Branch | 分支：不影响 `main` 的另一条修改线 |
 | Pull Request | 合并请求：请别人审阅并接受你的修改 |
-| Neural Engine | 苹果芯片里只管神经网络的那一块：识别快，机器也不发烫 |
+| Neural Engine | Apple Silicon 中供部分本地模型使用的单元。其他模型可能使用 Metal 或 CPU |
 | 语音模型 | 把声音转成文字的模型权重，保存在你的磁盘上。Parakeet 需单独下载，约 500 MB，由你按按钮启动。 |
 
 ## 安全与隐私
 
 - 普通听写不会保存录音。会议录音的副本会保留在 iriz 归档中。
-- 不读屏幕。没有 ScreenCaptureKit，也不截窗口。
-- 为了在听写后建议词语更正，iriz 会通过辅助功能读取当前焦点输入框的文本，但不会保存该输入框的完整内容。
+- 不读屏幕，不使用 ScreenCaptureKit，也不截取窗口。为了在听写后建议词语更正，iriz 只会通过辅助功能读取当前焦点输入框，并且不会保存其中的完整内容。
 - 你在哪里听写过，不记录。否则磁盘上会攒起你和谁、在什么时候工作的痕迹。
 - 粘贴之后，剪贴板放回原样。
 - 保存的转录仅允许所有者访问：文件夹权限为 0700，文件为 0600。文件是明文，应用不会加密。
@@ -211,17 +195,17 @@ claude                   # или пусти агента: он проведет
 
 - 此下载面向 Apple Silicon 和 macOS 14 及以上。Intel 未经验证；不支持 Windows、Linux 或 iPad。
 - 自动修正键盘布局只支持英语和俄语。界面支持俄语、英语和简体中文。
-- 应用使用自签名，尚未通过 Apple 公证。首次启动的安全提示见下载指南。
-- 默认 Parakeet 模型需要单独下载，约 500 MB，不识别中文语音。其他模型支持的语言不同。
+- 应用使用 ad hoc 签名，没有 Developer ID 证书，也未通过 Apple 公证。首次启动的安全提示见下载指南。
+- iriz 目前支持三个语音识别配置。只有 Parakeet 可自动安装；Whisper 模型文件需要手动放置。语言覆盖、磁盘占用和速度各不相同。
 - 更新需手动完成：下载新 DMG，退出 iriz，再替换应用。模型与历史记录保存在应用包之外。
 
-更深入：[逐步上手，每个界面都有截图](docs/ONBOARDING.zh.md)、[如何参与](CONTRIBUTING.zh.md)、[安全](SECURITY.zh.md)。
+继续了解：[选择语音模型](docs/MODELS.zh.md)、[查看带界面截图的逐步上手指南](docs/ONBOARDING.zh.md)、[查看更新记录](CHANGELOG.zh.md)、[参与项目](CONTRIBUTING.zh.md)、[阅读安全说明](SECURITY.zh.md)。
 
 ## 点亮星标与参与
 
 觉得有用？给 iriz 点亮星标：[https://github.com/zarubinvibe/iriz](https://github.com/zarubinvibe/iriz)。这只要一秒，却决定别人能不能找到这个项目。
 
-想改点什么？流程很短：先 fork 仓库，建一个分支 branch，提交 commit，推送 push，然后开一个 Pull Request。请不要直接向 `main` 推送，发布闸门会拒绝。
+想改点什么？流程很短：先 fork 仓库，建一个分支 branch，提交 commit，推送 push，然后开一个 Pull Request。请不要直接向 `main` 推送变更。
 
 发现问题？到 [https://github.com/zarubinvibe/iriz/issues](https://github.com/zarubinvibe/iriz/issues) 开一个 issue，写清楚你运行了什么、发生了什么。
 
@@ -230,7 +214,7 @@ claude                   # или пусти агента: он проведет
 <!-- pantheon-family:start -->
 ## Olympuz 家族
 
-这是 [Olympuz 家族](https://github.com/zarubinvibe/athena#olympuz-family) 的公开项目之一。表格里的每一行都可以打开仓库，或者直接下载源码压缩包。
+下面列出 [Olympuz 家族](https://github.com/zarubinvibe/athena#olympuz-family) 的公开项目。表格里的每一行都可以打开仓库，或者直接下载源码压缩包。
 
 | 类型 | 名称 | 做什么 | 如何帮到这个项目 | 获取 |
 |---|---|---|---|---|
@@ -248,3 +232,5 @@ claude                   # или пусти агента: он проведет
 ## 许可证
 
 MIT。见 [LICENSE](LICENSE)。
+
+下一步：[下载 macOS DMG](https://github.com/zarubinvibe/iriz/releases/latest/download/iriz-macos-arm64.dmg)，然后试一次听写。

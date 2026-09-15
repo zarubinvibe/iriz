@@ -207,7 +207,7 @@
 "settings.knopkiOchistitVseZdes" = "There is no «clear everything» button here on purpose: pressed without looking, it costs more than the gigabyte it saves. Picking what to delete lives where you can see what you are deleting — in the history window.";
 "settings.modelLokalnogoAgenta" = "Model of the local agent";
 "settings.nazhmiteSohranitChtobyZapisat" = " Press Save to write it down.";
-"settings.parakeetBystreeV11" = "Parakeet is 11–15 times faster, but it transliterates English terms inside a non-English phrase: git rebase comes back spelled the way it sounded. Whisper large-v3 keeps them in Latin (19 percent errors on mixed speech against 44), but a half-minute dictation waits about 16 seconds. Both compute on this Mac; nothing leaves it.";
+"settings.parakeetBystreeV11" = "Parakeet installs with one click and is the fast option. I use Whisper large-v3-turbo on an M3 with 24 GB of memory because it recognizes Russian and suits my speech with English technical terms. Both options run locally; the audio stays on this Mac.";
 "settings.perelivyTriTonaVokrug" = "Shimmer — three tones around the mode color. Calm — the same tones, half the spread. Mono — no shimmer at all. The palette does not change the mode color: plain dictation stays warm, prompt stays cold, otherwise the plate would not tell you what is being recorded.";
 "settings.perelivyTriTonaVokrug2" = "Shimmer: three tones around the mode color. Calm: the same tones, half the spread. Mono: no shimmer. The palette does not change the mode color — dictation stays warm, prompt stays cold";
 "settings.perenesiteZapisVstrechi" = "Drop the meeting recording here";
