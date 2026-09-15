@@ -48,6 +48,10 @@ PYOPT
 }
 
 if [ "${1:-}" = "--selftest" ]; then
+    if ! python3 -c 'from PIL import Image' >/dev/null 2>&1; then
+        echo "SELFTEST SKIP: нет необязательной dev-зависимости Pillow"
+        exit 0
+    fi
     TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
     python3 - "$TMP" <<'PYGEN'
 import sys

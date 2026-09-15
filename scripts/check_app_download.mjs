@@ -34,7 +34,7 @@ export const UI_SHOT_NAMES = [
 ].flatMap(surface => ['light', 'dark'].flatMap(theme => [1, 2]
   .map(scale => `${surface}-${theme}@${scale}x.png`)));
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const LOCALES = [['README.md', 'What This Is', 'Contents'], ['README.ru.md', 'Что это', 'Оглавление'], ['README.zh.md', '这是什么', '目录']];
+const LOCALES = [['README.md', 'What this is', 'Contents'], ['README.ru.md', 'Что это', 'Оглавление'], ['README.zh.md', '这是什么', '目录']];
 export const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const requireThat = (condition, message) => { if (!condition) throw new Error(message); };
 const sameNames = (actual, expected, label) => {

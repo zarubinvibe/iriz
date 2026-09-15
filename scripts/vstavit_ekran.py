@@ -19,7 +19,17 @@ import sys
 import tempfile
 from pathlib import Path
 
-from PIL import Image, ImageStat
+try:
+    from PIL import Image, ImageStat
+except ModuleNotFoundError:
+    if "--selftest" in sys.argv:
+        print("SELFTEST SKIP: нет необязательной dev-зависимости Pillow")
+        raise SystemExit(0)
+    print(
+        "vstavit_ekran требует dev-зависимость Pillow: python3 -m pip install Pillow",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
 
 
 def koefficienty(iz_uglov, v_ugly):

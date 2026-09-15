@@ -37,8 +37,19 @@ import json
 import sys
 from pathlib import Path
 
-import numpy as np
-from PIL import Image
+try:
+    import numpy as np
+    from PIL import Image
+except ModuleNotFoundError as error:
+    if "--selftest" in sys.argv:
+        print(f"SELFTEST SKIP: нет необязательной dev-зависимости {error.name}")
+        raise SystemExit(0)
+    print(
+        "glass_probe требует dev-зависимости numpy и Pillow: "
+        "python3 -m pip install numpy Pillow",
+        file=sys.stderr,
+    )
+    raise SystemExit(2)
 
 # Пороги приёмки. Держатся здесь, а не в голове: спор о том, стекло это или
 # нет, решается сравнением с числом.
